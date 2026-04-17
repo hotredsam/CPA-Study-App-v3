@@ -1,0 +1,48 @@
+{
+  "model": "claude-sonnet-4-6",
+  "effortLevel": "xhigh",
+  "autoDreamEnabled": true,
+  "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(git:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(gh:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(ffprobe:*)",
+      "Bash(node:*)",
+      "Bash(yt-dlp:*)",
+      "Edit",
+      "Write",
+      "Read",
+      "Grep",
+      "Glob",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard origin/main:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/sam-input-dispatch.mjs xml",
+            "if": "Write(sam-input/TODO.xml)",
+            "shell": "bash",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
