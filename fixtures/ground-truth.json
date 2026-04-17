@@ -1,0 +1,73 @@
+{
+  "_note": "TENTATIVE ground truth. Timestamps and question counts below are best-guess (ffprobe metadata + duration heuristics). Scene/audio boundaries were NOT manually verified. Sam: please review and tighten via sam-input/TODO.xml entries referencing fixture IDs.",
+  "_generated": "2026-04-17",
+  "_generator": "setupinstructions.md Section 11 (fixture-harness skill, best-guess mode)",
+  "fixtures": [
+    {
+      "id": "sample-3q",
+      "file": "sample-3q.mp4",
+      "sourceUrl": "https://www.youtube.com/watch?v=a18BAkY14W8",
+      "sourceTitle": "Becker ExamSolver Sample Video 1",
+      "durationSec": 658.541,
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "audioCodec": "aac",
+      "expectedQuestionCount": 3,
+      "tentativeQuestionBoundaries": [
+        { "startSec": 0, "endSec": 219.5, "flag": "GUESS" },
+        { "startSec": 219.5, "endSec": 439.0, "flag": "GUESS" },
+        { "startSec": 439.0, "endSec": 658.541, "flag": "GUESS" }
+      ],
+      "reviewNotes": "Equal thirds. Real boundaries unknown until Sam watches and marks transitions, or scene-detection is run."
+    },
+    {
+      "id": "sample-5q",
+      "file": "sample-5q.mkv",
+      "sourceUrl": "https://www.youtube.com/watch?v=u6SSrht0LTc",
+      "sourceTitle": "Becker ExamSolver Sample Video 2",
+      "durationSec": 641.048,
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "audioCodec": "opus",
+      "expectedQuestionCount": 5,
+      "tentativeQuestionBoundaries": [
+        { "startSec": 0, "endSec": 128.2, "flag": "GUESS" },
+        { "startSec": 128.2, "endSec": 256.4, "flag": "GUESS" },
+        { "startSec": 256.4, "endSec": 384.6, "flag": "GUESS" },
+        { "startSec": 384.6, "endSec": 512.8, "flag": "GUESS" },
+        { "startSec": 512.8, "endSec": 641.048, "flag": "GUESS" }
+      ],
+      "reviewNotes": "Equal fifths. This is a known-safe test input for segmentation logic — acceptance test should assert count=5 within +/- 1 even with real boundaries."
+    },
+    {
+      "id": "sample-long",
+      "file": "sample-long.mkv",
+      "sourceUrl": "https://www.youtube.com/watch?v=ymjN-H80Dgo",
+      "sourceTitle": "How To Pass The CPA Exam Using Becker CPA Review [2024 TUTORIAL]",
+      "durationSec": 1069.868,
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "audioCodec": "opus",
+      "expectedQuestionCount": null,
+      "tentativeQuestionBoundaries": [],
+      "reviewNotes": "Long-form video — not a pure practice walkthrough. Use as stress test for scene-detection fallback, variable-length segmentation, and whisper throughput. Expected question count is unknown and may be 0 if the video is purely narrative."
+    },
+    {
+      "id": "sample-corrupt",
+      "file": "sample-corrupt.mkv",
+      "sourceUrl": "(synthetic — truncation of sample-long)",
+      "sourceTitle": "truncated sample-long (6 MiB — first ~5 minutes of stream, container trailer missing)",
+      "durationSec": 300.033,
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "audioCodec": "opus",
+      "expectedQuestionCount": null,
+      "tentativeQuestionBoundaries": [],
+      "reviewNotes": "Synthetic corrupt sample. Pipeline must recover: ffmpeg re-muxes and extracts what it can, Recording.status → failed if unrecoverable, otherwise partial questions persisted with Question.status=incomplete. Acceptance test checks 'no unhandled throw'."
+    }
+  ]
+}

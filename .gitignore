@@ -16,7 +16,9 @@ dist/
 # fixtures & binaries
 /fixtures/*.webm
 /fixtures/*.mp4
+/fixtures/*.mkv
 /fixtures/*.wav
+/fixtures/*.m4a
 *.bin
 *.ggml
 

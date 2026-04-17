@@ -32,8 +32,11 @@
     <blocker id="2026-04-17-becker-ui-templates" priority="normal" kind="assets">
       <body>Task 4 Signal C (pHash template matching) needs reference frames for Becker's "question view" vs "feedback view". I can bootstrap from downloaded fixture videos, but Sam should confirm the templates match his Becker version before Task 4 ships.</body>
     </blocker>
-    <blocker id="2026-04-17-yt-dlp" priority="low" kind="tooling">
-      <body>yt-dlp isn't installed; Section 11 fixture downloads are deferred. Install via `winget install -e --id yt-dlp.yt-dlp` or let me install it on next run.</body>
+    <blocker id="2026-04-17-yt-dlp" priority="low" kind="tooling" status="resolved">
+      <body>yt-dlp installed via winget on 2026-04-17 01:17. Section 11 fixtures downloaded (3 Becker videos + 1 synthetic corrupt sample).</body>
+    </blocker>
+    <blocker id="2026-04-17-fixture-boundaries" priority="normal" kind="testing">
+      <body>`fixtures/ground-truth.json` contains TENTATIVE, equally-spaced question boundaries for `sample-3q` and `sample-5q`. Sam: please spot-check the fixtures, update the `startSec`/`endSec` values to reflect real transitions (where the Becker ExamSolver moves between questions), and flip `flag` from `"GUESS"` to `"VERIFIED"`. Without this, the segmentation acceptance tests run with placeholder ground truth and can only assert "question count within +/- 1". Fixture file list: `fixtures/sample-3q.mp4`, `fixtures/sample-5q.mkv`, `fixtures/sample-long.mkv`, `fixtures/sample-corrupt.mkv`. Duration data in `ground-truth.json` is authoritative (from ffprobe).</body>
     </blocker>
   </blockers>
 
