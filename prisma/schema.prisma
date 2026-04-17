@@ -1,0 +1,104 @@
+// Prisma schema — locked shape per .claude/skills/prisma-schema-steward/SKILL.md.
+// Additive-only migrations in Phase 1.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RecordingStatus {
+  uploading
+  uploaded
+  segmenting
+  processing_questions
+  done
+  failed
+}
+
+enum QuestionStatus {
+  pending
+  extracting
+  transcribing
+  grading
+  done
+  incomplete
+  failed
+}
+
+enum CpaSection {
+  AUD
+  BEC
+  FAR
+  REG
+}
+
+enum StageName {
+  uploading
+  segmenting
+  extracting
+  transcribing
+  grading
+}
+
+model Recording {
+  id           String          @id @default(cuid())
+  status       RecordingStatus @default(uploading)
+  r2Key        String          @unique
+  durationSec  Float?
+  triggerRunId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  questions    Question[]
+  progress     StageProgress[]
+}
+
+model Question {
+  id                  String         @id @default(cuid())
+  recording           Recording      @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  recordingId         String
+  clipR2Key           String?
+  thumbnailR2Key      String?
+  startSec            Float
+  endSec              Float
+  section             CpaSection?
+  transcript          Json?
+  extracted           Json?
+  status              QuestionStatus @default(pending)
+  noAudio             Boolean        @default(false)
+  segmentationSignals Json?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  feedback            Feedback?
+
+  @@index([recordingId])
+}
+
+model Feedback {
+  id                 String   @id @default(cuid())
+  question           Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId         String   @unique
+  items              Json
+  accountingScore    Float
+  consultingScore    Float?
+  combinedScore      Float
+  whatYouNeedToLearn String?
+  weakTopicTags      Json
+  createdAt          DateTime @default(now())
+}
+
+model StageProgress {
+  id          String    @id @default(cuid())
+  recording   Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  recordingId String
+  stage       StageName
+  pct         Float
+  etaSec      Int?
+  message     String
+  updatedAt   DateTime  @default(now())
+
+  @@index([recordingId, updatedAt])
+}
