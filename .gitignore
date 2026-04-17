@@ -23,6 +23,11 @@ dist/
 # trigger.dev
 .trigger/
 
+# test output
+test-results/
+playwright-report/
+blob-report/
+
 # claude
 .claude/cache/
 BUILD_LOG.md.bak
