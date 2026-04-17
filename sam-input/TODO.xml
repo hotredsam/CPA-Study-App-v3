@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sam-input>
+  <meta>
+    <owner>Sam Carlson</owner>
+    <project>CPA Study App v3</project>
+  </meta>
+
+  <items>
+    <!--
+      Add <item> entries below. Each has:
+        - id: unique, e.g. "2026-04-17-01"
+        - priority: "urgent" | "normal" | "low"
+        - kind: "feature" | "fix" | "question" | "tweak" | "blocker"
+        - body: what you want done, in plain English
+      Example:
+      <item id="2026-04-17-01" priority="normal" kind="tweak">
+        <body>Make the progress bar purple instead of blue on the status page.</body>
+      </item>
+    -->
+  </items>
+
+  <blockers>
+    <blocker id="2026-04-17-push-main" priority="urgent" kind="infrastructure">
+      <body>Session permission layer denied `git push -u origin main` during the overnight build. All work is committed locally — a manual `git push -u origin main` from the repo root will publish everything. Alternatively, add `"Bash(git push:*)"` to `.claude/settings.json` allow rules so the wrapper can push on resume.</body>
+    </blocker>
+    <blocker id="2026-04-17-env-secrets" priority="urgent" kind="secrets">
+      <body>`.env` needs real values before anything can run end-to-end. Required keys (see `.env.example`): DATABASE_URL, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL, TRIGGER_PROJECT_ID, TRIGGER_SECRET_KEY. ANTHROPIC_API_KEY stays empty — dev-time AI calls route through OAuth Claude Code.</body>
+    </blocker>
+    <blocker id="2026-04-17-feedback-items" priority="normal" kind="product">
+      <body>The 10 `FeedbackItem.key` values in `.claude/skills/cpa-grading/SKILL.md` are placeholders (knowledgeAccuracy, reasoningChain, ...). Lock the real 10 — wording, axis assignment (accounting vs consulting), and weights — and the grading schema + Zod validator will be updated to match in a single commit.</body>
+    </blocker>
+    <blocker id="2026-04-17-becker-ui-templates" priority="normal" kind="assets">
+      <body>Task 4 Signal C (pHash template matching) needs reference frames for Becker's "question view" vs "feedback view". I can bootstrap from downloaded fixture videos, but Sam should confirm the templates match his Becker version before Task 4 ships.</body>
+    </blocker>
+    <blocker id="2026-04-17-yt-dlp" priority="low" kind="tooling">
+      <body>yt-dlp isn't installed; Section 11 fixture downloads are deferred. Install via `winget install -e --id yt-dlp.yt-dlp` or let me install it on next run.</body>
+    </blocker>
+  </blockers>
+
+  <done>
+    <!-- Completed items moved here automatically. Don't edit. -->
+  </done>
+
+  <log>
+    <entry at="2026-04-17T00:56:00Z" level="info">Overnight build started. Initial blockers seeded by the playbook.</entry>
+  </log>
+</sam-input>
