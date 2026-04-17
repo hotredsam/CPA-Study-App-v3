@@ -1,0 +1,38 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# next
+.next/
+out/
+build/
+dist/
+
+# env
+.env
+.env.*
+!.env.example
+
+# fixtures & binaries
+/fixtures/*.webm
+/fixtures/*.mp4
+/fixtures/*.wav
+*.bin
+*.ggml
+
+# trigger.dev
+.trigger/
+
+# claude
+.claude/cache/
+BUILD_LOG.md.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# sam-input transient
+/sam-input/audio/*.wav
+/sam-input/audio/*.m4a
+!/sam-input/audio/.gitkeep
+/sam-input/.processed/

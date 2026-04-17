@@ -1,0 +1,31 @@
+You are executing setupinstructions.md tonight, autonomously. Sam is asleep and will not respond. Read the whole file once, then execute steps 1–58 in order.
+Critical context — override the doc where it conflicts:
+
+Working directory is already C:\Users\hotre\Desktop\Coding Projects\CPA-Study-App-v3. Both setupinstructions.md and PLAN.md are already present in this folder. You do NOT need to create the directory (Step 15 is a no-op) and you do NOT need to copy PLAN.md from the OneDrive path (Step 17 is a no-op — verify the file exists and move on).
+Git is NOT yet initialized in this folder. The repo was created as an empty repo on GitHub at https://github.com/hotredsam/CPA-Study-App-v3. Execute Step 16's commands literally and in order:
+
+  echo "# CPA-Study-App-v3" > README.md
+  git init
+  git add README.md
+  git commit -m "first commit"
+  git branch -M main
+  git remote add origin https://github.com/hotredsam/CPA-Study-App-v3.git
+  git push -u origin main
+After that first commit/push succeeds, your next commits will add PLAN.md, setupinstructions.md, and everything else the playbook creates. Note: the README.md from Step 16 is a placeholder; Step 20 overwrites it with the pretty version.
+
+PowerShell is running as Administrator. Step 7's Set-Service, Enable-WindowsOptionalFeature, and compact /u /s commands will execute for real. Run them. Log results in BUILD_LOG.md. Do not auto-reboot even if features need it — log the pending reboot and continue.
+Environment variables are already set at the user level: CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1, CLAUDE_CODE_EFFORT_LEVEL=max, and CLAUDE_CODE_OAUTH_TOKEN=<set>. Step 4 is verification only — confirm they're present in the current session and log. Do not re-set them.
+Auth is OAuth only. ANTHROPIC_API_KEY is deliberately unset. Do not try to set it. If any step assumes an API key, route through the OAuth-authenticated claude CLI instead.
+Follow the Rules of engagement in Section 0 exactly:
+
+Commit after every successful sub-step with Conventional Commits format.
+Push after every major section (1–13) completes.
+On any failure, log the failure + chosen remediation in BUILD_LOG.md and continue — never halt waiting for me.
+Anything that truly needs my credentials goes into sam-input/TODO.xml as a <blocker>.
+
+
+When you reach Section 13, enter the Ralph loop. Iterate through PLAN.md Phase 1 Tasks 1–10 with the planner → implementer → test-writer → verifier → code-reviewer subagent chain. Circuit-break at 3 consecutive failures per task.
+Run the full verification suite before and after the Ralph loop (pnpm typecheck && pnpm lint && pnpm test && pnpm e2e).
+Emit BUILD-COMPLETE when the whole document has been executed and PLAN.md Phase 1 is either green or documented as blocked. Write a 60-second morning summary at the top of BUILD_LOG.md.
+
+Begin.
