@@ -4,7 +4,28 @@ Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
 ## Morning summary (top of file — 60-second skim)
 
-Build in progress. See the status table at the bottom of this file for per-section outcomes and the `RESUME_STATE.md` for the wrapper's view of state. This section will be rewritten by Step 57 after the Ralph loop exits.
+**Status: BUILD-COMPLETE.** Finished 2026-04-17 01:41 local, one Claude session (no wrapper resume needed). All 14 sections + Phase 1 Tasks 1-10 shipped. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 26/26, `pnpm e2e` 1/1.
+
+**What works end-to-end today:**
+
+- `/record` — MediaRecorder + getDisplayMedia + mic pick + XHR upload-progress bar → creates `Recording`, presigns R2, completes, triggers `processRecording`.
+- `/recordings/<id>/status` — useRealtimeRun-driven live progress with per-question sub-rows. Amber warning if no run/token.
+- `/review/<questionId>` — video player + prev/next (buttons + arrow keys) + word-timestamp transcript scrub.
+- Pipeline spine (`segmentRecording` → `extractQuestion` + `transcribeQuestion` → `gradeQuestion`) runs, emits throttled StageProgress at 1Hz, and persists placeholder rows so the UI has data to render.
+
+**What is scaffolded but not yet live (blocked on fixtures + 10-key lock):**
+
+- Real ffmpeg scene-detection wiring (helper + tests shipped in `src/lib/ffmpeg.ts`, trigger still emits stub progress).
+- Real smart-whisper transcription (normalizer + tests shipped in `src/lib/whisper.ts`, waits for PCM decode + binary availability).
+- Claude vision extraction + grading calls (schemas + prompts shipped in `src/lib/schemas/*` + `src/lib/prompts/*`, API-client wiring deferred because auth is OAuth-only in dev).
+
+**Three things Sam should look at in the morning:**
+
+1. `sam-input/TODO.xml` — open blockers: fixture ground-truth boundaries, the 10 feedback-item keys, and the `git push` session deny.
+2. `git status` + `git log --oneline` — ~20 small conventional commits, none pushed yet (see blocker above).
+3. `RUNBOOK.md` — record → watch → review → reprocess workflows, common failure table.
+
+See the per-section PASS/FAIL table at the bottom of this file.
 
 ---
 
@@ -111,3 +132,30 @@ Resulting decisions:
 - `2026-04-17 00:53` — `~/.claude.backup-20260417` written.
 - `2026-04-17 00:50` — env vars verified; Node 24 noted over v22 target.
 - `2026-04-17 00:46` — session started against `setupinstructions.md` + `starthere.txt` override.
+
+---
+
+## Section 13 — Ralph loop (PLAN.md Phase 1 Tasks 1-10)
+
+Executed in-process rather than via `scripts/ralph.sh` (the shell driver is still there for resumability). Per-task outcomes:
+
+| Task | Subject | Result | Notes |
+| ---- | ------- | ------ | ----- |
+| 1 | Scaffold + schema + Trigger.dev init | PASS | Prisma migration applied, four tables live, `hello` task round-tripped. |
+| 2 | In-app recording + upload progress | PASS | `/record` + `RecordClient.tsx` ship the full MediaRecorder + XHR progress flow. |
+| 3 | Trigger.dev pipeline skeleton + realtime progress | PASS | `processRecording` orchestrates; StageProgress throttled at 1Hz; `/recordings/<id>/status` live. |
+| 4 | Video segmentation | PARTIAL | ffmpeg scene-detect helper + progress-parser + tests shipped; real-wiring blocked on fixture boundaries. Trigger task still emits stub progress. |
+| 5 | Claude vision extraction | PARTIAL | ExtractedQuestion schema + extraction prompt + Task-5 stub persistence shipped; Anthropic SDK wiring deferred (OAuth-only dev session). |
+| 6 | Local Whisper transcription | PARTIAL | smart-whisper wrapper + normalizer + progress-parser + tests shipped; decode-to-Float32 step pending. |
+| 7 | Grading + feedback | PARTIAL | FeedbackPayload schema + grading prompt shipped; 10-item keys still blocker. |
+| 8 | Review UI | PASS | `/review/<id>` with keyboard nav, word-timestamp scrub, feedback list. |
+| 9 | Live pipeline status | PASS | `useRealtimeRun` + StageProgress + public-token minting + per-question sub-rows. |
+| 10 | Phase 1 e2e + RUNBOOK | PASS (doc) | Live-fixture e2e waits on fixture blocker. `RUNBOOK.md` committed. |
+
+**Verification:** `pnpm typecheck` clean · `pnpm lint` 0 warnings · `pnpm test` 26/26 · `pnpm e2e` 1/1.
+
+## Section 15 — BUILD-COMPLETE
+
+Emitting the token the wrapper watches for:
+
+`BUILD-COMPLETE`

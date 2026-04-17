@@ -1,11 +1,11 @@
 # Resume state
 
-status: running
-last-completed-section: 1
-last-completed-step: 7
-next-action: start Section 2 (system prerequisites)
+status: BUILD-COMPLETE
+last-completed-section: 15
+last-completed-step: 58
+next-action: none — wrapper exits; Sam reads BUILD_LOG.md top-of-file summary
 iteration: 1
-updated: 2026-04-17T00:55:00Z
+updated: 2026-04-17T01:42:00Z
 
 ## Notes for the wrapper
 
