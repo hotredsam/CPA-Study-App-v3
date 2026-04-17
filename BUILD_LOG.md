@@ -92,8 +92,8 @@ Resulting decisions:
 | 8. Next/Prisma/Trigger | ✅ | Scaffold green; DB up, migration applied |
 | 9. Testing | ✅ | vitest + playwright passing |
 | 10. MCPs | ✅ | filesystem/postgres/github/fetch all connected |
-| 11. Fixtures | ⏳ | |
-| 12. Pre-Ralph verify | ⏳ | |
+| 11. Fixtures | ✅ | 3 Becker videos + synthetic corrupt; boundaries are best-guess |
+| 12. Pre-Ralph verify | ✅ | typecheck/lint/test/e2e all green; trigger auth pending (Sam blocker) |
 | 13. Ralph loop | ⏳ | |
 | 14. Resume wrapper | ⏳ | |
 
@@ -101,6 +101,8 @@ Resulting decisions:
 
 ## Event log (reverse chronological; most recent first)
 
+- `2026-04-17 01:28` — Pre-Ralph verification: `pnpm typecheck && pnpm lint && pnpm test && pnpm e2e` all green. Prisma migrations applied cleanly, Postgres container Up 12m, env vars verified. Trigger.dev CLI starts cleanly and blocks on OAuth login (expected — will unblock when Sam runs `pnpm exec trigger dev` in the morning and authorizes). Fixed `trigger:dev` script (bin is `trigger`, not `trigger.dev`).
+- `2026-04-17 01:24` — Section 11 fixtures: yt-dlp installed via winget; downloaded 3 Becker public videos (sample-3q 10:58 mp4, sample-5q 10:41 mkv, sample-long 17:50 mkv). Created sample-corrupt by `dd`-truncating sample-long to 6 MiB. Wrote tentative `fixtures/ground-truth.json` (evenly-spaced boundaries flagged GUESS) + `fixtures/README.md`. Added blocker `2026-04-17-fixture-boundaries` for Sam to tighten. Videos gitignored; only metadata tracked.
 - `2026-04-17 01:16` — MCPs installed: filesystem, postgres, fetch (local shim), github. `claude mcp list` confirms all four Connected. Upstream `@modelcontextprotocol/server-fetch` is 404 on npm → wrote local Node shim at `scripts/mcps/fetch/index.mjs` (fetch → JSON text tool response, `max_bytes` guard 200KB default).
 - `2026-04-17 01:14` — Vitest (2 files, 3 tests) + Playwright (1 test) smoke suite all green. Added `test-results/` + `playwright-report/` to `.gitignore` after accidental commit, cleaned with `git rm --cached`.
 - `2026-04-17 01:13` — Docker Desktop launched; `docker compose up -d` provisioned Postgres 16; `prisma migrate dev --create-only` + `migrate deploy` applied `20260417091357_init`. Schema matches locked spec (4 enums, 4 models).
