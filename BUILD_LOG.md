@@ -84,14 +84,14 @@ Resulting decisions:
 | 0. Rules | ✅ | Acknowledged |
 | 1. Env checks | ✅ (with Cowork deferred) | |
 | 2. Prereqs | ✅ (yt-dlp pending Step 47) | |
-| 3. Git + GitHub | ⏳ | |
-| 4. Scaffold | ⏳ | |
-| 5. Skills | ⏳ | |
-| 6. Subagents | ⏳ | |
-| 7. sam-input | ⏳ | |
-| 8. Next/Prisma/Trigger | ⏳ | |
-| 9. Testing | ⏳ | |
-| 10. MCPs | ⏳ | |
+| 3. Git + GitHub | ✅ (push-to-main blocked, see top) | |
+| 4. Scaffold | ✅ | CLAUDE.md, .claude/settings, slash cmds |
+| 5. Skills | ✅ | 10 custom skills |
+| 6. Subagents | ✅ | 12 agents with YAML frontmatter |
+| 7. sam-input | ✅ | XML TODO + dispatcher + watcher |
+| 8. Next/Prisma/Trigger | ✅ | Scaffold green; DB up, migration applied |
+| 9. Testing | ✅ | vitest + playwright passing |
+| 10. MCPs | ✅ | filesystem/postgres/github/fetch all connected |
 | 11. Fixtures | ⏳ | |
 | 12. Pre-Ralph verify | ⏳ | |
 | 13. Ralph loop | ⏳ | |
@@ -101,6 +101,10 @@ Resulting decisions:
 
 ## Event log (reverse chronological; most recent first)
 
+- `2026-04-17 01:16` — MCPs installed: filesystem, postgres, fetch (local shim), github. `claude mcp list` confirms all four Connected. Upstream `@modelcontextprotocol/server-fetch` is 404 on npm → wrote local Node shim at `scripts/mcps/fetch/index.mjs` (fetch → JSON text tool response, `max_bytes` guard 200KB default).
+- `2026-04-17 01:14` — Vitest (2 files, 3 tests) + Playwright (1 test) smoke suite all green. Added `test-results/` + `playwright-report/` to `.gitignore` after accidental commit, cleaned with `git rm --cached`.
+- `2026-04-17 01:13` — Docker Desktop launched; `docker compose up -d` provisioned Postgres 16; `prisma migrate dev --create-only` + `migrate deploy` applied `20260417091357_init`. Schema matches locked spec (4 enums, 4 models).
+- `2026-04-17 01:12` — `pnpm install` succeeded after pinning `smart-whisper` to `^0.8.1` (0.8.2 does not exist on registry; doc typo). 745 packages resolved; typecheck passes.
 - `2026-04-17 00:55` — `~/.claude/settings.json` patched with `autoDreamEnabled: true` (settings-schema field name — docs' `auto_dream` was a typo). All other keys preserved.
 - `2026-04-17 00:53` — `~/.claude.backup-20260417` written.
 - `2026-04-17 00:50` — env vars verified; Node 24 noted over v22 target.

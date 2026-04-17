@@ -1,0 +1,10 @@
+{
+  "name": "fetch-local-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": "./index.mjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}
