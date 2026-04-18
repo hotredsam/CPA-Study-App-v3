@@ -19,7 +19,6 @@ export async function POST(request: Request) {
   const recording = await prisma.recording.create({
     data: {
       status: "uploading",
-      r2Key: "",
       durationSec: parsed.data.durationSec ?? null,
     },
   });

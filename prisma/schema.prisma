@@ -31,9 +31,12 @@ enum QuestionStatus {
 
 enum CpaSection {
   AUD
-  BEC
+  BAR
   FAR
   REG
+  ISC
+  TCP
+  BEC // legacy — BEC was split into BAR+ISC+TCP in CPA Evolution 2024
 }
 
 enum StageName {
@@ -47,7 +50,7 @@ enum StageName {
 model Recording {
   id           String          @id @default(cuid())
   status       RecordingStatus @default(uploading)
-  r2Key        String          @unique
+  r2Key        String?         @unique
   durationSec  Float?
   triggerRunId String?
   createdAt    DateTime        @default(now())
