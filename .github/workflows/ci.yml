@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Typecheck · Lint · Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cpa_study_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cpa_study_test
+      # R2 stubs — unit tests mock these via vi.mock
+      R2_ACCOUNT_ID: stub
+      R2_ACCESS_KEY_ID: stub
+      R2_SECRET_ACCESS_KEY: stub
+      R2_BUCKET_NAME: stub
+      # Trigger.dev stubs
+      TRIGGER_PROJECT_ID: ci-stub-project
+      TRIGGER_SECRET_KEY: ci-stub-secret
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Python dependencies (for Anki export tests)
+        run: pip install genanki
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply DB migrations
+        run: pnpm prisma migrate deploy
+
+      - name: Generate Prisma client
+        run: pnpm prisma generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit + integration tests
+        run: pnpm test
+
+      # E2E skipped in CI — requires display server + real R2/Trigger credentials
+      # To run locally: pnpm e2e
+      # TODO: add Playwright CI when display server is available (xvfb)
