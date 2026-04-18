@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/kill-dev-ports.mjs",
     "dev": "next dev",
+    "kill-ports": "node scripts/kill-dev-ports.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
