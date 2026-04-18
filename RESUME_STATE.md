@@ -1,11 +1,11 @@
 # Resume state
 
 status: running
-phase: A-complete
-last-completed-phase: A-devloop-unblock
-next-action: Phase B — headless pipeline fixture runner
+phase: C-complete
+last-completed-phase: C15-anki-export
+next-action: Phase D — API surface hardening
 iteration: 3
-updated: 2026-04-18T15:17:00Z
+updated: 2026-04-18T16:00:00Z
 
 ## Night 2 summary
 

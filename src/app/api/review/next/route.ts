@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -9,14 +10,12 @@ const QuerySchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  try {
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
   const parsed = QuerySchema.safeParse(params);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid query", details: parsed.error.flatten() },
-      { status: 400 },
-    );
+    throw new ApiError("BAD_REQUEST", "invalid query", parsed.error.flatten());
   }
 
   const { n } = parsed.data;
@@ -93,4 +92,7 @@ export async function GET(request: NextRequest) {
     totalDue: dueItems.length,
     totalNew: newItems.length,
   });
+  } catch (err) {
+    return respond(err);
+  }
 }

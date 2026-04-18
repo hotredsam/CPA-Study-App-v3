@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { ExtractedQuestion } from "@/lib/schemas/extracted";
+import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -103,60 +104,57 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ recordingId: string }> },
 ) {
-  const { recordingId } = await params;
+  try {
+    const { recordingId } = await params;
 
-  const recording = await prisma.recording.findUnique({
-    where: { id: recordingId },
-    include: {
-      questions: {
-        include: { feedback: true },
-        orderBy: { startSec: "asc" },
+    const recording = await prisma.recording.findUnique({
+      where: { id: recordingId },
+      include: {
+        questions: {
+          include: { feedback: true },
+          orderBy: { startSec: "asc" },
+        },
       },
-    },
-  });
-
-  if (!recording) {
-    return NextResponse.json({ error: "recording not found" }, { status: 404 });
-  }
-
-  const cards = recording.questions
-    .filter((q) => q.status === "done" && q.extracted)
-    .map((q) => {
-      const extracted = ExtractedQuestion.safeParse(q.extracted);
-      const rawItems = q.feedback?.items;
-      const items: unknown[] = Array.isArray(rawItems) ? rawItems : [];
-      return {
-        guid: stableGuid(q.id),
-        front: buildFront(extracted),
-        back: buildBack(extracted, items),
-      };
     });
 
-  if (cards.length === 0) {
-    return NextResponse.json(
-      { error: "no graded questions in this recording" },
-      { status: 422 },
-    );
-  }
+    if (!recording) {
+      throw new ApiError("NOT_FOUND", "recording not found");
+    }
 
-  let apkgBuffer: Buffer;
-  try {
-    apkgBuffer = await callPython(cards);
+    const cards = recording.questions
+      .filter((q) => q.status === "done" && q.extracted)
+      .map((q) => {
+        const extracted = ExtractedQuestion.safeParse(q.extracted);
+        const rawItems = q.feedback?.items;
+        const items: unknown[] = Array.isArray(rawItems) ? rawItems : [];
+        return {
+          guid: stableGuid(q.id),
+          front: buildFront(extracted),
+          back: buildBack(extracted, items),
+        };
+      });
+
+    if (cards.length === 0) {
+      throw new ApiError("UNPROCESSABLE", "no graded questions in this recording");
+    }
+
+    const apkgBuffer = await callPython(cards);
+
+    const filename = `cpa-${recordingId.slice(0, 8)}.apkg`;
+    return new Response(new Uint8Array(apkgBuffer), {
+      status: 200,
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-disposition": `attachment; filename="${filename}"`,
+        "content-length": String(apkgBuffer.length),
+      },
+    });
   } catch (err) {
+    if (err instanceof ApiError) return respond(err);
     console.error("generate-apkg.py failed:", err);
     return NextResponse.json(
-      { error: "apkg generation failed — ensure Python + genanki are installed" },
+      { error: { code: "INTERNAL_ERROR", message: "apkg generation failed — ensure Python + genanki are installed" } },
       { status: 500 },
     );
   }
-
-  const filename = `cpa-${recordingId.slice(0, 8)}.apkg`;
-  return new Response(new Uint8Array(apkgBuffer), {
-    status: 200,
-    headers: {
-      "content-type": "application/octet-stream",
-      "content-disposition": `attachment; filename="${filename}"`,
-      "content-length": String(apkgBuffer.length),
-    },
-  });
 }
