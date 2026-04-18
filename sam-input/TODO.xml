@@ -17,6 +17,18 @@
         <body>Make the progress bar purple instead of blue on the status page.</body>
       </item>
     -->
+    <item id="2026-04-18-fixture-acceptance" priority="urgent" kind="testing">
+      <body>Night 3 built the fixture runner (scripts/run-pipeline-on-fixture.mjs) and verified R2 upload + pipeline trigger for sample-3q.mp4, sample-5q.mkv, and sample-corrupt.mkv. But task EXECUTION requires pnpm trigger:dev running. Sam must:
+1. pnpm dev (port 3001)
+2. pnpm trigger:dev (separate terminal)
+3. node scripts/run-pipeline-on-fixture.mjs fixtures/sample-3q.mp4
+4. node scripts/run-pipeline-on-fixture.mjs fixtures/sample-5q.mkv
+5. Check reports/night3-fixture-*-output.json for segmentation question counts.
+See reports/night3-pipeline-acceptance.md for full acceptance criteria.</body>
+    </item>
+    <item id="2026-04-18-sm2-wire-ui" priority="normal" kind="feature">
+      <body>Night 3 built the SM-2 backend: /api/review/next and /api/review/[questionId]/grade. Claude Design team needs to wire these into the new UI. The APIs are typed and documented in docs/api.md. ReviewState schema is in prisma/schema.prisma.</body>
+    </item>
   </items>
 
   <blockers>
@@ -48,5 +60,6 @@
     <entry at="2026-04-17T00:56:00Z" level="info">Overnight build started. Initial blockers seeded by the playbook.</entry>
     <entry at="2026-04-17T01:42:00Z" level="info">Night 1 BUILD-COMPLETE. 26 tests passing, e2e green, ~20 commits pushed by Sam.</entry>
     <entry at="2026-04-17T09:00:00Z" level="info">Night 2 started. Resolved push-main + env-secrets blockers. Beginning Phase A smoke test.</entry>
+    <entry at="2026-04-18T15:00:00Z" level="info">Night 3 started. Phase A: fixed trigger.config.ts, added port-reclaim scripts, all 5 e2e pass. Phase B: fixture runner built, R2 uploads verified for all fixtures; task execution pending trigger:dev. Continuing Phase C (SM-2 + Anki).</entry>
   </log>
 </sam-input>
