@@ -84,7 +84,6 @@ export const gradeQuestion = task({
     setStage({ stage: "grading", pct: 70, message: "Parsing grading response…" });
 
     // 6. Parse JSON
-    let feedbackParsed: ReturnType<typeof FeedbackPayload.safeParse>;
     let rawJson: unknown = null;
 
     if (raw.length > 0) {
@@ -99,7 +98,7 @@ export const gradeQuestion = task({
       }
     }
 
-    feedbackParsed = FeedbackPayload.safeParse(rawJson);
+    const feedbackParsed = FeedbackPayload.safeParse(rawJson);
 
     setStage({ stage: "grading", pct: 80, message: "Persisting feedback…" });
 
@@ -142,7 +141,7 @@ export const gradeQuestion = task({
       // 8. Parse failed — upsert stub Feedback
       logger.warn("gradeQuestion: FeedbackPayload parse failed, upserting stub", {
         questionId,
-        parseError: !feedbackParsed.success ? feedbackParsed.error?.message : "unknown",
+        parseError: feedbackParsed.error?.message,
       });
 
       await prisma.feedback.upsert({
