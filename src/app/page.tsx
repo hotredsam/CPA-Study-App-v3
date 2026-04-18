@@ -49,6 +49,18 @@ export default async function HomePage() {
         >
           Start recording
         </Link>
+        <Link
+          href="/sessions"
+          className="rounded-md border border-neutral-600 px-4 py-2 font-medium text-neutral-200 hover:border-neutral-400"
+        >
+          Sessions
+        </Link>
+        <Link
+          href="/analytics"
+          className="rounded-md border border-neutral-600 px-4 py-2 font-medium text-neutral-200 hover:border-neutral-400"
+        >
+          Analytics
+        </Link>
       </div>
 
       <section>
@@ -95,7 +107,7 @@ export default async function HomePage() {
         )}
       </section>
 
-      <p className="text-center text-xs text-neutral-500">Phase 1 MVP scaffold.</p>
+      <p className="text-center text-xs text-neutral-500">Phase 1 MVP — pipeline live.</p>
     </main>
   );
 }
