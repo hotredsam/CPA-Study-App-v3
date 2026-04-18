@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, respond } from "./api-error";
-import { ZodError, z } from "zod";
+import { z } from "zod";
 
 describe("api-error", () => {
   it("respond(ApiError) returns correct status + envelope for 400", async () => {

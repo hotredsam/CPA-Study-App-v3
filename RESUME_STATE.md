@@ -1,11 +1,11 @@
 # Resume state
 
 status: running
-phase: C-complete
-last-completed-phase: C15-anki-export
-next-action: Phase D — API surface hardening
+phase: D-complete
+last-completed-phase: D-api-hardening
+next-action: Phase E — observability (health endpoint, Sentry, idempotency)
 iteration: 3
-updated: 2026-04-18T16:00:00Z
+updated: 2026-04-18T16:30:00Z
 
 ## Night 2 summary
 
