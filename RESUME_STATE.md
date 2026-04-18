@@ -1,11 +1,35 @@
 # Resume state
 
-status: running
-phase: D-complete
-last-completed-phase: D-api-hardening
-next-action: Phase E — observability (health endpoint, Sentry, idempotency)
+status: NIGHT-3-COMPLETE
+phase: G-morning-handoff
+last-completed-phase: F-security-deploy
+next-action: Sam manual — run pipeline on fixtures, verify Anki export deploy target, lock feedback-items
 iteration: 3
-updated: 2026-04-18T16:30:00Z
+updated: 2026-04-18T15:37:00Z
+
+## Night 3 completed phases
+
+- A: dev loop unblocked (trigger.config.ts, port-reclaim scripts, e2e fix)
+- B: fixture runner built + API verified (task execution deferred — needs trigger:dev)
+- C: SM-2 spaced repetition + Anki export (19 + 3 tests)
+- D: API hardening (error envelope, typed client, docs/api.md)
+- E: health endpoint, Sentry stub
+- F: security headers, CI pipeline, deploy guide
+
+## Deferred items
+
+- Pipeline task execution (needs trigger:dev)
+- Structured logging (E1) — pino install + 15+ files to touch
+- Request ID middleware (E2)
+- Idempotency in tasks (E4)
+- Dead-letter/FailedStage table (E5)
+- Rate limiting (F3)
+- OpenAPI export (D5)
+
+## Notes for wrapper
+
+- `status: NIGHT-3-COMPLETE` → wrapper exits.
+- Sam resumes after reviewing reports and running fixture acceptance test.
 
 ## Night 2 summary
 

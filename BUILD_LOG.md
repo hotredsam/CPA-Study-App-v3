@@ -2,6 +2,29 @@
 
 Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
+## Morning summary — Night 3 (2026-04-18, top of file — 60-second skim)
+
+**Status: NIGHT-3-COMPLETE.** Night 3 autonomous run completed ~15:37 local. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 59/59, `pnpm e2e` 5/5.
+
+**What's new vs Night 2:**
+
+- **Dev loop unblocked**: trigger.config.ts reads TRIGGER_PROJECT_ID from env (no placeholder fallback). Port-reclaim scripts (`kill-dev-ports.{ps1,mjs}`) added + `predev` hook.
+- **SM-2 spaced repetition**: `ReviewState` schema + migration. `src/lib/sm2.ts` (pure algorithm). `/api/review/next` + `/api/review/:questionId/grade`. 19 tests.
+- **Anki export**: Python `genanki` subprocess. `/api/sessions/:id/export` streams `.apkg`. 3 tests. **Not available on Vercel serverless — see docs/deploy-prod.md section 6.**
+- **API hardening**: Consistent `{error:{code,message,details?}}` envelope on all 6 routes. `src/lib/api-client.ts` typed fetchers for Claude Design team. `docs/api.md`.
+- **Observability**: `/api/health` (DB + R2 + Trigger check). Sentry stub (DSN-gated no-op).
+- **Security**: CSP headers (permissive dev / restrictive prod), HSTS, X-Frame-Options DENY.
+- **CI**: `.github/workflows/ci.yml` (typecheck + lint + test on every PR/push, Postgres service).
+- **Deploy docs**: `docs/deploy-prod.md` (Neon + Vercel + Trigger.dev + R2 step-by-step). `docs/r2-setup.md`.
+
+**Three things Sam should look at:**
+
+1. **Pipeline execution** — run `pnpm dev` + `pnpm trigger:dev` in parallel, then `node scripts/run-pipeline-on-fixture.mjs fixtures/sample-3q.mp4`. See `reports/night3-pipeline-acceptance.md`.
+2. **Anki export caveat** — Python required on the server. Vercel won't work. Plan ahead for deploy target.
+3. **Lock feedback-items** — SM-2 review now surfaces questions; the grading quality depends on the FeedbackItem keys being finalized (still provisional).
+
+---
+
 ## Morning summary — Night 2 (2026-04-18, top of file — 60-second skim)
 
 **Status: PHASE-2-PARTIAL.** Night 2 autonomous run completed ~00:11 local. Full audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 32/32.
