@@ -2,7 +2,28 @@
 
 Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
-## Morning summary (top of file — 60-second skim)
+## Morning summary — Night 2 (2026-04-18, top of file — 60-second skim)
+
+**Status: PHASE-2-PARTIAL.** Night 2 autonomous run completed ~00:11 local. Full audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 32/32.
+
+**What's new vs Night 1:**
+
+- **Tasks 4–7 live-wired**: ffmpeg segmentation (2-signal: scene detect + equal-thirds fallback), claude CLI text-only extraction, smart-whisper transcription (graceful EPERM fallback on Windows), grading pipeline with FeedbackPayload parse + stub fallback. All outputs marked `_precision: "provisional"`.
+- **Phase 2 stubs**: `/sessions` history table with date-range filter, `/analytics` page with per-section score bars + weak-topic frequency chart + score-over-time bar sparkline.
+- **Infrastructure**: `src/lib/env.ts` Zod-validated env IIFE, `src/lib/r2-download.ts` streaming R2→tmp helper, `src/lib/claude-cli.ts` claude subprocess wrapper (6 unit tests), `src/lib/r2.test.ts` vi.mock fix (env IIFE no longer throws in Vitest).
+- **Schema**: `r2Key String? @unique` (nullable), BAR/ISC/TCP added to CpaSection enum. Migration applied.
+- **Reports**: `reports/phase1-acceptance-v2.md`, `reports/task4-accuracy.md`, `DEPLOY.md`.
+- **Playwright**: port 3001 (3000 permanently blocked by PID 42664 in this shell session).
+
+**Three things Sam should look at:**
+
+1. `sam-input/TODO.xml` — still-open blockers: fixture-boundaries, feedback-items, becker-ui-templates.
+2. Manual acceptance checklist in `reports/phase1-acceptance-v2.md` — run `pnpm trigger:dev`, upload `fixtures/sample-3q.mp4`, verify segmentation.
+3. D13 (spaced repetition SM-2) and D15 (Anki export) not yet implemented — complex schema work, deferred.
+
+---
+
+## Morning summary (Night 1 — kept below for reference)
 
 **Status: BUILD-COMPLETE.** Finished 2026-04-17 01:41 local, one Claude session (no wrapper resume needed). All 14 sections + Phase 1 Tasks 1-10 shipped. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 26/26, `pnpm e2e` 1/1.
 

@@ -1,15 +1,25 @@
 # Resume state
 
-status: running
-phase: C-acceptance-pass
-last-completed-phase: B-task4-7-live-wiring
-next-action: Phase C acceptance reports + tests → Phase D phase-2 tasks → Phase E handoff
+status: PHASE-2-PARTIAL
+phase: E-morning-handoff
+last-completed-phase: D12-analytics
+next-action: Sam manual review — verify fixtures, run trigger:dev, lock feedback-items
 iteration: 2
-updated: 2026-04-18T00:10:00Z
+updated: 2026-04-18T00:12:00Z
+
+## Night 2 summary
+
+Completed:
+- Phase A: smoke test (R2 upload live), corrupt-recording e2e
+- Phase B: Tasks 4-7 all live-wired
+- Phase C: acceptance reports written, 32/32 tests green
+- Phase D partial: D11 (/sessions), D12 (/analytics), D14 (env.ts + DEPLOY.md)
+
+Deferred:
+- D13: SM-2 spaced repetition (needs schema migration + algorithm)
+- D15: Anki export (needs .apkg format library)
 
 ## Notes for the wrapper
 
-- If `status: PHASE-2-COMPLETE` or `status: PHASE-2-PARTIAL` → wrapper exits.
-- Otherwise → wrapper sleeps 4 hours, then runs `claude --continue` to resume.
-
-resume-instruction: Continue at Phase C — write acceptance report, add corrupt-recording e2e test, run full audit. Then Phase D starting at D11 (/sessions route).
+- `status: PHASE-2-PARTIAL` → wrapper exits (no resume needed).
+- Sam resumes manually after reviewing reports and running trigger:dev.
