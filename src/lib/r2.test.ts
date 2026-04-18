@@ -1,4 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("./env", () => ({
+  env: {
+    R2_ACCOUNT_ID: "test-account",
+    R2_ACCESS_KEY_ID: "test-key",
+    R2_SECRET_ACCESS_KEY: "test-secret",
+    R2_BUCKET_NAME: "test-bucket",
+    NODE_ENV: "test",
+  },
+}));
+
 import { keys } from "./r2";
 
 describe("r2 key conventions", () => {
