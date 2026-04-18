@@ -1,11 +1,11 @@
 # Resume state
 
-status: PHASE-2-PARTIAL
-phase: E-morning-handoff
-last-completed-phase: D12-analytics
-next-action: Sam manual review — verify fixtures, run trigger:dev, lock feedback-items
-iteration: 2
-updated: 2026-04-18T00:12:00Z
+status: running
+phase: A-complete
+last-completed-phase: A-devloop-unblock
+next-action: Phase B — headless pipeline fixture runner
+iteration: 3
+updated: 2026-04-18T15:17:00Z
 
 ## Night 2 summary
 
