@@ -6,9 +6,19 @@ import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
+const RecordingStatusSchema = z.enum([
+  "uploading",
+  "uploaded",
+  "segmenting",
+  "processing_questions",
+  "done",
+  "failed",
+]);
+
 const ListQuery = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: RecordingStatusSchema.optional(),
 });
 
 export async function GET(request: Request) {
@@ -18,16 +28,19 @@ export async function GET(request: Request) {
     if (!parsed.success) {
       throw new ApiError("BAD_REQUEST", "invalid query", parsed.error.flatten());
     }
-    const { cursor, limit } = parsed.data;
+    const { cursor, limit, status } = parsed.data;
 
     const recordings = await prisma.recording.findMany({
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: "desc" },
+      ...(status ? { where: { status } } : {}),
       select: {
         id: true,
         status: true,
+        title: true,
         durationSec: true,
+        segmentsCount: true,
         createdAt: true,
         _count: { select: { questions: true } },
       },

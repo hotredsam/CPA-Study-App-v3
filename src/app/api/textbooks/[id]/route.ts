@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { ApiError, respond } from "@/lib/api-error";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    const textbook = await prisma.textbook.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { chunks: true } },
+      },
+    });
+
+    if (!textbook) {
+      throw new ApiError("NOT_FOUND", `Textbook ${id} not found`);
+    }
+
+    return NextResponse.json({
+      textbook: {
+        ...textbook,
+        sizeBytes: textbook.sizeBytes?.toString() ?? null,
+        chunkCount: textbook._count.chunks,
+      },
+    });
+  } catch (err) {
+    return respond(err);
+  }
+}
