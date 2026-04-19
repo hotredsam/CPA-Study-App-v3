@@ -1,13 +1,27 @@
 import { z } from "zod";
 
-// The 10 feedback-item keys are a Phase-1 blocker — see sam-input/TODO.xml.
-// Until the user locks them, the schema accepts an arbitrary keyed list so
-// Task 7 can stub the grading call without blocking downstream UI work.
+// Placeholder rubric keys used until the user finalises the real 10 keys.
+// Keys marked provisional:true are surfaced with a badge in the Review UI.
+// Replace these with real keys once locked — see blockers/2026-04-17-feedback-items.md
+export const PROVISIONAL_RUBRIC_KEYS: Array<{ key: string; label: string; domain: "accounting" | "consulting" }> = [
+  { key: "acc-conceptual-understanding", label: "Conceptual Understanding", domain: "accounting" },
+  { key: "acc-application-accuracy",    label: "Application Accuracy",     domain: "accounting" },
+  { key: "acc-standard-citation",       label: "Standard Citation",        domain: "accounting" },
+  { key: "acc-calculation-mechanics",   label: "Calculation Mechanics",    domain: "accounting" },
+  { key: "acc-journal-entry",           label: "Journal Entry",            domain: "accounting" },
+  { key: "con-risk-identification",     label: "Risk Identification",      domain: "consulting" },
+  { key: "con-professional-judgement",  label: "Professional Judgement",   domain: "consulting" },
+  { key: "con-communication-clarity",   label: "Communication Clarity",    domain: "consulting" },
+  { key: "con-synthesis",               label: "Synthesis",                domain: "consulting" },
+  { key: "con-recommendation-quality",  label: "Recommendation Quality",   domain: "consulting" },
+];
+
 export const FeedbackItem = z.object({
   key: z.string().min(1),
   label: z.string().optional(),
   comment: z.string(),
   score: z.number().min(0).max(10).optional(),
+  provisional: z.boolean().optional(),
 });
 export type FeedbackItem = z.infer<typeof FeedbackItem>;
 

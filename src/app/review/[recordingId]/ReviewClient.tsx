@@ -30,7 +30,7 @@ type TranscriptSegment = {
 }
 type TranscriptShape = { segments?: TranscriptSegment[] }
 
-type FeedbackItem = { key: string; score?: number; body?: string }
+type FeedbackItem = { key: string; score?: number; body?: string; provisional?: boolean }
 
 export type ReviewQuestion = {
   id: string
@@ -80,7 +80,7 @@ function parseFeedbackItems(items: unknown): FeedbackItem[] {
   const arr = Array.isArray(container.items) ? container.items : Array.isArray(items) ? items : null
   if (!arr) return []
   return arr.filter(
-    (i): i is { key: string; score?: number; body?: string } =>
+    (i): i is { key: string; score?: number; body?: string; provisional?: boolean } =>
       !!i && typeof i === 'object' && typeof (i as { key?: unknown }).key === 'string',
   )
 }
@@ -365,7 +365,14 @@ function FeedbackCard({ feedback }: { feedback: ReviewQuestion['feedback'] }) {
           {items.map((item, i) => (
             <li key={i}>
               <div className="flex items-center justify-between gap-2 mb-1">
-                <p className="eyebrow">{item.key}</p>
+                <div className="flex items-center gap-2">
+                  <p className="eyebrow">{item.key}</p>
+                  {item.provisional && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[color:var(--warn-soft)] text-[color:var(--warn)]">
+                      provisional
+                    </span>
+                  )}
+                </div>
                 {item.score !== undefined && (
                   <Score value={item.score} size="sm" />
                 )}
