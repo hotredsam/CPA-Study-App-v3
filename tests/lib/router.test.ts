@@ -33,10 +33,11 @@ vi.mock("@/lib/llm/openrouter", () => ({
   callOpenRouter: vi.fn(),
 }));
 
-// Mock @/lib/claude-cli
-vi.mock("@/lib/claude-cli", () => ({
-  callClaude: vi.fn(),
-}));
+// Mock @/lib/claude-cli — keep real extractJsonFromResponse, only stub callClaude
+vi.mock("@/lib/claude-cli", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/claude-cli")>();
+  return { ...actual, callClaude: vi.fn() };
+});
 
 // Mock logger to silence output in tests
 vi.mock("@/lib/logger", () => ({
