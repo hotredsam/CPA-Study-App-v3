@@ -1,0 +1,91 @@
+{
+  "recordingId": "cmo52qjcx0009ghac6oabivso",
+  "status": "done",
+  "timings": {
+    "create": 55,
+    "upload": 5499,
+    "trigger": 573,
+    "pipeline": 161034,
+    "totalMs": 166589
+  },
+  "questions": [
+    {
+      "id": "cmo52qy9l0005ghvwbwx8vhs6",
+      "status": "done",
+      "startSec": 439.0274226666667,
+      "endSec": 658.541134,
+      "section": null,
+      "hasTranscript": true,
+      "hasExtracted": true,
+      "hasFeedback": true
+    },
+    {
+      "id": "cmo52qvzg0003ghvwudrkyskk",
+      "status": "done",
+      "startSec": 219.5137113333334,
+      "endSec": 439.0274226666667,
+      "section": null,
+      "hasTranscript": true,
+      "hasExtracted": true,
+      "hasFeedback": true
+    },
+    {
+      "id": "cmo52qtgi0001ghvw4pkcvipo",
+      "status": "done",
+      "startSec": 0,
+      "endSec": 219.5137113333334,
+      "section": null,
+      "hasTranscript": true,
+      "hasExtracted": true,
+      "hasFeedback": true
+    }
+  ],
+  "feedbacks": [
+    {
+      "questionId": "cmo52qy9l0005ghvwbwx8vhs6",
+      "combinedScore": 0,
+      "accountingScore": 0,
+      "consultingScore": 0,
+      "itemCount": 10,
+      "weakTopicTags": [
+        "recording-failure",
+        "no-response"
+      ]
+    },
+    {
+      "questionId": "cmo52qvzg0003ghvwudrkyskk",
+      "combinedScore": 0,
+      "accountingScore": 0,
+      "consultingScore": 0,
+      "itemCount": 10,
+      "weakTopicTags": []
+    },
+    {
+      "questionId": "cmo52qtgi0001ghvw4pkcvipo",
+      "combinedScore": 0,
+      "accountingScore": 0,
+      "consultingScore": 0,
+      "itemCount": 10,
+      "weakTopicTags": [
+        "recording-setup",
+        "session-capture"
+      ]
+    }
+  ],
+  "progress": [
+    {
+      "stage": "grading",
+      "pct": 100,
+      "message": "All questions graded",
+      "updatedAt": "2026-04-19T01:17:59.490Z"
+    },
+    {
+      "stage": "segmenting",
+      "pct": 0,
+      "message": "Downloading recording",
+      "updatedAt": "2026-04-19T01:15:21.508Z"
+    }
+  ],
+  "timedOut": false,
+  "totalMs": 166589
+}

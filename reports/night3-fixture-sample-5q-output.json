@@ -1,0 +1,85 @@
+{
+  "recordingId": "cmo52uyfr000aghacrcxu472p",
+  "status": "done",
+  "timings": {
+    "create": 75,
+    "upload": 4158,
+    "trigger": 449,
+    "pipeline": 150822,
+    "totalMs": 155058
+  },
+  "questions": [
+    {
+      "id": "cmo52v8q00003ghw0e9x2gi75",
+      "status": "done",
+      "startSec": 213.6826666666667,
+      "endSec": 427.3653333333334,
+      "section": null,
+      "hasTranscript": true,
+      "hasExtracted": true,
+      "hasFeedback": true
+    },
+    {
+      "id": "cmo52v6m30001ghw0ri3f7lfr",
+      "status": "done",
+      "startSec": 0,
+      "endSec": 213.6826666666667,
+      "section": null,
+      "hasTranscript": true,
+      "hasExtracted": true,
+      "hasFeedback": true
+    },
+    {
+      "id": "cmo52vahj0005ghw0yc9rvwz8",
+      "status": "done",
+      "startSec": 427.3653333333334,
+      "endSec": 641.048,
+      "section": null,
+      "hasTranscript": true,
+      "hasExtracted": true,
+      "hasFeedback": true
+    }
+  ],
+  "feedbacks": [
+    {
+      "questionId": "cmo52v8q00003ghw0e9x2gi75",
+      "combinedScore": 5,
+      "accountingScore": 5,
+      "consultingScore": 5,
+      "itemCount": 0,
+      "weakTopicTags": []
+    },
+    {
+      "questionId": "cmo52v6m30001ghw0ri3f7lfr",
+      "combinedScore": 5,
+      "accountingScore": 5,
+      "consultingScore": 5,
+      "itemCount": 0,
+      "weakTopicTags": []
+    },
+    {
+      "questionId": "cmo52vahj0005ghw0yc9rvwz8",
+      "combinedScore": 5,
+      "accountingScore": 5,
+      "consultingScore": 5,
+      "itemCount": 0,
+      "weakTopicTags": []
+    }
+  ],
+  "progress": [
+    {
+      "stage": "grading",
+      "pct": 100,
+      "message": "All questions graded",
+      "updatedAt": "2026-04-19T01:21:15.050Z"
+    },
+    {
+      "stage": "segmenting",
+      "pct": 0,
+      "message": "Downloading recording",
+      "updatedAt": "2026-04-19T01:18:46.479Z"
+    }
+  ],
+  "timedOut": false,
+  "totalMs": 155058
+}

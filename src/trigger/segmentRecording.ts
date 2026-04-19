@@ -34,6 +34,33 @@ async function probeDurationSec(filePath: string): Promise<number> {
 }
 
 /**
+ * Detect the video codec family to choose the right output container.
+ * H264/H265 → mp4; VP8/VP9/AV1 → webm; fallback → mp4.
+ */
+async function probeClipFormat(filePath: string): Promise<{ ext: "mp4" | "webm"; contentType: string }> {
+  return new Promise((resolve) => {
+    const proc = spawn("ffprobe", [
+      "-v", "quiet",
+      "-select_streams", "v:0",
+      "-show_entries", "stream=codec_name",
+      "-of", "csv=p=0",
+      filePath,
+    ]);
+    let out = "";
+    proc.stdout.on("data", (chunk: Buffer) => { out += chunk.toString("utf8"); });
+    proc.on("error", () => resolve({ ext: "mp4", contentType: "video/mp4" }));
+    proc.on("close", () => {
+      const codec = out.trim().toLowerCase();
+      if (codec === "vp8" || codec === "vp9" || codec === "av1") {
+        resolve({ ext: "webm", contentType: "video/webm" });
+      } else {
+        resolve({ ext: "mp4", contentType: "video/mp4" });
+      }
+    });
+  });
+}
+
+/**
  * Merge raw scene timestamps into [startSec, endSec] segment pairs.
  * Filters out scenes < 15s apart; ensures each segment is >= 30s.
  */
@@ -140,12 +167,16 @@ export const segmentRecording = task({
     }
     const r2Key = recording.r2Key;
 
-    // 2. Download raw recording to tmp
+    // 2. Download raw recording to tmp (use generic ext; ffprobe probes the real format)
     setStage({ stage: "segmenting", pct: 2, message: "Downloading recording…" });
-    const tmpPath = await downloadToTmp(r2Key, "webm");
+    const tmpPath = await downloadToTmp(r2Key, "raw");
     const workDir = dirname(tmpPath);
 
     try {
+      // 3a. Detect clip format (must run before segmentation loop)
+      const clipFormat = await probeClipFormat(tmpPath);
+      logger.log("detected clip format", { ext: clipFormat.ext });
+
       // 3. Determine total duration
       let totalDurationSec = recording.durationSec ?? 0;
       if (totalDurationSec <= 0) {
@@ -236,7 +267,7 @@ export const segmentRecording = task({
         });
         const questionId = question.id;
 
-        const clipTmpPath = join(workDir, `clip-${questionId}.webm`);
+        const clipTmpPath = join(workDir, `clip-${questionId}.${clipFormat.ext}`);
         const thumbTmpPath = join(workDir, `thumb-${questionId}.jpg`);
         let clipUploaded = false;
         let thumbUploaded = false;
@@ -283,8 +314,8 @@ export const segmentRecording = task({
           });
 
           // 7d. Upload clip to R2
-          const clipKey = keys.clipVideo(questionId);
-          await uploadFileToR2(clipTmpPath, clipKey, "video/webm");
+          const clipKey = `clips/${questionId}/clip.${clipFormat.ext}`;
+          await uploadFileToR2(clipTmpPath, clipKey, clipFormat.contentType);
           clipUploaded = true;
 
           // 7e. Upload thumbnail (if it was created)

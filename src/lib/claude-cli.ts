@@ -1,6 +1,30 @@
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+
+/** Resolve the path to the `claude` CLI binary. */
+function resolveClaudeBin(): string {
+  if (process.platform === "win32") {
+    // claude.cmd is a wrapper for claude.exe — spawn the exe directly (no shell needed)
+    const npmRoot = join(process.env["APPDATA"] ?? "", "npm");
+    const exe = join(npmRoot, "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe");
+    if (existsSync(exe)) return exe;
+    // Fallback: try claude.cmd location for alternate installs
+    const cmd = join(npmRoot, "claude.cmd");
+    if (existsSync(cmd)) return cmd; // will need shell:true path below
+  }
+
+  try {
+    const resolved = execFileSync("which", ["claude"], { encoding: "utf8" }).trim();
+    if (resolved) return resolved;
+  } catch { /* which not found */ }
+
+  return "claude";
+}
+
+const CLAUDE_BIN = resolveClaudeBin();
 
 export type ClaudeOpts = {
   systemPrompt?: string;
@@ -29,7 +53,10 @@ export async function callClaude(prompt: string, opts: ClaudeOpts = {}): Promise
     let stderr = "";
     let settled = false;
 
-    const proc = spawn("claude", args, { shell: false });
+    // Use shell: true only if CLAUDE_BIN is a .cmd file (can't be spawned directly on Windows).
+    // The .exe path is preferred and doesn't need a shell.
+    const useShell = CLAUDE_BIN.endsWith(".cmd");
+    const proc = spawn(CLAUDE_BIN, args, { shell: useShell });
 
     const timer = setTimeout(() => {
       if (settled) return;

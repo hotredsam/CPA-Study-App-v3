@@ -36,16 +36,14 @@ export const processRecording = task({
       data: { status: "processing_questions" },
     });
 
-    await Promise.all(
-      questionIds.map(async (questionId) => {
-        const [extractRes, transcribeRes] = await Promise.all([
-          extractQuestion.triggerAndWait({ questionId }),
-          transcribeQuestion.triggerAndWait({ questionId }),
-        ]);
-        if (!extractRes.ok || !transcribeRes.ok) return;
-        await gradeQuestion.triggerAndWait({ questionId });
-      })
-    );
+    // Process questions sequentially — trigger.dev v3 does not support
+    // Promise.all() around triggerAndWait calls.
+    for (const questionId of questionIds) {
+      const extractRes = await extractQuestion.triggerAndWait({ questionId });
+      const transcribeRes = await transcribeQuestion.triggerAndWait({ questionId });
+      if (!extractRes.ok || !transcribeRes.ok) continue;
+      await gradeQuestion.triggerAndWait({ questionId });
+    }
 
     await prisma.recording.update({
       where: { id: recordingId },

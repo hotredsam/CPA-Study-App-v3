@@ -1,5 +1,10 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
 
+// trigger.dev's jiti runner doesn't load .env; load it with the built-in Node 20+ API
+if (typeof (process as NodeJS.Process & { loadEnvFile?: (p: string) => void }).loadEnvFile === "function") {
+  try { (process as NodeJS.Process & { loadEnvFile: (p: string) => void }).loadEnvFile(".env"); } catch {}
+}
+
 const projectId = process.env.TRIGGER_PROJECT_ID;
 if (!projectId || projectId.includes("placeholder")) {
   throw new Error("TRIGGER_PROJECT_ID is not set correctly — see .env.example");
