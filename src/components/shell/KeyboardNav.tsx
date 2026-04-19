@@ -46,5 +46,6 @@ export function KeyboardNav() {
     }
   }, [awaitingSecond, router])
 
+  // TODO(fidelity): add ? key handler to show shortcut help overlay (g+letter map + in-screen shortcuts)
   return null
 }

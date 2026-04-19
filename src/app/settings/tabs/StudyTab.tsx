@@ -295,6 +295,7 @@ Focus on my weakest areas and the exam that is coming up soonest.`
         </div>
 
         {/* Button row */}
+        {/* TODO(fidelity): add per-line XML error list with line numbers */}
         <div className="mt-5 flex flex-wrap gap-2">
           <Btn variant="ghost" size="sm" onClick={() => void handleValidate()}>
             Validate XML

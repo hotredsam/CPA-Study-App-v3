@@ -4,6 +4,31 @@ Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
 ---
 
+## Morning summary — Night 5 (2026-04-20, top of file — 60-second skim)
+
+**Status: NIGHT-5-COMPLETE.** Night 5 autonomous run completed ~00:00 local. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 170/170, `pnpm e2e` 15/15.
+
+**What shipped tonight:**
+
+- **UI swap complete**: All 10 screens migrated from prototype to Next.js App Router TypeScript. 5-theme design system (paper/night/sepia/sakura/scientific), TanStack Query data layer, g+letter keyboard nav, sidebar with live badges, TweaksPanel with localStorage persistence.
+- **7 new AI features**: pipeline-tag, topic-extract, checkpoint-quiz, anki-gen, chat-tutor, voice-note, topic-notes — all wired through the new OpenRouter LLM router (`runFunction()`).
+- **LLM infrastructure**: OpenRouter client (retry + backoff), semantic cache (cosine similarity, CF Workers AI / local xenova), batch coalesce queue (Trigger.dev cron), budget ledger (monthly cap, auto-degrade), per-function model config (11 functions).
+- **Prisma expansion**: 16 new models, 1 migration applied, seed script, 13 DB round-trip tests.
+- **Study routine**: XML parser (fast-xml-parser + Zod), validate endpoint, copy-prompt, dashboard today's schedule.
+- **170 tests, 15 e2e** — all green.
+
+**Three things Sam should do next:**
+1. **Run `pnpm db:seed`** — seeds Budget, UserSettings, ModelConfig singletons required by the UI. Without it, the budget card on the Settings page errors.
+2. **Set OpenRouter key** — go to Settings → Models & API tab, paste key. All 7 new AI features need it. OAuth claude-cli fallback still works for Anthropic-default functions.
+3. **Upload a textbook PDF** — go to Library → Upload → trigger textbook-indexer. Topics page will populate and Anki cards will generate automatically.
+
+**New blockers filed:**
+- `night5-openrouter-key` — no key in .env; UI falls back to OAuth for anthropic/* functions
+
+**Acceptance report:** `reports/night5-acceptance.md`
+
+---
+
 ## Night 5 — Prototype Analysis (Phase A complete)
 
 | # | Feature | Backend status | Target | Complexity | Phase |

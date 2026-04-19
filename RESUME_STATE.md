@@ -1,9 +1,9 @@
 # Resume state
 
-status: NIGHT-5-RUNNING
-phase: H-study-routine
-last-completed-phase: G-screen-migration
-next-action: Phase H — Study routine XML parser + copy-prompt + dashboard wiring
+status: NIGHT-5-COMPLETE
+phase: K-morning-handoff
+last-completed-phase: J-fidelity-pass
+next-action: Sam reviews BUILD_LOG.md, runs pnpm db:seed, sets OpenRouter key, uploads first textbook
 iteration: 5
 updated: 2026-04-19T23:30:00Z
 

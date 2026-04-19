@@ -42,6 +42,9 @@ See reports/night3-pipeline-acceptance.md for full acceptance criteria.</body>
     <blocker id="2026-04-17-fixture-boundaries" priority="normal" kind="testing">
       <body>`fixtures/ground-truth.json` contains TENTATIVE, equally-spaced question boundaries for `sample-3q` and `sample-5q`. Sam: please spot-check the fixtures, update the `startSec`/`endSec` values to reflect real transitions, and flip `flag` from "GUESS" to "VERIFIED". Without this, segmentation acceptance tests run with placeholder ground truth and assert only "question count within +/- 1". Night 2 ships Task 4 with this disclaimer baked into reports/task4-accuracy.md.</body>
     </blocker>
+    <blocker id="night5-openrouter-key" priority="normal" kind="config">
+      <body>Night 5 built the OpenRouter integration layer but no OPENROUTER_API_KEY is in .env. The UI in Settings → Models & API shows "No key set". All 7 new AI features (topic-extract, checkpoint-quiz, anki-gen, chat-tutor, voice-note, topic-notes, pipeline-tag) will fall back to OAuth claude-cli for anthropic/* model paths. To enable full OpenRouter routing: set OPENROUTER_API_KEY in .env AND paste the key via Settings → Models & API → OpenRouter Key field. The key is encrypted before storage (AES-256-GCM, requires ENCRYPTION_KEY in .env).</body>
+    </blocker>
   </blockers>
 
   <done>
