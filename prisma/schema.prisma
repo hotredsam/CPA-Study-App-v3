@@ -1,5 +1,6 @@
 // Prisma schema — locked shape per .claude/skills/prisma-schema-steward/SKILL.md.
 // Additive-only migrations in Phase 1.
+// Night 5: major expansion — Topic, Textbook, Chunk, Anki, Chat, Settings, Budget, Cache, Batch
 
 datasource db {
   provider = "postgresql"
@@ -9,6 +10,8 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
+
+// ─── Existing enums (unchanged) ───────────────────────────────────────────────
 
 enum RecordingStatus {
   uploading
@@ -23,6 +26,7 @@ enum QuestionStatus {
   pending
   extracting
   transcribing
+  tagging
   grading
   done
   incomplete
@@ -36,7 +40,7 @@ enum CpaSection {
   REG
   ISC
   TCP
-  BEC // legacy — BEC was split into BAR+ISC+TCP in CPA Evolution 2024
+  BEC
 }
 
 enum StageName {
@@ -44,8 +48,67 @@ enum StageName {
   segmenting
   extracting
   transcribing
+  tagging
   grading
 }
+
+// ─── New enums ────────────────────────────────────────────────────────────────
+
+enum TextbookStatus {
+  QUEUED
+  INDEXING
+  READY
+  NEEDS_UPDATE
+  FAILED
+}
+
+enum AnkiCardType {
+  CLOZE
+  QA
+  DEFINITION
+  FORMULA
+}
+
+enum AnkiRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+enum BatchJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+enum ConversationScope {
+  REVIEW
+  ANKI
+  STUDY
+}
+
+enum AiFunctionKey {
+  PIPELINE_GRADE
+  PIPELINE_SEGMENT
+  PIPELINE_TRANSCRIBE
+  PIPELINE_EXTRACT
+  PIPELINE_TAG
+  TOPIC_EXTRACT
+  CHECKPOINT_QUIZ
+  ANKI_GEN
+  CHAT_TUTOR
+  VOICE_NOTE
+  TOPIC_NOTES
+}
+
+// ─── Extended existing models ─────────────────────────────────────────────────
 
 model Recording {
   id           String          @id @default(cuid())
@@ -53,6 +116,12 @@ model Recording {
   r2Key        String?         @unique
   durationSec  Float?
   triggerRunId String?
+  // Night 5 additions
+  title        String?
+  sections     CpaSection[]
+  tagStage     Json?           // {status, startedAt, completedAt, pct}
+  modelUsed    String?
+  segmentsCount Int?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   questions    Question[]
@@ -73,13 +142,21 @@ model Question {
   status              QuestionStatus @default(pending)
   noAudio             Boolean        @default(false)
   segmentationSignals Json?
+  // Night 5 additions
+  topicId             String?
+  topic               Topic?         @relation(fields: [topicId], references: [id])
+  tags                Json?          // {section, unit, topic, difficulty}
+  taggedAt            DateTime?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   feedback            Feedback?
   reviewState         ReviewState?
 
   @@index([recordingId])
+  @@index([topicId])
 }
+
+// ─── Unchanged existing models ────────────────────────────────────────────────
 
 model Feedback {
   id                 String   @id @default(cuid())
@@ -118,4 +195,249 @@ model ReviewState {
   lastReviewedAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+// ─── New models — Night 5 ─────────────────────────────────────────────────────
+
+model Topic {
+  id         String     @id @default(cuid())
+  section    CpaSection
+  name       String
+  unit       String?
+  mastery    Float      @default(0)
+  errorRate  Float?
+  cardsDue   Int        @default(0)
+  lastSeen   DateTime?
+  notes      String?
+  aiNotes    Json?      // {coreRule, pitfall, citation, performance}
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  questions  Question[]
+  chunks     Chunk[]
+  ankiCards  AnkiCard[]
+
+  @@index([section])
+}
+
+model Textbook {
+  id          String         @id @default(cuid())
+  title       String
+  publisher   String?
+  sections    CpaSection[]
+  pages       Int?
+  chunkCount  Int            @default(0)
+  indexStatus TextbookStatus @default(QUEUED)
+  sizeBytes   BigInt?
+  r2Key       String?        @unique
+  citedCount  Int            @default(0)
+  uploadedAt  DateTime       @default(now())
+  indexedAt   DateTime?
+  chunks      Chunk[]
+
+  @@index([indexStatus])
+}
+
+model Chunk {
+  id            String    @id @default(cuid())
+  textbook      Textbook  @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+  textbookId    String
+  order         Int
+  chapterRef    String?
+  title         String?
+  content       String
+  topicId       String?
+  topic         Topic?    @relation(fields: [topicId], references: [id])
+  fasbCitation  String?
+  figures       Json?     // [{caption, r2Key}]
+  embedding     Json?     // float[] fallback (pgvector not yet provisioned)
+  embeddingPrec String?   // "full" | "provisional"
+  createdAt     DateTime  @default(now())
+
+  @@index([textbookId, order])
+  @@index([topicId])
+}
+
+model AnkiCard {
+  id             String       @id @default(cuid())
+  front          String
+  back           String
+  explanation    String?
+  sourceCitation String?
+  section        CpaSection?
+  topicId        String?
+  topic          Topic?       @relation(fields: [topicId], references: [id])
+  chunkId        String?
+  type           AnkiCardType @default(QA)
+  difficulty     Float?
+  srsState       Json         @default("{\"ease\":2.5,\"interval\":0,\"nextDue\":null,\"lapses\":0,\"repetitions\":0}")
+  voiceNoteR2Key String?
+  mnemonic       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  reviews        AnkiReview[]
+  notes          AnkiNote[]
+
+  @@index([section])
+  @@index([topicId])
+}
+
+model AnkiReview {
+  id          String     @id @default(cuid())
+  card        AnkiCard   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardId      String
+  rating      AnkiRating
+  reviewedAt  DateTime   @default(now())
+  newInterval Int
+  newEase     Float
+
+  @@index([cardId])
+}
+
+model AnkiNote {
+  id        String   @id @default(cuid())
+  card      AnkiCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardId    String
+  content   String
+  isVoice   Boolean  @default(false)
+  r2Key     String?
+  createdAt DateTime @default(now())
+
+  @@index([cardId])
+}
+
+model StudyRoutine {
+  id           String    @id @default(cuid())
+  xmlSource    String
+  parsedBlocks Json?     // {morning:[], midday:[], evening:[]}
+  examDates    Json?     // {FAR:"2026-08-31", ...}
+  hoursTarget  Json?     // {daily:5, weekly:35, total:1200}
+  createdAt    DateTime  @default(now())
+  activatedAt  DateTime?
+}
+
+model Budget {
+  id                String   @id @default(cuid())
+  monthlyCapUsd     Float    @default(50)
+  warnThreshold     Float    @default(0.8)
+  autoDegrade       Boolean  @default(true)
+  hardStop          Boolean  @default(false)
+  currentUsageUsd   Float    @default(0)
+  currentMonthStart DateTime @default(now())
+  rolloverEnabled   Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
+}
+
+model CacheEntry {
+  id          String   @id @default(cuid())
+  functionKey String
+  inputHash   String
+  embedding   Json?
+  output      Json
+  hitCount    Int      @default(0)
+  precision   String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@unique([functionKey, inputHash])
+  @@index([expiresAt])
+}
+
+model BatchJob {
+  id                  String         @id @default(cuid())
+  functionKey         String
+  payload             Json
+  status              BatchJobStatus @default(QUEUED)
+  coalesceWindowStart DateTime?
+  coalesceWindowEnd   DateTime?
+  offPeakPreferred    Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  completedAt         DateTime?
+  resultId            String?
+
+  @@index([status, functionKey])
+  @@index([coalesceWindowEnd])
+}
+
+model Conversation {
+  id        String            @id @default(cuid())
+  scope     ConversationScope
+  scopeId   String
+  createdAt DateTime          @default(now())
+  messages  ChatMessage[]
+
+  @@index([scope, scopeId])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  role           ChatRole
+  content        String
+  contextRefs    Json?        // {recordingId?, questionId?, topicId?, chunkId?}
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model UserSettings {
+  id                String   @id @default("singleton")
+  theme             String   @default("paper")
+  accentHue         Int      @default(18)
+  density           String   @default("comfortable")
+  serifFamily       String   @default("Instrument Serif")
+  activeModelConfig Json?
+  openRouterKeyEnc  String?
+  updatedAt         DateTime @updatedAt
+}
+
+model ModelConfig {
+  id                String        @id @default(cuid())
+  functionKey       AiFunctionKey @unique
+  model             String
+  batchEnabled      Boolean       @default(false)
+  cacheEnabled      Boolean       @default(true)
+  interestLevel     String?
+  downtimeTolerance String?
+  useOAuthFallback  Boolean       @default(false)
+  updatedAt         DateTime      @updatedAt
+}
+
+model IndexingConfig {
+  id                 String   @id @default("singleton")
+  indexDepth         Int      @default(3)
+  ocrMode            Boolean  @default(true)
+  formulaExtraction  Boolean  @default(true)
+  exampleDetection   Boolean  @default(true)
+  crossRefLinking    Boolean  @default(true)
+  glossaryBuild      Boolean  @default(true)
+  figureCaptioning   Boolean  @default(false)
+  sectionAutoTag     Boolean  @default(true)
+  unitGrouping       Boolean  @default(true)
+  ankiCardGen        Boolean  @default(true)
+  embeddingModel     String   @default("text-embedding-3-large")
+  chunkSize          Int      @default(512)
+  overlapWindow      Int      @default(64)
+  reindexOnUpdate    Boolean  @default(false)
+  piiScrubbing       Boolean  @default(true)
+  indexModel         String   @default("anthropic/claude-haiku-4.5")
+  batchMode          Boolean  @default(true)
+  offPeakTier        Boolean  @default(false)
+  concurrency        Int      @default(8)
+  updatedAt          DateTime @updatedAt
+}
+
+model ModelCall {
+  id           String   @id @default(cuid())
+  functionKey  String
+  model        String
+  inputTokens  Int?
+  outputTokens Int?
+  usdCost      Float?
+  cacheHit     Boolean  @default(false)
+  batchJobId   String?
+  createdAt    DateTime @default(now())
+
+  @@index([functionKey, createdAt])
+  @@index([createdAt])
 }
