@@ -10,6 +10,10 @@ import { parseFfmpegPctFromChunk } from "@/lib/progress-parsers";
 import { downloadToTmp } from "@/lib/r2-download";
 import { r2Client, bucket, keys } from "@/lib/r2";
 
+// Becker-format lecture videos have soft transitions; 0.3 never fires.
+// 0.15 reliably detects slide changes without over-segmenting.
+const SCENE_THRESHOLD_DEFAULT = 0.15;
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -196,7 +200,7 @@ export const segmentRecording = task({
         sceneTimestamps = await detectScenes({
           input: tmpPath,
           totalDurationSec,
-          threshold: 0.3,
+          threshold: SCENE_THRESHOLD_DEFAULT,
           onProgress: (pct) => {
             setStage({
               stage: "segmenting",

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { AiFunctionKey, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
-import { callClaude } from "@/lib/claude-cli";
+import { callClaude, extractJsonFromResponse } from "@/lib/claude-cli";
 import { callOpenRouter, type LLMCallResult, type LLMMessage } from "./openrouter";
 
 export interface RunFunctionOptions {
@@ -21,7 +21,14 @@ export interface RunFunctionResult {
  * Thin adapter that wraps the existing claudeCli function to return LLMCallResult shape.
  */
 async function claudeCliCall(payload: unknown): Promise<LLMCallResult> {
-  const result = await callClaude(JSON.stringify(payload));
+  // If payload carries a `prompt` field, send that as the actual prompt text.
+  // Passing JSON.stringify(payload) would confuse Claude with wrapper metadata.
+  const isObj = payload !== null && typeof payload === "object";
+  const promptText =
+    isObj && "prompt" in (payload as object) && typeof (payload as Record<string, unknown>)["prompt"] === "string"
+      ? (payload as Record<string, unknown>)["prompt"] as string
+      : JSON.stringify(payload);
+  const result = await callClaude(promptText);
   return {
     content: result,
     inputTokens: 0,
@@ -149,10 +156,10 @@ export async function runFunction(
     });
   }
 
-  // Parse output — try JSON first, fall back to raw string
+  // Parse output — try extractJsonFromResponse (handles prose wrapping), fall back to raw string
   let parsedOutput: unknown;
   try {
-    parsedOutput = JSON.parse(llmResult.content);
+    parsedOutput = extractJsonFromResponse(llmResult.content);
   } catch {
     parsedOutput = llmResult.content;
   }
