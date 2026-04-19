@@ -38,6 +38,12 @@ BUILD_LOG.md.bak
 .DS_Store
 Thumbs.db
 
+# prototype zip (extracted to ui-review/ — zip not needed in repo)
+cpa-study-servant.zip
+
+# tmp dev logs
+/tmp/
+
 # sam-input transient
 /sam-input/audio/*.wav
 /sam-input/audio/*.m4a
