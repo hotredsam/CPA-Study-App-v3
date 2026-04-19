@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "trigger:dev": "trigger dev",
-    "db:seed": "tsx prisma/seed-night5.ts"
+    "db:seed": "tsx prisma/seed-night5.ts",
+    "verify-seed": "tsx scripts/verify-seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

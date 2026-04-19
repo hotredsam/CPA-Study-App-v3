@@ -4,6 +4,15 @@ Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
 ---
 
+## Night 6 — Phase A (2026-04-20)
+
+- Fixed pnpm db:seed to be fully idempotent (Topics/Textbooks/Chunks/AnkiCards/Budget use skip-if-exists)
+- Added scripts/verify-seed.ts: asserts UserSettings, Budget, ModelConfig (11), IndexingConfig exist
+- pnpm verify-seed exits 0 ✓
+- Dashboard returns HTTP 200 ✓
+
+---
+
 ## Morning summary — Night 5 (2026-04-20, top of file — 60-second skim)
 
 **Status: NIGHT-5-COMPLETE.** Night 5 autonomous run completed ~00:00 local. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 170/170, `pnpm e2e` 15/15.
