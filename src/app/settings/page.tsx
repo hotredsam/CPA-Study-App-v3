@@ -1,14 +1,17 @@
-import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
+import { Suspense } from 'react'
+import { SettingsClient } from './SettingsClient'
 
 export const metadata = { title: 'Settings — CPA Study Servant' }
 
 export default function SettingsPage() {
   return (
-    <div>
-      <EyebrowHeading eyebrow="Configuration" title="Settings" sub="App, model, and indexing configuration." />
-      <p className="text-sm text-[color:var(--ink-faint)]">
-        Full settings view coming in Phase G.
-      </p>
-    </div>
+    <Suspense fallback={
+      <div className="flex flex-col gap-6">
+        <div className="h-8 w-48 rounded animate-pulse" style={{ background: 'var(--surface-2)' }} />
+        <div className="h-10 w-full rounded animate-pulse" style={{ background: 'var(--surface-2)' }} />
+      </div>
+    }>
+      <SettingsClient />
+    </Suspense>
   )
 }
