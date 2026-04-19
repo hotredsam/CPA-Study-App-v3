@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>CPA Study Servant</title>
+<meta name="viewport" content="width=1440"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* tweakable defaults — filled in from TWEAK_DEFAULTS at runtime */
+    --ink: #e9e9ea;
+    --ink-dim: #9a9a9e;
+    --ink-faint: #5a5a5e;
+    --canvas: #0a0a0b;
+    --canvas-2: #111113;
+    --glass: rgba(255,255,255,0.035);
+    --glass-hi: rgba(255,255,255,0.065);
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-border-hi: rgba(255,255,255,0.14);
+    --accent: oklch(0.62 0.19 25);      /* arterial red */
+    --accent-soft: oklch(0.62 0.19 25 / 0.18);
+    --accent-faint: oklch(0.62 0.19 25 / 0.08);
+
+    /* CPA section hues — desaturated glass tints */
+    --sec-aud: oklch(0.70 0.11 220);
+    --sec-bar: oklch(0.72 0.11 160);
+    --sec-far: oklch(0.72 0.11 80);
+    --sec-reg: oklch(0.68 0.11 20);
+    --sec-isc: oklch(0.68 0.11 300);
+    --sec-tcp: oklch(0.70 0.11 260);
+
+    --radius-s: 6px;
+    --radius: 10px;
+    --radius-l: 16px;
+
+    --density: 1;
+    --font-sans: 'Geist', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+    --font-serif: 'Instrument Serif', Georgia, serif;
+  }
+
+  html, body { margin: 0; padding: 0; background: #000; color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, oklch(0.35 0.09 25 / 0.25), transparent 60%),
+      radial-gradient(900px 500px at 105% 10%, oklch(0.35 0.04 260 / 0.18), transparent 60%),
+      linear-gradient(180deg, #07070a 0%, #0a0a0b 60%, #060607 100%);
+    background-attachment: fixed;
+  }
+  * { box-sizing: border-box; }
+  button { font: inherit; color: inherit; }
+  ::selection { background: var(--accent-soft); color: #fff; }
+  /* subtle grain */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 3px 3px;
+    mix-blend-mode: overlay;
+    opacity: .5;
+  }
+
+  /* light theme */
+  body.theme-light {
+    --ink: #0b0b0d;
+    --ink-dim: #5d5d63;
+    --ink-faint: #a6a6ab;
+    --canvas: #f4f4f2;
+    --canvas-2: #eeeeec;
+    --glass: rgba(0,0,0,0.025);
+    --glass-hi: rgba(0,0,0,0.05);
+    --glass-border: rgba(0,0,0,0.08);
+    --glass-border-hi: rgba(0,0,0,0.16);
+    background:
+      radial-gradient(1000px 500px at 10% -10%, oklch(0.72 0.09 25 / 0.25), transparent 60%),
+      linear-gradient(180deg, #f6f5f2 0%, #ececea 100%) !important;
+  }
+  body.theme-sepia {
+    --ink: #1b1410;
+    --ink-dim: #685c52;
+    --ink-faint: #a59585;
+    --canvas: #efe7da;
+    --canvas-2: #e9dfce;
+    --glass: rgba(30,20,10,0.035);
+    --glass-hi: rgba(30,20,10,0.07);
+    --glass-border: rgba(30,20,10,0.1);
+    --glass-border-hi: rgba(30,20,10,0.2);
+    background: linear-gradient(180deg, #f1e8d7 0%, #e6daca 100%) !important;
+  }
+
+  /* density */
+  body.density-compact { --density: 0.82; }
+  body.density-cozy { --density: 1; }
+  body.density-comfortable { --density: 1.18; }
+
+  /* global utility */
+  .mono { font-family: var(--font-mono); font-feature-settings: 'ss01', 'cv01'; }
+  .serif { font-family: var(--font-serif); }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .glass {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border-radius: var(--radius-l);
+  }
+  .glass-hi {
+    background: var(--glass-hi);
+    border: 1px solid var(--glass-border-hi);
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    border-radius: var(--radius-l);
+  }
+
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+  /* waveform animation */
+  @keyframes wv {
+    0%, 100% { transform: scaleY(0.2); }
+    50% { transform: scaleY(1); }
+  }
+  @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0.15; } }
+  .pulse-dot { animation: blink 1.6s infinite; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2.2s infinite linear;
+  }
+
+  /* progress bar fill */
+  .bar { position: relative; height: 6px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+  .bar > i { position: absolute; inset: 0; right: auto; background: var(--accent); border-radius: 99px; box-shadow: 0 0 12px var(--accent-soft); transition: width .4s ease; }
+  .bar.thin { height: 3px; }
+
+  /* focus + interactive */
+  .hov { transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease; cursor: pointer; }
+  .hov:hover { background: var(--glass-hi); border-color: var(--glass-border-hi); }
+
+  /* chip */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 22px; padding: 0 8px;
+    border-radius: 99px; font-size: 11px; letter-spacing: 0.02em;
+    background: var(--glass); border: 1px solid var(--glass-border);
+    color: var(--ink-dim); font-family: var(--font-mono); text-transform: uppercase;
+  }
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+</style>
+</head>
+<body class="theme-dark density-cozy">
+<div id="root"></div>
+
+<script>
+  // Tweak defaults (host-rewritable)
+  window.TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "theme": "dark",
+    "accentHue": 25,
+    "density": "cozy",
+    "fontPair": "geist",
+    "recordingStyle": "cockpit",
+    "statusLayout": "stepper",
+    "reviewLayout": "three-col"
+  }/*EDITMODE-END*/;
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="src/all.jsx"></script>
+</body>
+</html>

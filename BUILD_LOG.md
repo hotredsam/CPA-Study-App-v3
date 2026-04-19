@@ -2,6 +2,35 @@
 
 Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
+---
+
+## Night 5 — Prototype Analysis (Phase A complete)
+
+| # | Feature | Backend status | Target | Complexity | Phase |
+|---|---------|---------------|--------|------------|-------|
+| 1 | Grading | Partial (placeholder keys, stub quality) | Full Sonnet w/ rubric + misstep | M | E1/C3 |
+| 2 | Segmentation | Partial (ffmpeg, not Gemini Pro) | Keep ffmpeg locally; Gemini optional via ModelConfig | M | C3 |
+| 3 | Transcription | Partial (smart-whisper, no whisper model on Windows) | smart-whisper + OpenRouter fallback | S | C3 |
+| 4 | Topic extraction | MISSING | Haiku per Chunk, batch on | M | E2 |
+| 5 | Checkpoint-quiz gen | MISSING | Sonnet per Chunk, cache on | M | E3 |
+| 6 | Anki card gen | MISSING | Haiku per Chunk, batch on | M | E4 |
+| 7 | Chat tutor | MISSING | Sonnet SSE streaming, prompt cache | L | E5 |
+| 8 | Voice-note transcription | MISSING | smart-whisper local, OR override | S | E6 |
+| 9 | Topic AI-notes refresh | MISSING | Haiku, batch on (bulk) | S | E7 |
+| 10 | Pipeline tagging | MISSING | Haiku stage 5 (between Transcribe+Grade) | M | E1 |
+| 11 | Study-routine generator | N/A (external Claude Projects) | Copy-prompt + XML parse UI | S | H |
+
+**10 screens:** Dashboard, Record, Pipeline, Review, Topics, Study Textbook, Anki, Library, Textbook Viewer, Settings  
+**4 infrastructure systems:** Budget enforcement, Prompt+semantic cache, Batch coalescing, Per-function model config  
+**5 themes:** Paper, Night, Sepia, Sakura, Scientific (all with full oklch CSS variable sets)
+
+**Analysis artifacts written:**
+- `ui-review/COMPONENT_INVENTORY.md` — full component tree + data shapes for all 10 screens
+- `ui-review/APP_SHELL.md` — sidebar nav, keyboard shortcuts, theme system, toast
+- `ui-review/SCHEMA_GAP.md` — 19 new/extended models for Phase B migration
+
+---
+
 ## Morning summary — Night 4 (2026-04-19, top of file — 60-second skim)
 
 **Status: NIGHT-4-COMPLETE.** Night 4 autonomous run completed ~01:30 local. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 59/59.

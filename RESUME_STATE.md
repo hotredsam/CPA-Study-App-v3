@@ -1,11 +1,11 @@
 # Resume state
 
-status: NIGHT-4-COMPLETE
-phase: G-morning-handoff
-last-completed-phase: F-backend-gap-fill
-next-action: Sam manual — deploy to trigger.dev cloud with real API key, lower scene detection threshold, lock feedback-items
-iteration: 4
-updated: 2026-04-19T01:30:00Z
+status: NIGHT-5-RUNNING
+phase: B-schema-expansion
+last-completed-phase: A-prototype-analysis
+next-action: Phase B — Prisma schema expansion (schema-guardian agent). Run night5_feature_expansion migration.
+iteration: 5
+updated: 2026-04-19T02:00:00Z
 
 ## Night 4 completed phases
 
