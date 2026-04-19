@@ -27,6 +27,7 @@
     "@tanstack/react-query-devtools": "^5.99.1",
     "@trigger.dev/react-hooks": "^3.3.0",
     "@trigger.dev/sdk": "^3.3.0",
+    "fast-xml-parser": "^5.7.1",
     "next": "^15.0.3",
     "pino": "^10.3.1",
     "react": "^19.0.0",

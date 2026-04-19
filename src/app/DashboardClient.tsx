@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import {
   EyebrowHeading,
   Btn,
@@ -9,6 +10,7 @@ import {
   Bar,
   Score,
 } from '@/components/ui'
+import type { ParsedBlock, ParsedRoutine } from '@/lib/routine/xml-parser'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,6 +137,109 @@ function FocusStat({ label, value, sub }: FocusStatProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Today's schedule sub-component
+// ---------------------------------------------------------------------------
+
+function BlockPill({ block }: { block: ParsedBlock }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-2 rounded border border-[color:var(--border)] bg-[color:var(--surface-2)]"
+    >
+      {block.time && (
+        <span className="text-xs mono tabular shrink-0" style={{ color: 'var(--ink-faint)' }}>
+          {block.time}
+        </span>
+      )}
+      {block.duration != null && (
+        <span className="text-xs mono tabular shrink-0" style={{ color: 'var(--ink-dim)' }}>
+          {block.duration}m
+        </span>
+      )}
+      {block.type && (
+        <span
+          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+          style={{ background: 'var(--accent-faint)', color: 'var(--accent)' }}
+        >
+          {block.type}
+        </span>
+      )}
+    </div>
+  )
+}
+
+interface PeriodRowProps {
+  label: string
+  blocks: ParsedBlock[]
+}
+
+function PeriodRow({ label, blocks }: PeriodRowProps) {
+  if (blocks.length === 0) return null
+  return (
+    <div>
+      <p className="eyebrow mb-2" style={{ color: 'var(--ink-faint)' }}>
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {blocks.map((b, i) => (
+          <BlockPill key={i} block={b} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TodaySchedule() {
+  const { data, isLoading } = useQuery<ParsedRoutine>({
+    queryKey: ['study-routine-today'],
+    queryFn: async () => {
+      const res = await fetch('/api/study-routine/today')
+      if (!res.ok) return { morning: [], midday: [], evening: [] }
+      return res.json() as Promise<ParsedRoutine>
+    },
+  })
+
+  const hasBlocks =
+    (data?.morning.length ?? 0) > 0 ||
+    (data?.midday.length ?? 0) > 0 ||
+    (data?.evening.length ?? 0) > 0
+
+  if (isLoading) return null
+
+  return (
+    <section aria-label="Today's schedule">
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+            Today&apos;s Schedule
+          </h2>
+          <Link href="/settings?tab=study" tabIndex={0}>
+            <span className="text-xs" style={{ color: 'var(--accent)' }}>
+              Edit
+            </span>
+          </Link>
+        </div>
+
+        {hasBlocks ? (
+          <div className="flex flex-col gap-4">
+            <PeriodRow label="Morning" blocks={data?.morning ?? []} />
+            <PeriodRow label="Midday" blocks={data?.midday ?? []} />
+            <PeriodRow label="Evening" blocks={data?.evening ?? []} />
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: 'var(--ink-dim)' }}>
+            Set up your study schedule in{' '}
+            <Link href="/settings?tab=study" style={{ color: 'var(--accent)' }}>
+              Settings &rarr; Study tab
+            </Link>
+            .
+          </p>
+        )}
+      </Card>
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main client component
 // ---------------------------------------------------------------------------
 
@@ -233,6 +338,9 @@ export function DashboardClient({ data }: Props) {
           </div>
         </Card>
       )}
+
+      {/* Today's Schedule */}
+      <TodaySchedule />
 
       {/* Section cards */}
       {sections.length > 0 && (

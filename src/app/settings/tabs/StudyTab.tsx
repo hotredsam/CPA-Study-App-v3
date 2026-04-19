@@ -31,31 +31,11 @@ interface StudyRoutine {
 }
 
 // ---------------------------------------------------------------------------
-// XML validation helpers
-// ---------------------------------------------------------------------------
-
-function validateXml(xml: string): { valid: boolean; blocks: number; tasks: number; error?: string } {
-  try {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(xml, 'application/xml')
-    const parseError = doc.querySelector('parsererror')
-    if (parseError) {
-      return { valid: false, blocks: 0, tasks: 0, error: 'XML parse error: ' + parseError.textContent?.slice(0, 120) }
-    }
-    const blocks = doc.querySelectorAll('block').length
-    const tasks = doc.querySelectorAll('task').length
-    return { valid: true, blocks, tasks }
-  } catch {
-    return { valid: false, blocks: 0, tasks: 0, error: 'Could not parse XML' }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Toast shim (inline — we rely on parent ToastProvider via an event)
 // ---------------------------------------------------------------------------
 
-function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-  window.dispatchEvent(new CustomEvent('cpa-toast', { detail: { message, type } }))
+function emitToast(message: string, variant: 'success' | 'error' | 'info' = 'info') {
+  window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message, variant } }))
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +69,7 @@ export function StudyTab() {
     }
   }, [routine])
 
+  // H5: Save & Regenerate — POST xmlSource + examDates + hoursTarget
   const saveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch('/api/study-routine', {
@@ -96,7 +77,12 @@ export function StudyTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ xmlSource: xmlValue, examDates, hoursTarget }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: { message?: string }
+        }
+        throw new Error(body.error?.message ?? `HTTP ${res.status}`)
+      }
       return res.json() as Promise<StudyRoutine>
     },
     onSuccess: () => {
@@ -108,22 +94,65 @@ export function StudyTab() {
     },
   })
 
-  const handleValidate = useCallback(() => {
-    const result = validateXml(xmlValue)
-    if (result.valid) {
-      emitToast(`Valid — ${result.blocks} blocks, ${result.tasks} tasks`, 'success')
-    } else {
-      emitToast(result.error ?? 'Invalid XML', 'error')
+  // H3: Validate XML — calls server-side validate endpoint (fast-xml-parser is Node-only)
+  const handleValidate = useCallback(async () => {
+    try {
+      const res = await fetch('/api/study-routine/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ xml: xmlValue }),
+      })
+      const result = (await res.json()) as {
+        success: boolean
+        errors?: string[]
+        stats?: { blockCount: number; taskCount: number; totalMinutes: number }
+      }
+      if (result.success) {
+        emitToast(
+          `Valid — ${result.stats?.blockCount ?? 0} blocks, ${result.stats?.taskCount ?? 0} tasks`,
+          'success',
+        )
+      } else {
+        emitToast(result.errors?.[0] ?? 'Invalid XML', 'error')
+      }
+    } catch {
+      emitToast('Validation request failed', 'error')
     }
   }, [xmlValue])
 
+  // H4: Copy Claude prompt
   const handleCopyPrompt = useCallback(() => {
-    const text = [
-      "I'm studying for the CPA exam. Please create a detailed daily study routine for the following schedule:",
-      `FAR exam: ${examDates.FAR ?? '[not set]'}, REG exam: ${examDates.REG ?? '[not set]'}, AUD exam: ${examDates.AUD ?? '[not set]'}, TCP exam: ${examDates.TCP ?? '[not set]'}`,
-      `Available hours: ${hoursTarget.daily ?? '[not set]'} hours/day, ${hoursTarget.weekly ?? '[not set]'} hours/week, ${hoursTarget.total ?? '[not set]'} total hours`,
-      'Please structure the routine as XML with <study-routine><morning><block>...</block></morning><midday>...</midday><evening>...</evening></study-routine> format.',
-    ].join('\n')
+    const farDate = examDates.FAR ?? 'not set'
+    const regDate = examDates.REG ?? 'not set'
+    const audDate = examDates.AUD ?? 'not set'
+    const tcpDate = examDates.TCP ?? 'not set'
+    const dailyHours = hoursTarget.daily != null ? String(hoursTarget.daily) : '4'
+    const weeklyHours = hoursTarget.weekly != null ? String(hoursTarget.weekly) : '28'
+    const totalHours = hoursTarget.total != null ? String(hoursTarget.total) : '500'
+
+    const text = `I'm studying for the CPA exam. Please create a detailed daily study routine.
+
+Exam dates:
+- FAR: ${farDate}
+- REG: ${regDate}
+- AUD: ${audDate}
+- TCP: ${tcpDate}
+
+Study time available: ${dailyHours} hours/day, ${weeklyHours} hours/week, ${totalHours} total hours
+
+Please structure your response as XML with this exact format:
+<study-routine>
+  <morning>
+    <block time="HH:MM" duration="minutes" type="reading|anki|questions|review">
+      <task section="FAR|REG|AUD|TCP|BAR|ISC" unit="Topic name" chapter="Ch X.Y" />
+    </block>
+  </morning>
+  <midday>...</midday>
+  <evening>...</evening>
+</study-routine>
+
+Focus on my weakest areas and the exam that is coming up soonest.`
+
     void navigator.clipboard.writeText(text)
     emitToast('Copied to clipboard!', 'success')
   }, [examDates, hoursTarget])
@@ -141,12 +170,37 @@ export function StudyTab() {
     reader.readAsText(file)
   }, [])
 
-  const promptText = [
-    "I'm studying for the CPA exam. Please create a detailed daily study routine for the following schedule:",
-    `FAR exam: ${examDates.FAR ?? '[not set]'}, REG exam: ${examDates.REG ?? '[not set]'}, AUD exam: ${examDates.AUD ?? '[not set]'}, TCP exam: ${examDates.TCP ?? '[not set]'}`,
-    `Available hours: ${hoursTarget.daily ?? '[not set]'} hours/day, ${hoursTarget.weekly ?? '[not set]'} hours/week, ${hoursTarget.total ?? '[not set]'} total hours`,
-    'Please structure the routine as XML with <study-routine><morning><block>...</block></morning><midday>...</midday><evening>...</evening></study-routine> format.',
-  ].join('\n')
+  // Prompt preview text (used in the collapsible section)
+  const farDate = examDates.FAR ?? 'not set'
+  const regDate = examDates.REG ?? 'not set'
+  const audDate = examDates.AUD ?? 'not set'
+  const tcpDate = examDates.TCP ?? 'not set'
+  const dailyHours = hoursTarget.daily != null ? String(hoursTarget.daily) : '4'
+  const weeklyHours = hoursTarget.weekly != null ? String(hoursTarget.weekly) : '28'
+  const totalHours = hoursTarget.total != null ? String(hoursTarget.total) : '500'
+
+  const promptText = `I'm studying for the CPA exam. Please create a detailed daily study routine.
+
+Exam dates:
+- FAR: ${farDate}
+- REG: ${regDate}
+- AUD: ${audDate}
+- TCP: ${tcpDate}
+
+Study time available: ${dailyHours} hours/day, ${weeklyHours} hours/week, ${totalHours} total hours
+
+Please structure your response as XML with this exact format:
+<study-routine>
+  <morning>
+    <block time="HH:MM" duration="minutes" type="reading|anki|questions|review">
+      <task section="FAR|REG|AUD|TCP|BAR|ISC" unit="Topic name" chapter="Ch X.Y" />
+    </block>
+  </morning>
+  <midday>...</midday>
+  <evening>...</evening>
+</study-routine>
+
+Focus on my weakest areas and the exam that is coming up soonest.`
 
   return (
     <div className="flex flex-col gap-5" role="tabpanel" id="tabpanel-study" aria-labelledby="tab-study">
@@ -242,7 +296,7 @@ export function StudyTab() {
 
         {/* Button row */}
         <div className="mt-5 flex flex-wrap gap-2">
-          <Btn variant="ghost" size="sm" onClick={handleValidate}>
+          <Btn variant="ghost" size="sm" onClick={() => void handleValidate()}>
             Validate XML
           </Btn>
           <Btn

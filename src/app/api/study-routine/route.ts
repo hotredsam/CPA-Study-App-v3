@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
+import { parseRoutineXml } from '@/lib/routine/xml-parser'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +42,8 @@ const PostBodySchema = z.object({
 
 /**
  * POST /api/study-routine
- * Creates a StudyRoutine row (no server-side XML validation yet — just stores).
+ * Validates xmlSource, parses it, and creates a new StudyRoutine row.
+ * Returns 400 if the XML is invalid.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -53,11 +55,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const { xmlSource, examDates, hoursTarget } = parsed.data
 
+    // Parse and validate the XML
+    const parseResult = parseRoutineXml(xmlSource)
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'INVALID_XML',
+            message: parseResult.errors?.[0] ?? 'Invalid XML',
+            details: parseResult.errors,
+          },
+        },
+        { status: 400 },
+      )
+    }
+
     const routine = await prisma.studyRoutine.create({
       data: {
         xmlSource,
+        parsedBlocks: parseResult.data ?? {},
         examDates: examDates ?? {},
         hoursTarget: hoursTarget ?? {},
+        activatedAt: new Date(),
       },
     })
 
