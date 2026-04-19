@@ -192,3 +192,104 @@ export async function exportToAnki(recordingId: string): Promise<Response> {
   }
   return res;
 }
+
+const RecordingListItem = z.object({
+  id: z.string(),
+  status: z.string(),
+  durationSec: z.number().nullable(),
+  createdAt: z.string(),
+  _count: z.object({ questions: z.number() }),
+});
+
+const RecordingListResponse = z.object({
+  items: z.array(RecordingListItem),
+  nextCursor: z.string().optional(),
+  hasMore: z.boolean(),
+});
+
+/**
+ * List recordings with cursor pagination.
+ *
+ * @example
+ * const page1 = await listRecordings({ limit: 20 });
+ * const page2 = await listRecordings({ cursor: page1.nextCursor, limit: 20 });
+ */
+export async function listRecordings(opts: { cursor?: string; limit?: number } = {}) {
+  const params = new URLSearchParams();
+  if (opts.cursor) params.set("cursor", opts.cursor);
+  if (opts.limit) params.set("limit", String(opts.limit));
+  const res = await fetch(`${BASE}/api/recordings?${params}`);
+  return parseResponse(res, RecordingListResponse);
+}
+
+/**
+ * Permanently delete a recording and all its clips from R2 and the database.
+ *
+ * @example
+ * await deleteRecording(recordingId); // returns undefined on success (204)
+ */
+export async function deleteRecording(recordingId: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/recordings/${recordingId}`, { method: "DELETE" });
+  if (res.status === 204) return;
+  throw await parseErrorResponse(res);
+}
+
+/**
+ * Re-queue a recording for pipeline reprocessing.
+ * Wipes existing questions, feedback, and stage progress before re-triggering.
+ *
+ * @example
+ * const { runId } = await reprocessRecording(recordingId);
+ */
+export async function reprocessRecording(recordingId: string) {
+  const res = await fetch(`${BASE}/api/recordings/${recordingId}/reprocess`, { method: "POST" });
+  return parseResponse(res, z.object({ recordingId: z.string(), runId: z.string() }));
+}
+
+const SessionListItem = z.object({
+  id: z.string(),
+  status: z.string(),
+  durationSec: z.number().nullable(),
+  createdAt: z.string(),
+  questionCount: z.number(),
+  avgScore: z.number().nullable(),
+});
+
+const SessionListResponse = z.object({
+  items: z.array(SessionListItem),
+  nextCursor: z.string().optional(),
+  hasMore: z.boolean(),
+  total: z.number(),
+});
+
+/**
+ * List sessions with optional text search, status filter, and pagination.
+ *
+ * @example
+ * const results = await listSessions({ q: "revenue recognition", status: "done" });
+ */
+export async function listSessions(opts: {
+  q?: string;
+  status?: string;
+  cursor?: string;
+  limit?: number;
+} = {}) {
+  const params = new URLSearchParams();
+  if (opts.q) params.set("q", opts.q);
+  if (opts.status) params.set("status", opts.status);
+  if (opts.cursor) params.set("cursor", opts.cursor);
+  if (opts.limit) params.set("limit", String(opts.limit));
+  const res = await fetch(`${BASE}/api/sessions?${params}`);
+  return parseResponse(res, SessionListResponse);
+}
+
+async function parseErrorResponse(res: Response): Promise<ApiClientError> {
+  const text = await res.text();
+  let json: unknown;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  const err = ApiErrorBody.safeParse(json);
+  if (err.success) {
+    return new ApiClientError(err.data.error.code, err.data.error.message, err.data.error.details, res.status);
+  }
+  return new ApiClientError("HTTP_ERROR", `HTTP ${res.status}`, json, res.status);
+}
