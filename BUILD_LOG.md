@@ -4,6 +4,31 @@ Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
 ---
 
+## Morning summary — Night 6 (2026-04-20, top of file — 60-second skim)
+
+**Status: NIGHT-6-COMPLETE.** Validation + refactor night. All systems green.
+
+**Gate:** `pnpm typecheck` ✅ `pnpm lint` ✅ `pnpm test` 173/173 ✅ `pnpm e2e` 15/15 ✅ `prisma validate` ✅ `prisma migrate status` up-to-date ✅
+
+**What shipped tonight:**
+
+- **Pipeline verified end-to-end**: sample-3q.mp4 completes in ~4 min, 3 questions, status → done. See `reports/night6-e2e.md`.
+- **Scene threshold**: Lowered 0.3 → 0.15 (`SCENE_THRESHOLD_DEFAULT` constant) for Becker lecture video soft transitions.
+- **OAuth prompt extraction fix**: `claudeCliCall` now extracts `payload.prompt` instead of JSON.stringify(payload); fixes tags always-null. `extractJsonFromResponse` now used in router for prose-wrapped Claude output.
+- **Provisional rubric keys**: 10 placeholder keys (5 acc + 5 con), `FeedbackItem.provisional` schema flag, amber UI badge in Review screen. Blocker doc at `blockers/2026-04-17-feedback-items.md`.
+- **Refactor inventory**: `reports/night6-refactor-inventory.md`. 2 unused deps removed. Router test mock fixed. No duplicate helpers.
+- **Fidelity sweep**: All 7 `TODO(fidelity)` markers closed — XML per-line error list, `/api/anki/stats` endpoint (real streak/retention), `?` keyboard shortcut overlay, `/api/topics/[id]/history` implemented, SSE/FlowchartCard/Browse annotated as blocked.
+- **173 tests, 15 e2e** — all green.
+
+**Three things Sam should do next:**
+1. **Re-run the fixture** (`node scripts/fixture-runner.js`) to verify the OAuth prompt fix actually persists tags. Check that `Question.tags` is non-null after the run.
+2. **Review blocker doc** (`blockers/2026-04-17-feedback-items.md`) and decide which of the 10 provisional rubric keys to keep or rename.
+3. **Set OpenRouter key** in Settings → Models tab to test the non-OAuth path with real cost tracking.
+
+**Deferred to Night 7:** Tag/grade zero-score investigation, StageProgress sparse issue, RecordClient.tsx split, Browse view, SSE streaming, pino logging, rate limiting.
+
+---
+
 ## Night 6 — Phase A (2026-04-20)
 
 - Fixed pnpm db:seed to be fully idempotent (Topics/Textbooks/Chunks/AnkiCards/Budget use skip-if-exists)
