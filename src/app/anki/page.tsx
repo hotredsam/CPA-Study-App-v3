@@ -1,14 +1,22 @@
-import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
+import { Suspense } from 'react'
+import { AnkiClient } from './AnkiClient'
 
-export const metadata = { title: 'Anki — CPA Study Servant' }
+export const metadata = { title: 'Flashcards — CPA Study Servant' }
 
 export default function AnkiPage() {
   return (
-    <div>
-      <EyebrowHeading eyebrow="Spaced Repetition" title="Anki" sub="Practice your due flashcards." />
-      <p className="text-sm text-[color:var(--ink-faint)]">
-        Full Anki view coming in Phase G.
-      </p>
-    </div>
+    <Suspense
+      fallback={
+        <div
+          className="py-16 text-center text-sm text-[color:var(--ink-faint)]"
+          role="status"
+          aria-live="polite"
+        >
+          Loading…
+        </div>
+      }
+    >
+      <AnkiClient />
+    </Suspense>
   )
 }
