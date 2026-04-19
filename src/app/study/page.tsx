@@ -1,14 +1,60 @@
-import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
+import { EyebrowHeading } from "@/components/ui/EyebrowHeading";
+import { StudyHomeClient } from "./StudyHomeClient";
 
-export const metadata = { title: 'Study — CPA Study Servant' }
+export const metadata = { title: "Study — CPA Study Servant" };
 
-export default function StudyPage() {
+type RecentTextbook = {
+  id: string;
+  title: string;
+  lastChunkIdx: number;
+  totalChunks: number;
+} | null;
+
+type TextbookItem = {
+  id: string;
+  title: string;
+  sections: string[];
+  chunkCount: number;
+  indexStatus: string;
+};
+
+type StudyData = {
+  recentTextbook: RecentTextbook;
+  textbooks: TextbookItem[];
+  cardsDue: number;
+};
+
+async function fetchStudyData(): Promise<StudyData> {
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+    const res = await fetch(`${baseUrl}/api/study`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return { recentTextbook: null, textbooks: [], cardsDue: 0 };
+    }
+
+    return res.json() as Promise<StudyData>;
+  } catch {
+    return { recentTextbook: null, textbooks: [], cardsDue: 0 };
+  }
+}
+
+export default async function StudyPage() {
+  const data = await fetchStudyData();
+
   return (
     <div>
-      <EyebrowHeading eyebrow="Textbook Reader" title="Study" sub="Read and review CPA exam material." />
-      <p className="text-sm text-[color:var(--ink-faint)]">
-        Full study view coming in Phase G.
-      </p>
+      <EyebrowHeading eyebrow="Study" title="Textbook Study" />
+      <StudyHomeClient
+        recentTextbook={data.recentTextbook}
+        textbooks={data.textbooks}
+        cardsDue={data.cardsDue}
+      />
     </div>
-  )
+  );
 }

@@ -1,14 +1,17 @@
-import RecordClient from "./RecordClient";
+import { EyebrowHeading } from "@/components/ui/EyebrowHeading";
+import { RecordClient } from "./RecordClient";
+
+export const metadata = { title: "Record — CPA Study Servant" };
 
 export default function RecordPage() {
   return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-3xl font-bold mb-2">Record a session</h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Pick a mic + a screen source, hit start, and run through your Becker practice questions.
-        When you stop, the recording uploads to R2 and the pipeline kicks off.
-      </p>
+    <div>
+      <EyebrowHeading
+        eyebrow="Record"
+        title="Record a Session"
+        sub="Capture your screen and microphone while working through practice questions. The pipeline grades your performance automatically."
+      />
       <RecordClient />
-    </main>
+    </div>
   );
 }
