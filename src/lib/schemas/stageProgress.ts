@@ -5,6 +5,7 @@ export const Stage = z.enum([
   "segmenting",
   "extracting",
   "transcribing",
+  "tagging",
   "grading",
 ]);
 export type Stage = z.infer<typeof Stage>;

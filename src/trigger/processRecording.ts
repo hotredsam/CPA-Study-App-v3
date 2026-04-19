@@ -4,6 +4,7 @@ import type { StageProgress } from "@/lib/schemas/stageProgress";
 import { segmentRecording } from "@/trigger/segmentRecording";
 import { extractQuestion } from "@/trigger/extractQuestion";
 import { transcribeQuestion } from "@/trigger/transcribeQuestion";
+import { tagQuestion } from "@/trigger/tagQuestion";
 import { gradeQuestion } from "@/trigger/gradeQuestion";
 
 export const processRecording = task({
@@ -42,12 +43,17 @@ export const processRecording = task({
       const extractRes = await extractQuestion.triggerAndWait({ questionId });
       const transcribeRes = await transcribeQuestion.triggerAndWait({ questionId });
       if (!extractRes.ok || !transcribeRes.ok) continue;
+      // Tag stage: non-blocking on failure (tagQuestion catches its own errors)
+      await tagQuestion.triggerAndWait({ questionId });
       await gradeQuestion.triggerAndWait({ questionId });
     }
 
     await prisma.recording.update({
       where: { id: recordingId },
-      data: { status: "done" },
+      data: {
+        status: "done",
+        tagStage: { status: "completed", completedAt: new Date().toISOString(), pct: 100 },
+      },
     });
     await setStage(recordingId, {
       stage: "grading",

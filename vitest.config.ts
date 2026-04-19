@@ -12,7 +12,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/integration/**/*.test.ts", "tests/db/**/*.test.ts", "tests/lib/**/*.test.ts", "tests/api/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/integration/**/*.test.ts", "tests/db/**/*.test.ts", "tests/lib/**/*.test.ts", "tests/api/**/*.test.ts", "tests/ai/**/*.test.ts"],
     exclude: ["node_modules", ".next", "tests/e2e/**"],
     testTimeout: 15000,
     pool: "threads",

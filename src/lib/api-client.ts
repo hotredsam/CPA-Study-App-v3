@@ -293,3 +293,123 @@ async function parseErrorResponse(res: Response): Promise<ApiClientError> {
   }
   return new ApiClientError("HTTP_ERROR", `HTTP ${res.status}`, json, res.status);
 }
+
+// ---------------------------------------------------------------------------
+// New AI feature endpoints (Night 5 / Phase E)
+// ---------------------------------------------------------------------------
+
+const CheckpointQuizResponse = z.object({
+  questions: z.array(
+    z.object({
+      stem: z.string(),
+      choices: z.tuple([z.string(), z.string(), z.string(), z.string()]),
+      correctIndex: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
+      rationale: z.string(),
+      distractorQualityNote: z.string(),
+    }),
+  ),
+});
+
+/**
+ * Get checkpoint quiz questions for a textbook chunk.
+ *
+ * @example
+ * const { questions } = await getCheckpointQuiz(chunkId);
+ */
+export async function getCheckpointQuiz(chunkId: string) {
+  const res = await fetch(`${BASE}/api/study/checkpoint?chunkId=${encodeURIComponent(chunkId)}`);
+  return parseResponse(res, CheckpointQuizResponse);
+}
+
+const RegenerateAnkiCardsResponse = z.object({
+  count: z.number(),
+  topicId: z.string(),
+});
+
+/**
+ * Regenerate Anki cards for all chunks belonging to a topic.
+ *
+ * @example
+ * const { count } = await regenerateAnkiCards(topicId);
+ */
+export async function regenerateAnkiCards(topicId: string) {
+  const res = await fetch(
+    `${BASE}/api/anki/regenerate?topicId=${encodeURIComponent(topicId)}`,
+  );
+  return parseResponse(res, RegenerateAnkiCardsResponse);
+}
+
+const RefreshTopicNotesResponse = z.object({
+  topicId: z.string(),
+  aiNotes: z.object({
+    coreRule: z.string(),
+    pitfall: z.string(),
+    citation: z.string(),
+    performance: z.string(),
+  }),
+});
+
+/**
+ * Refresh AI-generated study notes for a single topic.
+ *
+ * @example
+ * const { aiNotes } = await refreshTopicNotes(topicId);
+ */
+export async function refreshTopicNotes(topicId: string) {
+  const res = await fetch(`${BASE}/api/topics/${topicId}/refresh-notes`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+  });
+  return parseResponse(res, RefreshTopicNotesResponse);
+}
+
+const BulkRefreshTopicNotesResponse = z.object({
+  processed: z.number(),
+});
+
+/**
+ * Bulk-refresh AI study notes for topics matching a section or explicit list.
+ *
+ * @example
+ * const { processed } = await bulkRefreshTopicNotes({ section: "FAR" });
+ * const { processed } = await bulkRefreshTopicNotes({ topicIds: ["id1", "id2"] });
+ */
+export async function bulkRefreshTopicNotes(params: {
+  section?: string;
+  topicIds?: string[];
+}) {
+  const res = await fetch(`${BASE}/api/topics/bulk-refresh-notes`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  return parseResponse(res, BulkRefreshTopicNotesResponse);
+}
+
+const PostChatResponse = z.object({
+  reply: z.string(),
+  conversationId: z.string(),
+});
+
+/**
+ * Send a message to the CPA tutor chatbot.
+ * Creates a new conversation if no conversationId is provided.
+ *
+ * @example
+ * const { reply, conversationId } = await postChat({ message: "Explain ASC 606" });
+ * // Continue the conversation:
+ * const { reply: reply2 } = await postChat({ conversationId, message: "Give me an example" });
+ */
+export async function postChat(body: {
+  conversationId?: string;
+  message: string;
+  context?: { recordingId?: string; questionId?: string; topicId?: string };
+}) {
+  const res = await fetch(`${BASE}/api/chat`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return parseResponse(res, PostChatResponse);
+}
