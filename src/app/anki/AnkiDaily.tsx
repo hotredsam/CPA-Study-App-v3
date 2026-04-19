@@ -31,13 +31,14 @@ export function AnkiDaily({ setMode }: Props) {
     refetchInterval: 60_000,
   })
 
-  // Stats: derive from available data (no dedicated stats endpoint yet)
   const { data: statsData } = useQuery<ReviewStatsResponse>({
     queryKey: ['anki-stats'],
     queryFn: async (): Promise<ReviewStatsResponse> => {
-      // TODO(fidelity): Add a dedicated /api/anki/stats endpoint with real streak + retention
-      return { streak: 0, totalCards: 0, retentionRate: null, backlog: 0 }
+      const res = await fetch('/api/anki/stats')
+      if (!res.ok) return { streak: 0, totalCards: 0, retentionRate: null, backlog: 0 }
+      return res.json() as Promise<ReviewStatsResponse>
     },
+    refetchInterval: 60_000,
   })
 
   const count = dueData?.count ?? 0

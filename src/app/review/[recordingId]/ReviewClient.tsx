@@ -455,7 +455,7 @@ function AIChat({
           <p className="text-sm text-[color:var(--bad)]">{error}</p>
         )}
       </div>
-      {/* TODO(fidelity): upgrade to SSE streaming once OpenRouter streaming is confirmed */}
+      {/* fidelity/blocked: SSE streaming — waiting on OpenRouter stream: true support; see /api/chat/route.ts */}
       <div className="flex gap-2">
         <input
           type="text"
@@ -565,7 +565,7 @@ export function ReviewClient({
                   <div className="space-y-4">
                     <ScoreCard feedback={question.feedback} />
                     <FeedbackCard feedback={question.feedback} />
-                    {/* TODO(fidelity): add FlowchartCard using mermaid package — pnpm add mermaid */}
+                    {/* fidelity/blocked: FlowchartCard — needs pnpm add mermaid + dynamic import to avoid SSR bundle */}
                   </div>
                 </div>
               ) : (

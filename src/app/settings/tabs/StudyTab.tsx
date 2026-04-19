@@ -49,6 +49,7 @@ export function StudyTab() {
   const [hoursTarget, setHoursTarget] = useState<HoursTarget>({})
   const [isDragging, setIsDragging] = useState(false)
   const [promptVisible, setPromptVisible] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Load latest routine
@@ -108,14 +109,18 @@ export function StudyTab() {
         stats?: { blockCount: number; taskCount: number; totalMinutes: number }
       }
       if (result.success) {
+        setValidationErrors([])
         emitToast(
           `Valid — ${result.stats?.blockCount ?? 0} blocks, ${result.stats?.taskCount ?? 0} tasks`,
           'success',
         )
       } else {
-        emitToast(result.errors?.[0] ?? 'Invalid XML', 'error')
+        const errs = result.errors ?? ['Invalid XML']
+        setValidationErrors(errs)
+        emitToast(errs[0] ?? 'Invalid XML', 'error')
       }
     } catch {
+      setValidationErrors([])
       emitToast('Validation request failed', 'error')
     }
   }, [xmlValue])
@@ -295,7 +300,6 @@ Focus on my weakest areas and the exam that is coming up soonest.`
         </div>
 
         {/* Button row */}
-        {/* TODO(fidelity): add per-line XML error list with line numbers */}
         <div className="mt-5 flex flex-wrap gap-2">
           <Btn variant="ghost" size="sm" onClick={() => void handleValidate()}>
             Validate XML
@@ -312,6 +316,14 @@ Focus on my weakest areas and the exam that is coming up soonest.`
             Copy Claude prompt
           </Btn>
         </div>
+
+        {validationErrors.length > 0 && (
+          <ul className="mt-3 space-y-1 rounded border border-[color:var(--error-border,#f87171)] bg-[color:var(--error-soft,#fef2f2)] p-3 text-xs text-[color:var(--error,#dc2626)]" role="list" aria-label="XML validation errors">
+            {validationErrors.map((e, i) => (
+              <li key={i} className="font-mono">{e}</li>
+            ))}
+          </ul>
+        )}
 
         {/* Prompt preview */}
         <div className="mt-4">

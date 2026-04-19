@@ -1,4 +1,4 @@
-// TODO(fidelity): Implement full Browse view — search/filter all cards, bulk edit, import/export
+// fidelity/deferred: Browse view (search + filter all cards, bulk edit, CSV import/export) — Night 7 scope
 
 import { Card } from '@/components/ui'
 
