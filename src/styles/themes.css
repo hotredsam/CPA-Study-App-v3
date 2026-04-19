@@ -1,0 +1,180 @@
+/* ─── Base token layer — shared across all themes (Paper default) ──────────── */
+:root {
+  --accent-hue: 18;
+  --canvas: oklch(0.975 0.006 75);
+  --canvas-2: oklch(0.955 0.008 70);
+  --surface: oklch(0.995 0.003 75);
+  --surface-2: oklch(0.965 0.006 70);
+  --ink: oklch(0.22 0.01 50);
+  --ink-dim: oklch(0.42 0.012 50);
+  --ink-faint: oklch(0.60 0.010 50);
+  --border: oklch(0.88 0.008 60);
+  --border-hi: oklch(0.78 0.010 60);
+  --track: oklch(0.92 0.008 60);
+  --accent: oklch(0.52 0.18 var(--accent-hue));
+  --accent-faint: oklch(0.93 0.04 var(--accent-hue));
+  --good: oklch(0.48 0.12 145);
+  --good-soft: oklch(0.92 0.06 145);
+  --warn: oklch(0.58 0.14 60);
+  --warn-soft: oklch(0.93 0.06 60);
+  --bad: oklch(0.52 0.20 28);
+  --bad-soft: oklch(0.94 0.07 28);
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+}
+
+/* ─── Night theme ───────────────────────────────────────────────────────────── */
+html[data-theme="night"] {
+  --canvas: oklch(0.14 0.008 260);
+  --canvas-2: oklch(0.17 0.009 260);
+  --surface: oklch(0.19 0.010 260);
+  --surface-2: oklch(0.22 0.010 260);
+  --ink: oklch(0.96 0.006 260);
+  --ink-dim: oklch(0.75 0.008 260);
+  --ink-faint: oklch(0.55 0.008 260);
+  --border: oklch(0.28 0.012 260);
+  --border-hi: oklch(0.38 0.012 260);
+  --track: oklch(0.24 0.010 260);
+  --accent-faint: oklch(0.28 0.08 var(--accent-hue));
+  --good-soft: oklch(0.26 0.05 145);
+  --bad-soft: oklch(0.28 0.07 28);
+  --warn-soft: oklch(0.28 0.06 60);
+}
+
+/* ─── Sepia theme ───────────────────────────────────────────────────────────── */
+html[data-theme="sepia"] {
+  --canvas: oklch(0.94 0.028 75);
+  --canvas-2: oklch(0.91 0.032 72);
+  --surface: oklch(0.97 0.020 78);
+  --surface-2: oklch(0.93 0.025 74);
+  --ink: oklch(0.28 0.03 50);
+  --ink-dim: oklch(0.45 0.025 50);
+  --ink-faint: oklch(0.60 0.020 55);
+  --border: oklch(0.82 0.030 70);
+  --border-hi: oklch(0.72 0.032 68);
+  --track: oklch(0.87 0.025 70);
+}
+
+/* ─── Sakura theme ──────────────────────────────────────────────────────────── */
+html[data-theme="sakura"] {
+  --canvas: oklch(0.965 0.018 10);
+  --canvas-2: oklch(0.945 0.022 8);
+  --surface: oklch(0.985 0.012 12);
+  --surface-2: oklch(0.955 0.018 10);
+  --ink: oklch(0.28 0.05 350);
+  --ink-dim: oklch(0.45 0.04 350);
+  --ink-faint: oklch(0.60 0.030 355);
+  --border: oklch(0.86 0.035 10);
+  --border-hi: oklch(0.76 0.040 10);
+  --track: oklch(0.90 0.028 10);
+  --accent-faint: oklch(0.94 0.050 10);
+}
+
+/* ─── Scientific theme ──────────────────────────────────────────────────────── */
+html[data-theme="scientific"] {
+  --canvas: oklch(0.11 0.010 240);
+  --canvas-2: oklch(0.14 0.010 240);
+  --surface: oklch(0.16 0.012 240);
+  --surface-2: oklch(0.19 0.012 240);
+  --ink: oklch(0.92 0.03 145);
+  --ink-dim: oklch(0.72 0.025 145);
+  --ink-faint: oklch(0.52 0.020 145);
+  --border: oklch(0.26 0.015 240);
+  --border-hi: oklch(0.36 0.015 240);
+  --track: oklch(0.20 0.012 240);
+  --accent-hue: 145 !important;
+  --accent-faint: oklch(0.22 0.06 145);
+  --font-sans: 'JetBrains Mono', monospace;
+}
+
+/* ─── Density tokens ────────────────────────────────────────────────────────── */
+html[data-density="compact"] {
+  --spacing-unit: 0.75;
+}
+
+html[data-density="comfortable"] {
+  --spacing-unit: 1;
+}
+
+/* ─── Serif family ──────────────────────────────────────────────────────────── */
+html[data-serif="tiempos"] {
+  --font-serif: 'Tiempos', Georgia, serif;
+}
+
+html[data-serif="source"] {
+  --font-serif: 'Source Serif 4', Georgia, serif;
+}
+
+html[data-serif="instrument"] {
+  --font-serif: 'Instrument Serif', Georgia, serif;
+}
+
+/* ─── App shell layout ──────────────────────────────────────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.side {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.main {
+  padding: 28px 36px 80px;
+  max-width: 1500px;
+  width: 100%;
+}
+
+/* ─── Utilities ─────────────────────────────────────────────────────────────── */
+.mono {
+  font-family: var(--font-mono);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.dim {
+  color: var(--ink-faint);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.hov {
+  transition: background-color .15s, border-color .15s, color .15s, transform .1s;
+}
+
+.hov:hover {
+  filter: brightness(0.97);
+}
+
+html[data-theme="night"] .hov:hover {
+  filter: brightness(1.15);
+}
+
+.pulse-dot {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}

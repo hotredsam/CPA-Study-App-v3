@@ -1,12 +1,15 @@
+@import '../styles/themes.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
-
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
 }

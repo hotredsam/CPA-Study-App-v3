@@ -17,6 +17,9 @@ export default [
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/ban-ts-comment": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
+      // App Router root layout.tsx is the correct place to load Google Fonts.
+      // This rule was designed for the Pages Router (_document.js).
+      "@next/next/no-page-custom-font": "off",
     },
   },
 ];
