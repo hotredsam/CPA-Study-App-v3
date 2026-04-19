@@ -20,10 +20,7 @@ export interface RunFunctionResult {
 /**
  * Thin adapter that wraps the existing claudeCli function to return LLMCallResult shape.
  */
-async function claudeCliCall(
-  payload: unknown,
-  _functionKey: AiFunctionKey,
-): Promise<LLMCallResult> {
+async function claudeCliCall(payload: unknown): Promise<LLMCallResult> {
   const result = await callClaude(JSON.stringify(payload));
   return {
     content: result,
@@ -142,7 +139,7 @@ export async function runFunction(
   let llmResult: LLMCallResult;
 
   if (modelConfig.useOAuthFallback) {
-    llmResult = await claudeCliCall(payload, functionKey);
+    llmResult = await claudeCliCall(payload);
   } else {
     const messages = buildMessages(functionKey, payload);
     llmResult = await callOpenRouter({
@@ -192,7 +189,7 @@ export async function runFunction(
           hitCount: 0,
         },
       })
-      .catch((_err: unknown) => {
+      .catch(() => {
         // Cache write failure is non-fatal
         logger.warn({ functionKey, inputHash }, "cache entry write failed");
       });

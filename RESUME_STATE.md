@@ -1,9 +1,9 @@
 # Resume state
 
 status: NIGHT-5-RUNNING
-phase: F-ui-scaffold
-last-completed-phase: E-ai-features
-next-action: Phase F — UI migration scaffold (app shell, routes, primitives, TanStack Query hooks)
+phase: H-study-routine
+last-completed-phase: G-screen-migration
+next-action: Phase H — Study routine XML parser + copy-prompt + dashboard wiring
 iteration: 5
 updated: 2026-04-19T23:30:00Z
 
@@ -13,6 +13,8 @@ updated: 2026-04-19T23:30:00Z
 - C: OpenRouter integration (crypto, openrouter client, LLM router, model-config + key endpoints, 30 tests)
 - D: Infrastructure layer (semantic cache, batch queue, budget ledger, cron jobs, API endpoints, 34 tests)
 - E: 7 new AI features (tag, topic-extract, checkpoint-quiz, anki-gen, chat-tutor, voice-note, topic-notes, 151 tests)
+- F: UI scaffold (app shell, 5-theme system, shared primitives, TanStack Query hooks, route stubs)
+- G: All 10 screens migrated (Dashboard, Record, Pipeline, Review, Topics, Study, Anki, Library, TextbookViewer, Settings)
 
 ## Night 4 completed phases
 
