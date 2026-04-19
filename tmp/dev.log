@@ -1,0 +1,19 @@
+
+> cpa-study-app-v3@0.1.0 predev C:\Users\hotre\Desktop\Coding Projects\CPA-Study-App-v3
+> node scripts/kill-dev-ports.mjs
+
+
+> cpa-study-app-v3@0.1.0 dev C:\Users\hotre\Desktop\Coding Projects\CPA-Study-App-v3
+> next dev
+
+ ⨯ Failed to start server
+Error: listen EADDRINUSE: address already in use :::3001
+    at <unknown> (Error: listen EADDRINUSE: address already in use :::3001)
+    at new Promise (<anonymous>) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[?25h

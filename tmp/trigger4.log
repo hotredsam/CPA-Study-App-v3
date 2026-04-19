@@ -1,0 +1,68 @@
+
+> cpa-study-app-v3@0.1.0 trigger:dev C:\Users\hotre\Desktop\Coding Projects\CPA-Study-App-v3
+> trigger dev
+
+
+Trigger.dev (3.3.17 -> 4.4.4)
+------------------------------------------------------
+[90m│[39m
+[33m▲[39m  Warning: You're not running the latest CLI version, please consider updating ASAP
+[90m│[39m  
+[90m│[39m           Current:     3.3.17
+[90m│[39m           Latest:      4.4.4
+[90m│[39m  
+[90m│[39m           Run latest:  npx trigger.dev@latest
+------------------------------------------------------
+Key: Version | Task | Run
+------------------------------------------------------
+○ Building background worker…
+○ Background worker ready [node] -> 20260419.6
+○ Apr 18, 16:46:29.847 ->  20260419.6 | processRecording | run_thvqvkkpa1xbordvtwq2j.1
+○ Apr 18, 16:46:30.741 ->  20260419.6 | segmentRecording | run_notgpg81e185u1azbtyta.1
+○ Apr 18, 16:46:45.214 ->  20260419.6 | segmentRecording | run_notgpg81e185u1azbtyta.1 | Success (14.3s)
+○ Apr 18, 16:46:45.653 run_thvqvkkpa1xbordvtwq2j.1 Parallel waits are not supported, e.g. using Promise.all() around our wait functions.
+○ Apr 18, 16:46:45.655 Parallel waits are not supported, e.g. using Promise.all() around our wait functions.
+
+○ Apr 18, 16:46:45.656 Parallel waits are not supported, e.g. using Promise.all() around our wait functions.
+
+○ Apr 18, 16:46:45.657 Parallel waits are not supported, e.g. using Promise.all() around our wait functions.
+
+○ Apr 18, 16:46:45.669 Parallel waits are not supported, e.g. using Promise.all() around our wait functions.
+
+○ Apr 18, 16:46:45.781 ->  20260419.6 | processRecording | run_thvqvkkpa1xbordvtwq2j.1 | Error (retrying skipped) (15.8s)
+○ Apr 18, 16:46:46.146 ->  20260419.6 | transcribeQuestion | run_gcaq3dtx55iaft8ksvmxn.1
+○ Apr 18, 16:46:46.255 ->  20260419.6 | transcribeQuestion | run_pa45ruisf6kouz7xw7tfq.1
+○ Apr 18, 16:46:46.314 ->  20260419.6 | extractQuestion | run_tuh5o81ij7e62khez3drr.1
+○ Apr 18, 16:46:46.439 ->  20260419.6 | transcribeQuestion | run_95gffsurfdc67d95oy1bw.1
+○ Apr 18, 16:46:46.448 ->  20260419.6 | extractQuestion | run_bbop127uwgzsenvv3yxob.1
+○ Apr 18, 16:46:46.573 ->  20260419.6 | extractQuestion | run_6vse8s4qbz2vytoan3132.1
+○ Apr 18, 16:46:46.939 ->  20260419.6 | extractQuestion | run_tuh5o81ij7e62khez3drr.1 | Success (542.1ms)
+○ Apr 18, 16:46:47.192 ->  20260419.6 | extractQuestion | run_6vse8s4qbz2vytoan3132.1 | Success (533.9ms)
+○ Apr 18, 16:46:47.253 ->  20260419.6 | extractQuestion | run_bbop127uwgzsenvv3yxob.1 | Success (705.4ms)
+○ Apr 18, 16:46:47.836 ->  20260419.6 | transcribeQuestion | run_95gffsurfdc67d95oy1bw.1 | Success (1.2s)
+○ Apr 18, 16:46:47.861 ->  20260419.6 | transcribeQuestion | run_gcaq3dtx55iaft8ksvmxn.1 | Success (1.6s)
+○ Apr 18, 16:46:48.047 ->  20260419.6 | transcribeQuestion | run_pa45ruisf6kouz7xw7tfq.1 | Success (1.7s)
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.7
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.8
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.9
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.10
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.11
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.12
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.13
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.14
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.15
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.16
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.17
+○ Rebuilding background worker…
+○ Background worker ready [node] -> 20260419.18
