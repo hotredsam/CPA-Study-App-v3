@@ -47,7 +47,8 @@ async function embedViaXenova(text: string): Promise<number[]> {
   // Dynamic import to avoid top-level ESM issues
   const { pipeline } = await import("@xenova/transformers");
   const extractor = await pipeline("feature-extraction", "Xenova/bge-small-en-v1.5");
-  const output = await extractor(text, { pooling: "mean", normalize: true }) as { data: number[] | Float32Array };
+  const results = await extractor(text) as { data: number[] | Float32Array }[];
+  const output = results[0] as { data: number[] | Float32Array };
   return Array.from(output.data);
 }
 

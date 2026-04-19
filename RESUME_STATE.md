@@ -1,11 +1,18 @@
 # Resume state
 
 status: NIGHT-5-RUNNING
-phase: B-schema-expansion
-last-completed-phase: A-prototype-analysis
-next-action: Phase B — Prisma schema expansion (schema-guardian agent). Run night5_feature_expansion migration.
+phase: F-ui-scaffold
+last-completed-phase: E-ai-features
+next-action: Phase F — UI migration scaffold (app shell, routes, primitives, TanStack Query hooks)
 iteration: 5
-updated: 2026-04-19T02:00:00Z
+updated: 2026-04-19T23:30:00Z
+
+## Night 5 completed phases
+- A: Prototype unpack + analysis (ui-review/, COMPONENT_INVENTORY.md, APP_SHELL.md, SCHEMA_GAP.md)
+- B: Prisma schema expansion (16 new models, migration applied, seed script, 13 DB tests, 102 tests total)
+- C: OpenRouter integration (crypto, openrouter client, LLM router, model-config + key endpoints, 30 tests)
+- D: Infrastructure layer (semantic cache, batch queue, budget ledger, cron jobs, API endpoints, 34 tests)
+- E: 7 new AI features (tag, topic-extract, checkpoint-quiz, anki-gen, chat-tutor, voice-note, topic-notes, 151 tests)
 
 ## Night 4 completed phases
 
