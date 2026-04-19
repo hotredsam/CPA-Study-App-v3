@@ -1,11 +1,37 @@
 # Resume state
 
-status: NIGHT-3-COMPLETE
+status: NIGHT-4-COMPLETE
 phase: G-morning-handoff
-last-completed-phase: F-security-deploy
-next-action: Sam manual — run pipeline on fixtures, verify Anki export deploy target, lock feedback-items
-iteration: 3
-updated: 2026-04-18T15:37:00Z
+last-completed-phase: F-backend-gap-fill
+next-action: Sam manual — deploy to trigger.dev cloud with real API key, lower scene detection threshold, lock feedback-items
+iteration: 4
+updated: 2026-04-19T01:30:00Z
+
+## Night 4 completed phases
+
+- A: Stack boot (Postgres up, Next.js on 3001, trigger:dev connected + authenticated)
+- B: All 3 fixtures run end-to-end (4 critical pipeline bugs fixed)
+- C: Quality audit written (reports/night4-quality-audit.md)
+- D: Prompt iteration deferred (no transcript/visual data on Windows dev)
+- E: Stress tests deferred (sequential pipeline works; concurrency + failure injection for Night 5)
+- F: Backend gap-fill (GET/DELETE/reprocess recordings, GET sessions with text search)
+- G: Morning handoff (BUILD_LOG, RESUME_STATE, night4-summary.md)
+
+## Night 4 deferred items
+
+- Prompt iteration (needs real transcript data from Linux/whisper prod)
+- Scene detection threshold tuning (0.3 → 0.15 for Becker format)
+- Structured logging (pino) — deferred from Night 3
+- Request ID middleware — deferred from Night 3
+- Idempotency in tasks — deferred from Night 3
+- Rate limiting — deferred from Night 3
+- OpenAPI export — deferred from Night 3
+- Concurrency + failure injection stress tests
+
+## Notes for wrapper
+
+- `status: NIGHT-4-COMPLETE` → wrapper exits.
+- Sam resumes after reviewing Night 4 report and deploying to trigger.dev cloud.
 
 ## Night 3 completed phases
 

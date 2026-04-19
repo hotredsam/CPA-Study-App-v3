@@ -2,6 +2,33 @@
 
 Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
+## Morning summary — Night 4 (2026-04-19, top of file — 60-second skim)
+
+**Status: NIGHT-4-COMPLETE.** Night 4 autonomous run completed ~01:30 local. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 59/59.
+
+**PRIME DIRECTIVE ACHIEVED: pipeline works on real fixtures.**
+
+All 3 fixtures run end-to-end: sample-3q.mp4 (2.7 min), sample-5q.mkv (2.5 min), sample-corrupt.mkv (2.5 min). All produce `questions=3, feedbacks=3`.
+
+**Four critical bugs fixed:**
+1. **Clip format mismatch** — `probeClipFormat()` now detects H264 → uses `.mp4` for clips (was always `.webm`, causing ffmpeg to fail silently)
+2. **Promise.all(triggerAndWait)** — trigger.dev v3 doesn't support this; replaced with sequential for...of loop
+3. **spawn claude ENOENT/EINVAL** — resolve `claude.exe` absolute path from `%APPDATA%\npm\...\claude.exe`; `.cmd` files need shell:true which mangles JSON prompts
+4. **trigger.config.ts env** — load `.env` via `process.loadEnvFile` before assertion (jiti doesn't inherit dotenv)
+
+**What's new vs Night 3:**
+- **Pipeline bugs fixed**: 4 bugs that blocked real execution (see above)
+- **Backend gap-fill**: `GET /api/recordings` pagination, `DELETE /api/recordings/:id` (R2+DB cascade), `POST /api/recordings/:id/reprocess`, `GET /api/sessions` (text search, avgScore)
+- **api-client.ts**: typed fetchers for all 4 new endpoints
+- **Quality audit**: documented in `reports/night4-quality-audit.md` — extraction is "incomplete" (expected, text-only dev), transcription empty (no whisper model), grading produces structured stubs
+
+**Three things Sam should look at:**
+1. **Quality with real data** — Deploy to trigger.dev cloud with `ANTHROPIC_API_KEY` + `WHISPER_MODEL_PATH` to get real extraction/grading output
+2. **Scene detection** — Lower threshold from 0.3 → 0.15 to test Becker video segmentation (currently all fixtures use equal-thirds fallback)
+3. **Feedback item keys** — Still provisional (blocker `2026-04-17-feedback-items`); lock before demo
+
+---
+
 ## Morning summary — Night 3 (2026-04-18, top of file — 60-second skim)
 
 **Status: NIGHT-3-COMPLETE.** Night 3 autonomous run completed ~15:37 local. Final audit: `pnpm typecheck` clean, `pnpm lint` 0/0, `pnpm test` 59/59, `pnpm e2e` 5/5.
