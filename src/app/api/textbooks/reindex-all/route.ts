@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
+import { queueTextbookIndex } from '@/lib/textbooks/queue'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,28 +11,25 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(): Promise<NextResponse> {
   try {
-    // Reset all textbooks to QUEUED
+    // Reset all textbooks with source PDFs to INDEXING
     const updateResult = await prisma.textbook.updateMany({
-      data: { indexStatus: 'QUEUED', indexedAt: null },
+      where: { r2Key: { not: null } },
+      data: { indexStatus: 'INDEXING', indexedAt: null },
     })
 
     // Fetch all textbook ids so we can trigger each
     const textbooks = await prisma.textbook.findMany({
+      where: { r2Key: { not: null } },
       select: { id: true },
     })
 
-    // Best-effort trigger for each textbook
-    if (process.env.TRIGGER_SECRET_KEY) {
+    // Best-effort trigger/fallback for each textbook
+    for (const tb of textbooks) {
       try {
-        const { tasks } = await import('@trigger.dev/sdk/v3')
-        for (const tb of textbooks) {
-          await tasks.trigger('textbook-indexer', { textbookId: tb.id })
-        }
-      } catch (triggerErr) {
-        console.warn('[textbooks/reindex-all] trigger skipped:', triggerErr)
+        await queueTextbookIndex({ textbookId: tb.id, rebuildChunks: true })
+      } catch (queueErr) {
+        console.warn('[textbooks/reindex-all] index queue skipped:', queueErr)
       }
-    } else {
-      console.warn('[textbooks/reindex-all] TRIGGER_SECRET_KEY not set, skipping trigger')
     }
 
     return NextResponse.json({ queued: updateResult.count })

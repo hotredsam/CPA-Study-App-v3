@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AiFunctionKey } from "@prisma/client";
+import { AiFunctionKey, CpaSection } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { runFunction } from "@/lib/llm/router";
 
@@ -11,6 +11,7 @@ export const TopicExtractInput = z.object({
   chunkId: z.string(),
   content: z.string(),
   chapterRef: z.string().optional(),
+  section: z.nativeEnum(CpaSection).optional(),
 });
 
 export const TopicExtractOutput = z.object({
@@ -37,6 +38,11 @@ function buildPrompt(input: TopicExtractInput): string {
 
   if (input.chapterRef) {
     parts.push(`Chapter Reference: ${input.chapterRef}`);
+    parts.push("");
+  }
+
+  if (input.section) {
+    parts.push(`CPA Section: ${input.section}`);
     parts.push("");
   }
 
@@ -79,17 +85,31 @@ export async function runTopicExtract(
 
   const output = TopicExtractOutput.parse(result.output);
 
-  // Update Chunk.topicId if a matching Topic exists (case-insensitive name match)
+  // Link to an existing Topic if possible; otherwise create one for uploaded
+  // textbook content so a blank app can build its topic map from scratch.
   const matchingTopic = await prisma.topic.findFirst({
     where: {
       name: { equals: output.canonicalTopic, mode: "insensitive" },
+      ...(validated.section ? { section: validated.section } : {}),
     },
   });
 
-  if (matchingTopic) {
+  const topic = matchingTopic ?? (
+    validated.section
+      ? await prisma.topic.create({
+          data: {
+            section: validated.section,
+            name: output.canonicalTopic,
+            unit: output.subsection || null,
+          },
+        })
+      : null
+  );
+
+  if (topic) {
     await prisma.chunk.update({
       where: { id: validated.chunkId },
-      data: { topicId: matchingTopic.id },
+      data: { topicId: topic.id },
     });
   }
 

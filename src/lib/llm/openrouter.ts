@@ -30,9 +30,20 @@ const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 
+function normalizeOpenRouterKey(value: string): string {
+  let key = value.trim();
+  if (key.toLowerCase().startsWith("bearer ")) {
+    key = key.slice("bearer ".length).trim();
+  }
+  if (key.startsWith("<") && key.endsWith(">")) {
+    key = key.slice(1, -1).trim();
+  }
+  return key;
+}
+
 function envOpenRouterKey(): string | null {
   if (process.env.NODE_ENV === "test") return null;
-  const key = process.env["OPENROUTER_API_KEY"]?.trim();
+  const key = normalizeOpenRouterKey(process.env["OPENROUTER_API_KEY"] ?? "");
   return key && key.length > 0 ? key : null;
 }
 
@@ -49,7 +60,7 @@ async function getOpenRouterKey(): Promise<string> {
     throw new Error("OpenRouter key not configured");
   }
 
-  return decryptKey(settings.openRouterKeyEnc);
+  return normalizeOpenRouterKey(decryptKey(settings.openRouterKeyEnc));
 }
 
 export async function hasOpenRouterKeyConfigured(): Promise<boolean> {

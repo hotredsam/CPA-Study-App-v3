@@ -6,6 +6,7 @@ import { bucket, r2Client } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
 import { getActiveExamSections } from "@/lib/exam-settings";
+import { queueTextbookIndex } from "@/lib/textbooks/queue";
 
 export const dynamic = "force-dynamic";
 
@@ -112,20 +113,19 @@ export async function POST(request: Request) {
         data: {
           r2Key,
           sizeBytes: BigInt(buffer.byteLength),
+          indexStatus: "INDEXING",
+          indexedAt: null,
         },
       });
-    }
-
-    // Trigger textbook-indexer task if credentials are available
-    if (process.env.TRIGGER_SECRET_KEY) {
       try {
-        const { tasks } = await import("@trigger.dev/sdk/v3");
-        await tasks.trigger("textbook-indexer", { textbookId: textbook.id });
-      } catch (triggerErr) {
-        console.warn("[textbooks/POST] trigger skipped:", triggerErr);
+        await queueTextbookIndex({ textbookId: textbook.id, rebuildChunks: true });
+      } catch (queueErr) {
+        console.warn("[textbooks/POST] index queue skipped:", queueErr);
+        textbook = await prisma.textbook.update({
+          where: { id: textbook.id },
+          data: { indexStatus: "QUEUED" },
+        });
       }
-    } else {
-      console.warn("[textbooks/POST] TRIGGER_SECRET_KEY not set, skipping trigger");
     }
 
     const textbookWithCount = await prisma.textbook.findUniqueOrThrow({

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AiFunctionKey } from "@prisma/client";
+import { AiFunctionKey, CpaSection } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { runFunction } from "@/lib/llm/router";
 
@@ -11,6 +11,7 @@ export const AnkiGenInput = z.object({
   chunkId: z.string(),
   content: z.string(),
   topicId: z.string().optional(),
+  section: z.nativeEnum(CpaSection).optional(),
 });
 
 const AnkiCardItem = z.object({
@@ -70,6 +71,7 @@ export async function runAnkiGen(input: AnkiGenInput): Promise<AnkiGenOutput> {
         sourceCitation: card.citation,
         chunkId: validated.chunkId,
         topicId: validated.topicId ?? null,
+        section: validated.section ?? null,
         difficulty: card.difficulty,
       },
     });

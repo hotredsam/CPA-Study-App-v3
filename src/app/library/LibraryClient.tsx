@@ -282,7 +282,7 @@ function TextbookTableRow({
   onReindex,
 }: {
   textbook: TextbookRow
-  onReindex: (id: string) => void
+  onReindex: (textbook: TextbookRow) => void
 }) {
   const [reindexing, setReindexing] = useState(false)
 
@@ -291,7 +291,8 @@ function TextbookTableRow({
     try {
       const res = await fetch(`/api/textbooks/${textbook.id}/reindex`, { method: 'POST' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      onReindex(textbook.id)
+      const data = (await res.json()) as { textbook: TextbookRow }
+      onReindex(data.textbook)
     } catch {
       // silently allow the parent to handle
     } finally {
@@ -344,15 +345,15 @@ function TextbookTableRow({
               Open
             </Btn>
           </a>
-          <Btn
-            variant="subtle"
-            size="sm"
+          <button
+            type="button"
+            className="rounded px-2 py-1 text-xs font-medium text-[color:var(--accent)] underline underline-offset-2 hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)] disabled:cursor-not-allowed disabled:text-[color:var(--ink-faint)] disabled:no-underline"
             onClick={() => void handleReindex()}
             disabled={reindexing || textbook.indexStatus === 'INDEXING'}
             aria-label={`Re-index ${textbook.title}`}
           >
-            {reindexing ? '…' : 'Re-index'}
-          </Btn>
+            {reindexing ? 'Re-indexing...' : 'Re-index'}
+          </button>
         </div>
       </td>
     </tr>
@@ -381,9 +382,9 @@ export function LibraryClient({ initialTextbooks }: { initialTextbooks: Textbook
     setTextbooks((prev) => [textbook, ...prev])
   }, [])
 
-  const handleReindex = useCallback((id: string) => {
+  const handleReindex = useCallback((textbook: TextbookRow) => {
     setTextbooks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, indexStatus: 'QUEUED' as const } : t)),
+      prev.map((t) => (t.id === textbook.id ? textbook : t)),
     )
   }, [])
 

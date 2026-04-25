@@ -1,8 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, respond } from "@/lib/api-error";
+import { queueTextbookIndex } from "@/lib/textbooks/queue";
 
 export const dynamic = "force-dynamic";
+
+type TextbookWithCount = Awaited<ReturnType<typeof prisma.textbook.findFirstOrThrow>> & {
+  _count?: { chunks: number };
+};
+
+function serializeTextbook(textbook: TextbookWithCount) {
+  return {
+    id: textbook.id,
+    title: textbook.title,
+    publisher: textbook.publisher,
+    sections: textbook.sections,
+    pages: textbook.pages,
+    chunkCount: textbook._count?.chunks ?? textbook.chunkCount,
+    indexStatus: textbook.indexStatus,
+    sizeBytes: textbook.sizeBytes?.toString() ?? null,
+    citedCount: textbook.citedCount,
+    uploadedAt: textbook.uploadedAt,
+    indexedAt: textbook.indexedAt,
+  };
+}
 
 export async function POST(
   _request: Request,
@@ -15,28 +36,32 @@ export async function POST(
     if (!existing) {
       throw new ApiError("NOT_FOUND", `Textbook ${id} not found`);
     }
-
-    const textbook = await prisma.textbook.update({
-      where: { id },
-      data: { indexStatus: "QUEUED", indexedAt: null },
-    });
-
-    if (process.env.TRIGGER_SECRET_KEY) {
-      try {
-        const { tasks } = await import("@trigger.dev/sdk/v3");
-        await tasks.trigger("textbook-indexer", { textbookId: id });
-      } catch (triggerErr) {
-        console.warn("[textbooks/reindex] trigger skipped:", triggerErr);
-      }
-    } else {
-      console.warn("[textbooks/reindex] TRIGGER_SECRET_KEY not set, skipping trigger");
+    if (!existing.r2Key) {
+      throw new ApiError("UNPROCESSABLE", "Upload a PDF before re-indexing this textbook.");
     }
 
+    await prisma.textbook.update({
+      where: { id },
+      data: { indexStatus: "INDEXING", indexedAt: null },
+    });
+
+    try {
+      await queueTextbookIndex({ textbookId: id, rebuildChunks: true });
+    } catch (queueErr) {
+      console.warn("[textbooks/reindex] index queue skipped:", queueErr);
+      await prisma.textbook.update({
+        where: { id },
+        data: { indexStatus: "QUEUED" },
+      });
+    }
+
+    const updated = await prisma.textbook.findUniqueOrThrow({
+      where: { id },
+      include: { _count: { select: { chunks: true } } },
+    });
+
     return NextResponse.json({
-      textbook: {
-        ...textbook,
-        sizeBytes: textbook.sizeBytes?.toString() ?? null,
-      },
+      textbook: serializeTextbook(updated),
     });
   } catch (err) {
     return respond(err);

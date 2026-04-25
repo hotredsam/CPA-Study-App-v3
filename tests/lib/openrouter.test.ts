@@ -146,6 +146,32 @@ describe("callOpenRouter", () => {
     expect(headers["X-Title"]).toBe("CPA Study App");
   });
 
+  it("normalizes pasted keys wrapped in angle brackets", async () => {
+    vi.mocked(prisma.userSettings.findUnique).mockResolvedValueOnce({
+      id: "singleton",
+      openRouterKeyEnc: encryptKey("<sk-or-test-key-456>"),
+      theme: "paper",
+      accentHue: 18,
+      density: "comfortable",
+      serifFamily: "Instrument Serif",
+      activeModelConfig: null,
+      examSections: null,
+      updatedAt: new Date(),
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(makeSuccessResponse("ok"));
+
+    await callOpenRouter({
+      model: "anthropic/claude-3-5-sonnet",
+      messages: [{ role: "user", content: "test" }],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe("Bearer sk-or-test-key-456");
+  });
+
   it("includes json_schema in body when jsonSchema param is provided", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

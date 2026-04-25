@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   devIndicators: false,
+  serverExternalPackages: ["@napi-rs/canvas", "pdfjs-dist", "tesseract.js"],
 
   async headers() {
     return [
