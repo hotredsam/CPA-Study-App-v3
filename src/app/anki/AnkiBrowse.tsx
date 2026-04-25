@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, SectionBadge, Btn } from '@/components/ui'
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
 import type { CpaSectionCode } from '@/lib/cpa-sections'
+import { AutoBadge } from './AutoBadge'
 import type { AnkiCard } from './types'
 
 type SectionFilter = 'all' | CpaSectionCode
@@ -112,7 +113,10 @@ export function AnkiBrowse() {
                   return (
                     <tr key={card.id} className="border-b border-[color:var(--border)] last:border-0 align-top">
                       <td className="px-4 py-3">
-                        {card.section ? <SectionBadge section={card.section} size="xs" /> : '-'}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {card.section ? <SectionBadge section={card.section} size="xs" /> : '-'}
+                          {card.chunkId ? <AutoBadge /> : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <button

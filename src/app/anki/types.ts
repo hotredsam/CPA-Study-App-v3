@@ -16,6 +16,7 @@ export interface AnkiCard {
   sourceCitation: string | null
   section: string | null
   topicId: string | null
+  chunkId: string | null
   type: string
   difficulty: number | null
   srsState: SrsState

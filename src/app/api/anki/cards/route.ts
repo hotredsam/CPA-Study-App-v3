@@ -66,6 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         sourceCitation: true,
         section: true,
         topicId: true,
+        chunkId: true,
         type: true,
         difficulty: true,
         srsState: true,

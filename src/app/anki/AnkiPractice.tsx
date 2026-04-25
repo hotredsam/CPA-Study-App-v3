@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bar, Btn, Card, SectionBadge } from '@/components/ui'
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
 import type { CpaSectionCode } from '@/lib/cpa-sections'
+import { AutoBadge } from './AutoBadge'
 import type { AnkiCard, AnkiRating } from './types'
 
 interface CardsResponse {
@@ -337,9 +338,10 @@ export function AnkiPractice({ topicId }: Props) {
         >
           {!flipped ? (
             <>
-              {card.section && (
-                <div className="mb-4">
-                  <SectionBadge section={card.section} size="xs" />
+              {(card.section || card.chunkId) && (
+                <div className="mb-4 flex flex-wrap items-center gap-1.5">
+                  {card.section ? <SectionBadge section={card.section} size="xs" /> : null}
+                  {card.chunkId ? <AutoBadge /> : null}
                 </div>
               )}
               <p
