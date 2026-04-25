@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { decryptKey } from "./crypto";
 
@@ -41,9 +43,37 @@ function normalizeOpenRouterKey(value: string): string {
   return key;
 }
 
+function unquoteEnvValue(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function repoEnvOpenRouterKey(): string | null {
+  if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "test") {
+    return null;
+  }
+
+  const envPath = join(process.cwd(), ".env");
+  if (!existsSync(envPath)) return null;
+
+  const envText = readFileSync(envPath, "utf8");
+  const match = envText.match(/^OPENROUTER_API_KEY\s*=\s*(.*)$/m);
+  const raw = match?.[1];
+  if (!raw) return null;
+
+  const key = normalizeOpenRouterKey(unquoteEnvValue(raw));
+  return key.length > 0 ? key : null;
+}
+
 function envOpenRouterKey(): string | null {
   if (process.env.NODE_ENV === "test") return null;
-  const key = normalizeOpenRouterKey(process.env["OPENROUTER_API_KEY"] ?? "");
+  const key = repoEnvOpenRouterKey() ?? normalizeOpenRouterKey(process.env["OPENROUTER_API_KEY"] ?? "");
   return key && key.length > 0 ? key : null;
 }
 
