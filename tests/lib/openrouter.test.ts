@@ -47,6 +47,7 @@ describe("callOpenRouter", () => {
       density: "comfortable",
       serifFamily: "Instrument Serif",
       activeModelConfig: null,
+      examSections: null,
       updatedAt: new Date(),
     });
   });

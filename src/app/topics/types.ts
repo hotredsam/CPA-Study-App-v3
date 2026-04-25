@@ -1,3 +1,5 @@
+import type { CpaSectionCode } from '@/lib/cpa-sections'
+
 export interface AiNotes {
   coreRule: string
   pitfall: string
@@ -21,4 +23,4 @@ export interface Topic {
 }
 
 export type SortField = 'mastery' | 'error' | 'cards' | 'seen'
-export type SectionFilter = 'all' | 'FAR' | 'REG' | 'AUD' | 'TCP'
+export type SectionFilter = 'all' | CpaSectionCode

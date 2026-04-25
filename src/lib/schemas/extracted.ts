@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { CPA_SECTION_OPTIONS } from "@/lib/cpa-sections";
 
-export const CpaSection = z.enum(["AUD", "FAR", "REG", "TCP"]);
+export const CpaSection = z.enum(CPA_SECTION_OPTIONS);
 export type CpaSection = z.infer<typeof CpaSection>;
 
 export const Choice = z.object({

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { Card, SectionBadge, Bar } from '@/components/ui'
+import { normalizePercent } from '@/lib/percent'
 
 interface Topic {
   id: string
@@ -47,7 +48,7 @@ export function AnkiPath() {
       {!isLoading && !isError && (
         <ul className="space-y-2" aria-label="Topic learning path">
           {(topics ?? []).map((topic) => {
-            const mastery = Math.round(topic.mastery * 100)
+            const mastery = normalizePercent(topic.mastery)
             return (
               <li
                 key={topic.id}

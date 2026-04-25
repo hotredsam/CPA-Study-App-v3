@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/Card";
 import { Btn } from "@/components/ui/Btn";
 import { Bar } from "@/components/ui/Bar";
 import { SectionBadge } from "@/components/ui/SectionBadge";
+import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from "@/hooks/useExamSections";
+import type { CpaSectionCode } from "@/lib/cpa-sections";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,8 +33,7 @@ type Check = {
   status: "ok" | "warn" | "fail" | "loading";
 };
 
-const CPA_SECTIONS = ["FAR", "REG", "AUD", "TCP"] as const;
-type CpaSection = (typeof CPA_SECTIONS)[number];
+type CpaSection = CpaSectionCode;
 
 type ScreenSource = "full-screen" | "window" | "browser-tab";
 
@@ -99,6 +100,8 @@ function SetupPhase({
   const [health, setHealth] = useState<HealthData | null>(null);
   const [hasOpenRouterKey, setHasOpenRouterKey] = useState<boolean | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
+  const { data: examSettings } = useExamSections();
+  const sectionOptions = examSettings?.sections ?? DEFAULT_EXAM_SECTIONS_SETTINGS.sections;
 
   // Mic level visualizer
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -368,7 +371,7 @@ function SetupPhase({
               role="group"
               aria-label="Select CPA sections for this recording"
             >
-              {CPA_SECTIONS.map((s) => {
+              {sectionOptions.map((s) => {
                 const active = selectedSections.includes(s);
                 return (
                   <button

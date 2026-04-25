@@ -8,7 +8,7 @@ Given 2-6 keyframes split between the "question view" and the "feedback view" fo
   "userAnswer": "A"|"B"|"C"|"D"|null,
   "correctAnswer": "A"|"B"|"C"|"D"|null,
   "beckerExplanation": string|null,   // text from Becker's explanation panel
-  "section": "AUD"|"FAR"|"REG"|"TCP"|null
+  "section": "AUD"|"FAR"|"REG"|"TCP"|"BAR"|"ISC"|null
 }
 
 Rules:

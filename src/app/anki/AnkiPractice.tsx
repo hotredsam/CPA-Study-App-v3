@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bar, Btn, Card, SectionBadge } from '@/components/ui'
+import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
+import type { CpaSectionCode } from '@/lib/cpa-sections'
 import type { AnkiCard, AnkiRating } from './types'
 
 interface CardsResponse {
@@ -28,7 +30,7 @@ const RATING_COLORS: Record<AnkiRating, string> = {
   EASY: 'var(--good)',
 }
 
-const SECTION_FILTERS = ['all', 'FAR', 'REG', 'AUD', 'TCP'] as const
+type SectionFilter = 'all' | CpaSectionCode
 
 function dispatchToast(message: string) {
   window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message } }))
@@ -41,7 +43,7 @@ export function AnkiPractice({ topicId }: Props) {
   const [askOpen, setAskOpen] = useState(false)
   const [askInput, setAskInput] = useState('')
   const [askReply, setAskReply] = useState<string | null>(null)
-  const [sectionFilter, setSectionFilter] = useState<(typeof SECTION_FILTERS)[number]>('all')
+  const [sectionFilter, setSectionFilter] = useState<SectionFilter>('all')
   const [submittingRating, setSubmittingRating] = useState(false)
   const [voiceRecording, setVoiceRecording] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState<string | null>(null)
@@ -52,6 +54,11 @@ export function AnkiPractice({ topicId }: Props) {
   const askInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const voiceChunksRef = useRef<Blob[]>([])
+  const { data: examSettings } = useExamSections()
+  const sectionFilters: SectionFilter[] = [
+    'all',
+    ...(examSettings?.sections ?? DEFAULT_EXAM_SECTIONS_SETTINGS.sections),
+  ]
 
   const params = new URLSearchParams()
   if (topicId) params.set('topicId', topicId)
@@ -142,7 +149,7 @@ export function AnkiPractice({ topicId }: Props) {
         setSubmittingRating(false)
       }
     },
-    [currentCard, submittingRating],
+    [currentCard, queryClient, submittingRating],
   )
 
   const handleAskSubmit = useCallback(
@@ -294,7 +301,7 @@ export function AnkiPractice({ topicId }: Props) {
         {!topicId && (
           <Card>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter practice by section">
-              {SECTION_FILTERS.map((section) => (
+              {sectionFilters.map((section) => (
                 <Btn
                   key={section}
                   size="sm"

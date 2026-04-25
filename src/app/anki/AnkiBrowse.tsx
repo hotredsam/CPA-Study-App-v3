@@ -3,9 +3,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, SectionBadge, Btn } from '@/components/ui'
+import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
+import type { CpaSectionCode } from '@/lib/cpa-sections'
 import type { AnkiCard } from './types'
 
-const SECTIONS = ['all', 'FAR', 'REG', 'AUD', 'TCP'] as const
+type SectionFilter = 'all' | CpaSectionCode
 
 interface CardsResponse {
   cards: AnkiCard[]
@@ -14,8 +16,13 @@ interface CardsResponse {
 
 export function AnkiBrowse() {
   const [query, setQuery] = useState('')
-  const [section, setSection] = useState<(typeof SECTIONS)[number]>('all')
+  const [section, setSection] = useState<SectionFilter>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const { data: examSettings } = useExamSections()
+  const sections: SectionFilter[] = useMemo(
+    () => ['all', ...(examSettings?.sections ?? DEFAULT_EXAM_SECTIONS_SETTINGS.sections)],
+    [examSettings?.sections],
+  )
 
   const params = useMemo(() => {
     const p = new URLSearchParams()
@@ -51,7 +58,7 @@ export function AnkiBrowse() {
             />
           </div>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter cards by section">
-            {SECTIONS.map((s) => (
+            {sections.map((s) => (
               <Btn
                 key={s}
                 size="sm"

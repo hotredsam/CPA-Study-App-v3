@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
 import { CpaSection } from '@prisma/client'
-import { ACTIVE_CPA_SECTIONS } from '@/lib/cpa-sections'
+import { getActiveExamSections } from '@/lib/exam-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,10 +11,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const now = new Date().toISOString()
     const { searchParams } = new URL(request.url)
     const breakdown = searchParams.get('breakdown') === 'true'
+    const activeSections = await getActiveExamSections()
 
     // Base where clause: cards that are due now
     const dueWhere = {
-      section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] },
+      section: { in: activeSections as unknown as CpaSection[] },
       srsState: {
         path: ['nextDue'],
         lte: now,

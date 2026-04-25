@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
 import { parseRoutineXml } from '@/lib/routine/xml-parser'
+import { isActiveCpaSection } from '@/lib/cpa-sections'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,14 +24,7 @@ export async function GET(): Promise<NextResponse> {
 
 const PostBodySchema = z.object({
   xmlSource: z.string().min(1),
-  examDates: z
-    .object({
-      FAR: z.string().optional(),
-      REG: z.string().optional(),
-      AUD: z.string().optional(),
-      TCP: z.string().optional(),
-    })
-    .optional(),
+  examDates: z.record(z.string(), z.string()).optional(),
   hoursTarget: z
     .object({
       daily: z.number().positive().optional(),
@@ -54,6 +48,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const { xmlSource, examDates, hoursTarget } = parsed.data
+    const filteredExamDates = Object.fromEntries(
+      Object.entries(examDates ?? {}).filter(([section, value]) => (
+        isActiveCpaSection(section) && value.trim().length > 0
+      )),
+    )
 
     // Parse and validate the XML
     const parseResult = parseRoutineXml(xmlSource)
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       data: {
         xmlSource,
         parsedBlocks: parseResult.data ?? {},
-        examDates: examDates ?? {},
+        examDates: filteredExamDates,
         hoursTarget: hoursTarget ?? {},
         activatedAt: new Date(),
       },

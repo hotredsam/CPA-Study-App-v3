@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
-import { ACTIVE_CPA_SECTIONS } from '@/lib/cpa-sections'
+import { getActiveExamSections } from '@/lib/exam-settings'
+import { normalizePercent } from '@/lib/percent'
 import { CpaSection, RecordingStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,8 @@ const STALE_PIPELINE_MS = 2 * 60 * 60 * 1000
 
 export async function GET(): Promise<NextResponse> {
   try {
+    const activeSections = await getActiveExamSections()
+    const activePrismaSections = activeSections as unknown as CpaSection[]
     const staleBefore = new Date(Date.now() - STALE_PIPELINE_MS)
     await prisma.recording.updateMany({
       where: {
@@ -56,7 +59,7 @@ export async function GET(): Promise<NextResponse> {
         },
       }),
       prisma.topic.findMany({
-        where: { section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] } },
+        where: { section: { in: activePrismaSections } },
         select: {
           id: true,
           section: true,
@@ -70,7 +73,7 @@ export async function GET(): Promise<NextResponse> {
       // Count Anki cards due now
       prisma.ankiCard.count({
         where: {
-          section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] },
+          section: { in: activePrismaSections },
           srsState: {
             path: ['nextDue'],
             lte: new Date().toISOString(),
@@ -115,12 +118,12 @@ export async function GET(): Promise<NextResponse> {
       const key = String(t.section)
       const existing = sectionMap.get(key) ?? { topicCount: 0, masterySum: 0, hoursStudied: 0 }
       existing.topicCount++
-      existing.masterySum += t.mastery
+      existing.masterySum += normalizePercent(t.mastery)
       sectionMap.set(key, existing)
     }
 
-    const sectionHoursShare = Number((totalHours / ACTIVE_CPA_SECTIONS.length).toFixed(1))
-    const sections = ACTIVE_CPA_SECTIONS.map((section) => {
+    const sectionHoursShare = Number((totalHours / Math.max(activeSections.length, 1)).toFixed(1))
+    const sections = activeSections.map((section) => {
       const agg = sectionMap.get(section) ?? { topicCount: 0, masterySum: 0, hoursStudied: 0 }
       return {
         section,
@@ -136,7 +139,7 @@ export async function GET(): Promise<NextResponse> {
       id: t.id,
       name: t.name,
       section: String(t.section),
-      mastery: Math.round(t.mastery),
+      mastery: normalizePercent(t.mastery),
       errorRate: t.errorRate != null ? Math.round(t.errorRate * 100) : 0,
     }))
 

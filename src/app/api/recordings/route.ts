@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { keys, presignUpload } from "@/lib/r2";
 import { ApiError, respond } from "@/lib/api-error";
-import { ACTIVE_CPA_SECTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
+import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ const RECORDING_STATUSES = [
 ] as const;
 
 const RecordingStatusSchema = z.enum(RECORDING_STATUSES);
-const CpaSectionSchema = z.enum(ACTIVE_CPA_SECTIONS);
+const CpaSectionSchema = z.enum(CPA_SECTION_OPTIONS);
 const STALE_PIPELINE_MS = 2 * 60 * 60 * 1000;
 
 const ListQuery = z.object({

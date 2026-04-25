@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { EyebrowHeading, Btn, Card, SectionBadge, Bar } from '@/components/ui'
 import { ACTIVE_CPA_SECTIONS, CPA_SECTION_META } from '@/lib/cpa-sections'
+import { clampPercent } from '@/lib/percent'
 import type { ParsedBlock, ParsedRoutine } from '@/lib/routine/xml-parser'
 
 interface StudyStats {
@@ -44,15 +45,19 @@ export interface DashboardData {
   weakestTopics: WeakTopic[]
   recentRecordings: RecentRecording[]
   cardsDue: number
-  routine: null
+  routine: ParsedRoutine | null
 }
 
 const EXAM_DEFAULTS: Record<string, string | null> = {
-  FAR: '2026-08-31',
-  REG: '2026-08-31',
-  AUD: '2026-10-15',
+  FAR: null,
+  REG: null,
+  AUD: null,
   TCP: null,
+  BAR: null,
+  ISC: null,
 }
+
+const EMPTY_ROUTINE: ParsedRoutine = { morning: [], midday: [], evening: [] }
 
 
 function relTime(iso: string): string {
@@ -75,7 +80,7 @@ function daysUntil(iso: string | null): number | null {
 }
 
 function statBar(pct: number, hue?: number) {
-  return <Bar pct={Math.max(0, Math.min(100, pct))} height={3} accent={hue ? `oklch(0.50 0.12 ${hue})` : 'var(--accent)'} />
+  return <Bar pct={clampPercent(pct)} height={3} accent={hue ? `oklch(0.50 0.12 ${hue})` : 'var(--accent)'} />
 }
 
 function Stat({ label, value, unit, bar }: { label: string; value: string | number; unit?: string; bar?: number }) {
@@ -111,7 +116,8 @@ function SectionCard({ data }: { data: SectionData }) {
   const due = data.examDate ?? EXAM_DEFAULTS[data.section] ?? null
   const days = daysUntil(due)
   const hue = meta?.hue ?? 0
-  const unitsDone = Math.max(0, Math.round((data.mastery / 100) * Math.max(data.topicCount, 1)))
+  const mastery = clampPercent(data.mastery)
+  const unitsDone = Math.max(0, Math.round((mastery / 100) * Math.max(data.topicCount, 1)))
   const unitsTotal = Math.max(data.topicCount, 1)
 
   return (
@@ -131,13 +137,13 @@ function SectionCard({ data }: { data: SectionData }) {
       <div className="mt-3 text-[13px] font-medium text-[color:var(--ink)]">{meta?.name ?? data.section}</div>
       <div className="mt-3.5 grid grid-cols-2 gap-3">
         <FocusStat label="Hours" value={data.hoursStudied.toFixed(1)} />
-        <FocusStat label="Progress" value={`${data.mastery}%`} />
+        <FocusStat label="Progress" value={`${mastery}%`} />
       </div>
       <div className="mt-3">
         <div className="mono mb-1 text-[11px] text-[color:var(--ink-dim)]">
           {unitsDone}/{unitsTotal} units
         </div>
-        {statBar(data.mastery, hue)}
+        {statBar(mastery, hue)}
       </div>
     </Card>
   )
@@ -148,6 +154,75 @@ function labelForBlock(block: ParsedBlock): string {
   const first = tasks[0]
   if (first?.unit || first?.chapter) return [first.section, first.unit, first.chapter].filter(Boolean).join(' - ')
   return block.type ? `${block.type} block` : 'Study block'
+}
+
+function tasksFor(block: ParsedBlock) {
+  return Array.isArray(block.task) ? block.task : block.task ? [block.task] : []
+}
+
+function parseMinutes(time: string | undefined): number | null {
+  if (!time) return null
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time)
+  if (!match) return null
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+  if (hours > 23 || minutes > 59) return null
+  return hours * 60 + minutes
+}
+
+function currentMinuteOfDay(): number {
+  const now = new Date()
+  return now.getHours() * 60 + now.getMinutes()
+}
+
+function focusFromRoutine(routine: ParsedRoutine): {
+  active: boolean
+  status: string
+  section: string | null
+  title: string
+  detail: string
+} {
+  const blocks = [
+    ...routine.morning.map((block) => ({ block, period: 'morning' })),
+    ...routine.midday.map((block) => ({ block, period: 'midday' })),
+    ...routine.evening.map((block) => ({ block, period: 'evening' })),
+  ]
+    .map((entry, index) => {
+      const start = parseMinutes(entry.block.time)
+      const duration = entry.block.duration ?? 0
+      return { ...entry, index, start, end: start == null ? null : start + duration }
+    })
+    .sort((a, b) => (a.start ?? 10_000 + a.index) - (b.start ?? 10_000 + b.index))
+
+  if (blocks.length === 0) {
+    return {
+      active: false,
+      status: 'NOT SCHEDULED',
+      section: null,
+      title: 'No current focus scheduled',
+      detail: 'Create a study routine or upload a textbook to start building today\'s plan.',
+    }
+  }
+
+  const now = currentMinuteOfDay()
+  const current = blocks.find((entry) => (
+    entry.start != null && entry.end != null && now >= entry.start && now < entry.end
+  ))
+  const target = current ?? blocks.find((entry) => entry.start != null && entry.start >= now) ?? blocks[0]!
+  const task = tasksFor(target.block)[0]
+  const duration = target.block.duration ? `${target.block.duration}m` : null
+  const time = target.block.time ?? target.period
+  const type = target.block.type ?? 'study'
+
+  return {
+    active: Boolean(current),
+    status: current ? 'IN PROGRESS' : 'UP NEXT',
+    section: task?.section ?? null,
+    title: labelForBlock(target.block),
+    detail: [current ? 'Current' : 'Next', type, 'block', time ? `at ${time}` : null, duration ? `for ${duration}` : null]
+      .filter(Boolean)
+      .join(' '),
+  }
 }
 
 function RoutineBlock({ label, blocks }: { label: string; blocks: ParsedBlock[] }) {
@@ -224,13 +299,24 @@ function RoutineSection() {
 
 export function DashboardClient({ data }: { data: DashboardData }) {
   const { studyStats, sections, weakestTopics, recentRecordings, cardsDue } = data
+  const { data: routineData, isLoading: routineLoading } = useQuery<ParsedRoutine>({
+    queryKey: ['study-routine-today'],
+    queryFn: async () => {
+      const res = await fetch('/api/study-routine/today')
+      if (!res.ok) return EMPTY_ROUTINE
+      return res.json() as Promise<ParsedRoutine>
+    },
+    initialData: data.routine ?? EMPTY_ROUTINE,
+    refetchInterval: 60_000,
+  })
   const displayTotalHours = studyStats.totalHours
   const displayWeekHours = studyStats.weekHours
   const displayStreak = studyStats.streak
   const displayCardsDue = cardsDue > 0 ? cardsDue : 0
   const displayRecordingsCount = studyStats.recordingsCount
   const bySection = new Map(sections.map((section) => [section.section, section]))
-  const sectionRows: SectionData[] = ACTIVE_CPA_SECTIONS.map((section) => bySection.get(section) ?? {
+  const sectionOrder = sections.length > 0 ? sections.map((section) => section.section) : [...ACTIVE_CPA_SECTIONS]
+  const sectionRows: SectionData[] = sectionOrder.map((section) => bySection.get(section) ?? {
     section,
     hoursStudied: 0,
     mastery: 0,
@@ -238,16 +324,36 @@ export function DashboardClient({ data }: { data: DashboardData }) {
     topicCount: 0,
   })
   const displaySectionRows = sectionRows
-  const focus = displaySectionRows[0]!
+  const currentFocus = routineLoading
+    ? {
+        active: false,
+        status: 'LOADING',
+        section: null,
+        title: 'Loading current focus',
+        detail: 'Checking today\'s study routine.',
+      }
+    : focusFromRoutine(routineData ?? EMPTY_ROUTINE)
+  const focusSection = currentFocus.section
+    ? displaySectionRows.find((section) => section.section === currentFocus.section)
+    : null
+  const focusStats = focusSection ?? displaySectionRows[0] ?? {
+    section: ACTIVE_CPA_SECTIONS[0],
+    hoursStudied: 0,
+    mastery: 0,
+    examDate: null,
+    topicCount: 0,
+  }
+  const focusHue = CPA_SECTION_META[(focusSection?.section ?? displaySectionRows[0]?.section ?? 'FAR') as keyof typeof CPA_SECTION_META]?.hue ?? CPA_SECTION_META.FAR.hue
+  const focusMastery = clampPercent(focusStats.mastery)
   const totalTarget = 1200
-  const totalPct = Math.round((displayTotalHours / totalTarget) * 100)
+  const totalPct = clampPercent((displayTotalHours / totalTarget) * 100)
 
   return (
     <div className="flex flex-col gap-5">
       <EyebrowHeading
         eyebrow={`DASHBOARD - ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
         title={`${displayTotalHours.toFixed(1)} hours in, ${displayWeekHours.toFixed(1)} this week, on pace.`}
-        sub={`${focus.section} Unit 3 today. Anki has ${displayCardsDue} reviews due. ${studyStats.processingCount ?? 0} recordings processing in the background.`}
+        sub={`${currentFocus.section ? `${currentFocus.section}: ` : ''}${currentFocus.title}. Anki has ${displayCardsDue} reviews due. ${studyStats.processingCount ?? 0} recordings processing in the background.`}
         right={
           <div className="flex gap-2">
             <Link href="/anki" tabIndex={-1}>
@@ -262,29 +368,29 @@ export function DashboardClient({ data }: { data: DashboardData }) {
 
       <Card
         pad={false}
-        style={{ background: `linear-gradient(180deg, oklch(0.70 0.06 ${CPA_SECTION_META.FAR.hue} / 0.12) 0%, var(--surface) 70%)` }}
+        style={{ background: `linear-gradient(180deg, oklch(0.70 0.06 ${focusHue} / 0.12) 0%, var(--surface) 70%)` }}
       >
         <div className="grid items-center gap-7 px-7 py-5 xl:grid-cols-[1fr_auto]">
           <div>
             <div className="mb-2.5 flex items-center gap-2.5">
               <span className="eyebrow">CURRENT FOCUS - RIGHT NOW</span>
-              <span className="mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--accent)]">IN PROGRESS</span>
+              <span className="mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--accent)]">{currentFocus.status}</span>
             </div>
             <div className="flex flex-wrap items-baseline gap-3.5">
-              <SectionBadge section={focus.section} size="lg" />
+              {currentFocus.section && <SectionBadge section={currentFocus.section} size="lg" />}
               <div>
                 <div className="text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-[color:var(--ink)]">
-                  Unit 3 - Revenue recognition
+                  {currentFocus.title}
                 </div>
                 <div className="mt-1 text-sm text-[color:var(--ink-dim)]">
-                  Currently reading <span className="text-[color:var(--ink)]">Becker FAR · Ch 7.3c · Allocation when SSPs ≠ transaction price</span>
+                  <span className="text-[color:var(--ink)]">{currentFocus.detail}</span>
                 </div>
               </div>
             </div>
             <div className="mt-5 grid max-w-[680px] grid-cols-2 gap-6 md:grid-cols-4">
-              <FocusStat label="Unit progress" value={`${focus.mastery}%`} bar={focus.mastery} />
-              <FocusStat label="Hours - unit" value={focus.hoursStudied.toFixed(1)} sub="hrs" />
-              <FocusStat label="Topics - seen" value={focus.topicCount} />
+              <FocusStat label="Unit progress" value={`${focusMastery}%`} bar={focusMastery} />
+              <FocusStat label="Hours - unit" value={focusStats.hoursStudied.toFixed(1)} sub="hrs" />
+              <FocusStat label="Topics - seen" value={focusStats.topicCount} />
               <FocusStat label="Cards - due" value={displayCardsDue} />
             </div>
           </div>

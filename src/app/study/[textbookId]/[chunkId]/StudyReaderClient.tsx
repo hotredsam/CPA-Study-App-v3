@@ -6,6 +6,7 @@ import { Bar } from "@/components/ui/Bar";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
 import { SectionBadge } from "@/components/ui/SectionBadge";
+import { normalizePercent } from "@/lib/percent";
 
 type Textbook = {
   id: string;
@@ -115,6 +116,7 @@ export function StudyReaderClient({
 
   const progressPct =
     textbook.chunkCount > 0 ? ((chunk.order + 1) / textbook.chunkCount) * 100 : 0;
+  const topicMasteryPct = topic ? normalizePercent(topic.mastery) : 0;
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -400,8 +402,8 @@ export function StudyReaderClient({
               <div className="mt-3">
                 <p className="mb-1 text-xs text-[color:var(--ink-faint)]">Mastery</p>
                 <Bar
-                  pct={topic.mastery * 100}
-                  aria-label={`Topic mastery: ${Math.round(topic.mastery * 100)}%`}
+                  pct={topicMasteryPct}
+                  aria-label={`Topic mastery: ${topicMasteryPct}%`}
                 />
               </div>
             </Card>

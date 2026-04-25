@@ -111,21 +111,21 @@ enum AiFunctionKey {
 // ─── Extended existing models ─────────────────────────────────────────────────
 
 model Recording {
-  id           String          @id @default(cuid())
-  status       RecordingStatus @default(uploading)
-  r2Key        String?         @unique
-  durationSec  Float?
-  triggerRunId String?
+  id            String          @id @default(cuid())
+  status        RecordingStatus @default(uploading)
+  r2Key         String?         @unique
+  durationSec   Float?
+  triggerRunId  String?
   // Night 5 additions
-  title        String?
-  sections     CpaSection[]
-  tagStage     Json?           // {status, startedAt, completedAt, pct}
-  modelUsed    String?
+  title         String?
+  sections      CpaSection[]
+  tagStage      Json? // {status, startedAt, completedAt, pct}
+  modelUsed     String?
   segmentsCount Int?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  questions    Question[]
-  progress     StageProgress[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  questions     Question[]
+  progress      StageProgress[]
 }
 
 model Question {
@@ -145,7 +145,7 @@ model Question {
   // Night 5 additions
   topicId             String?
   topic               Topic?         @relation(fields: [topicId], references: [id])
-  tags                Json?          // {section, unit, topic, difficulty}
+  tags                Json? // {section, unit, topic, difficulty}
   taggedAt            DateTime?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -200,21 +200,21 @@ model ReviewState {
 // ─── New models — Night 5 ─────────────────────────────────────────────────────
 
 model Topic {
-  id         String     @id @default(cuid())
-  section    CpaSection
-  name       String
-  unit       String?
-  mastery    Float      @default(0)
-  errorRate  Float?
-  cardsDue   Int        @default(0)
-  lastSeen   DateTime?
-  notes      String?
-  aiNotes    Json?      // {coreRule, pitfall, citation, performance}
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  questions  Question[]
-  chunks     Chunk[]
-  ankiCards  AnkiCard[]
+  id        String     @id @default(cuid())
+  section   CpaSection
+  name      String
+  unit      String?
+  mastery   Float      @default(0)
+  errorRate Float?
+  cardsDue  Int        @default(0)
+  lastSeen  DateTime?
+  notes     String?
+  aiNotes   Json? // {coreRule, pitfall, citation, performance}
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  questions Question[]
+  chunks    Chunk[]
+  ankiCards AnkiCard[]
 
   @@index([section])
 }
@@ -238,20 +238,20 @@ model Textbook {
 }
 
 model Chunk {
-  id            String    @id @default(cuid())
-  textbook      Textbook  @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  textbook      Textbook @relation(fields: [textbookId], references: [id], onDelete: Cascade)
   textbookId    String
   order         Int
   chapterRef    String?
   title         String?
   content       String
   topicId       String?
-  topic         Topic?    @relation(fields: [topicId], references: [id])
+  topic         Topic?   @relation(fields: [topicId], references: [id])
   fasbCitation  String?
-  figures       Json?     // [{caption, r2Key}]
-  embedding     Json?     // float[] fallback (pgvector not yet provisioned)
-  embeddingPrec String?   // "full" | "provisional"
-  createdAt     DateTime  @default(now())
+  figures       Json? // [{caption, r2Key}]
+  embedding     Json? // float[] fallback (pgvector not yet provisioned)
+  embeddingPrec String? // "full" | "provisional"
+  createdAt     DateTime @default(now())
 
   @@index([textbookId, order])
   @@index([topicId])
@@ -308,9 +308,9 @@ model AnkiNote {
 model StudyRoutine {
   id           String    @id @default(cuid())
   xmlSource    String
-  parsedBlocks Json?     // {morning:[], midday:[], evening:[]}
-  examDates    Json?     // {FAR:"2026-08-31", ...}
-  hoursTarget  Json?     // {daily:5, weekly:35, total:1200}
+  parsedBlocks Json? // {morning:[], midday:[], evening:[]}
+  examDates    Json? // {FAR:"2026-08-31", ...}
+  hoursTarget  Json? // {daily:5, weekly:35, total:1200}
   createdAt    DateTime  @default(now())
   activatedAt  DateTime?
 }
@@ -374,7 +374,7 @@ model ChatMessage {
   conversationId String
   role           ChatRole
   content        String
-  contextRefs    Json?        // {recordingId?, questionId?, topicId?, chunkId?}
+  contextRefs    Json? // {recordingId?, questionId?, topicId?, chunkId?}
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
@@ -387,6 +387,7 @@ model UserSettings {
   density           String   @default("comfortable")
   serifFamily       String   @default("Instrument Serif")
   activeModelConfig Json?
+  examSections      Json?
   openRouterKeyEnc  String?
   updatedAt         DateTime @updatedAt
 }
@@ -404,27 +405,27 @@ model ModelConfig {
 }
 
 model IndexingConfig {
-  id                 String   @id @default("singleton")
-  indexDepth         Int      @default(3)
-  ocrMode            Boolean  @default(true)
-  formulaExtraction  Boolean  @default(true)
-  exampleDetection   Boolean  @default(true)
-  crossRefLinking    Boolean  @default(true)
-  glossaryBuild      Boolean  @default(true)
-  figureCaptioning   Boolean  @default(false)
-  sectionAutoTag     Boolean  @default(true)
-  unitGrouping       Boolean  @default(true)
-  ankiCardGen        Boolean  @default(true)
-  embeddingModel     String   @default("text-embedding-3-large")
-  chunkSize          Int      @default(512)
-  overlapWindow      Int      @default(64)
-  reindexOnUpdate    Boolean  @default(false)
-  piiScrubbing       Boolean  @default(true)
-  indexModel         String   @default("anthropic/claude-haiku-4.5")
-  batchMode          Boolean  @default(true)
-  offPeakTier        Boolean  @default(false)
-  concurrency        Int      @default(8)
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default("singleton")
+  indexDepth        Int      @default(3)
+  ocrMode           Boolean  @default(true)
+  formulaExtraction Boolean  @default(true)
+  exampleDetection  Boolean  @default(true)
+  crossRefLinking   Boolean  @default(true)
+  glossaryBuild     Boolean  @default(true)
+  figureCaptioning  Boolean  @default(false)
+  sectionAutoTag    Boolean  @default(true)
+  unitGrouping      Boolean  @default(true)
+  ankiCardGen       Boolean  @default(true)
+  embeddingModel    String   @default("text-embedding-3-large")
+  chunkSize         Int      @default(512)
+  overlapWindow     Int      @default(64)
+  reindexOnUpdate   Boolean  @default(false)
+  piiScrubbing      Boolean  @default(true)
+  indexModel        String   @default("anthropic/claude-haiku-4.5")
+  batchMode         Boolean  @default(true)
+  offPeakTier       Boolean  @default(false)
+  concurrency       Int      @default(8)
+  updatedAt         DateTime @updatedAt
 }
 
 model ModelCall {

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { Card, SectionBadge } from '@/components/ui'
+import { normalizePercent } from '@/lib/percent'
 import type { AnkiMode, DueSectionBreakdown } from './types'
 
 interface Props {
@@ -123,7 +124,7 @@ export function AnkiDaily({ setMode }: Props) {
             <dt className="text-sm text-[color:var(--ink-faint)]">Retention (30d)</dt>
             <dd className="text-2xl font-mono font-bold text-[color:var(--ink)]">
               {statsData?.retentionRate != null
-                ? `${Math.round(statsData.retentionRate * 100)}%`
+                ? `${normalizePercent(statsData.retentionRate)}%`
                 : '—'}
             </dd>
           </div>

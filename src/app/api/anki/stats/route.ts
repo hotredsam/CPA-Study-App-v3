@@ -1,5 +1,7 @@
+import { CpaSection } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getActiveExamSections } from "@/lib/exam-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -16,27 +18,28 @@ function toDateStr(d: Date): string {
 
 export async function GET(): Promise<NextResponse<AnkiStatsResponse>> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const activeSections = await getActiveExamSections();
+  const cardSectionWhere = { section: { in: activeSections as unknown as CpaSection[] } };
 
-  // Run all queries concurrently
   const [totalCards, goodCount, totalRecentCount, reviewDatesRaw, backlogCount] =
     await Promise.all([
-      prisma.ankiCard.count(),
+      prisma.ankiCard.count({ where: cardSectionWhere }),
       prisma.ankiReview.count({
         where: {
+          card: cardSectionWhere,
           reviewedAt: { gte: thirtyDaysAgo },
           rating: { in: ["GOOD", "EASY"] },
         },
       }),
       prisma.ankiReview.count({
-        where: { reviewedAt: { gte: thirtyDaysAgo } },
+        where: { card: cardSectionWhere, reviewedAt: { gte: thirtyDaysAgo } },
       }),
-      // Only need dates for streak — fetch minimal columns
       prisma.ankiReview.findMany({
-        where: { reviewedAt: { gte: thirtyDaysAgo } },
+        where: { card: cardSectionWhere, reviewedAt: { gte: thirtyDaysAgo } },
         select: { reviewedAt: true },
         orderBy: { reviewedAt: "desc" },
       }),
-      prisma.ankiCard.count({ where: { reviews: { none: {} } } }),
+      prisma.ankiCard.count({ where: { ...cardSectionWhere, reviews: { none: {} } } }),
     ]);
 
   const retentionRate =
@@ -44,7 +47,6 @@ export async function GET(): Promise<NextResponse<AnkiStatsResponse>> {
       ? Math.round((goodCount / totalRecentCount) * 100)
       : null;
 
-  // Streak: consecutive calendar days with >= 1 review
   const reviewDays = new Set(reviewDatesRaw.map((r) => toDateStr(r.reviewedAt)));
   let streak = 0;
   const today = new Date();

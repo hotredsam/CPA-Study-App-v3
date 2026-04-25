@@ -5,10 +5,12 @@ import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
 import { Card } from '@/components/ui/Card'
 import { Btn } from '@/components/ui/Btn'
 import { SectionBadge } from '@/components/ui/SectionBadge'
+import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
+import type { CpaSectionCode } from '@/lib/cpa-sections'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CpaSection = 'AUD' | 'FAR' | 'REG' | 'TCP'
+type CpaSection = CpaSectionCode
 
 type TextbookRow = {
   id: string
@@ -24,7 +26,7 @@ type TextbookRow = {
   indexedAt: string | Date | null
 }
 
-const ALL_SECTIONS: CpaSection[] = ['FAR', 'REG', 'AUD', 'TCP']
+const FALLBACK_SECTIONS: CpaSection[] = DEFAULT_EXAM_SECTIONS_SETTINGS.sections
 
 // ─── Index status badge ───────────────────────────────────────────────────────
 
@@ -72,6 +74,8 @@ function UploadModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const { data: examSettings } = useExamSections()
+  const sectionOptions = examSettings?.sections ?? FALLBACK_SECTIONS
 
   const toggleSection = (s: CpaSection) => {
     setSections((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
@@ -111,7 +115,7 @@ function UploadModal({
     } finally {
       setLoading(false)
     }
-  }, [title, publisher, sections, onClose, onSuccess])
+  }, [title, publisher, sections, file, onClose, onSuccess])
 
   // Trap focus on mount
   const firstRef = useRef<HTMLInputElement>(null)
@@ -188,7 +192,7 @@ function UploadModal({
           <div>
             <p className="text-xs font-medium text-[color:var(--ink-dim)] mb-2">Sections</p>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="CPA sections">
-              {ALL_SECTIONS.map((s) => {
+              {sectionOptions.map((s) => {
                 const active = sections.includes(s)
                 return (
                   <button

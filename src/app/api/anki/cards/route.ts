@@ -3,13 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
 import { CpaSection } from '@prisma/client'
 import { z } from 'zod'
-import { ACTIVE_CPA_SECTIONS } from '@/lib/cpa-sections'
+import { CPA_SECTION_OPTIONS } from '@/lib/cpa-sections'
+import { getActiveExamSections } from '@/lib/exam-settings'
 
 export const dynamic = 'force-dynamic'
 
 const QuerySchema = z.object({
   topicId: z.string().optional(),
-  section: z.enum(ACTIVE_CPA_SECTIONS).optional(),
+  section: z.enum(CPA_SECTION_OPTIONS).optional(),
   q: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).default(0),
@@ -25,12 +26,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       limit: searchParams.get('limit') ?? undefined,
       offset: searchParams.get('offset') ?? undefined,
     })
+    const activeSections = await getActiveExamSections()
+    if (parsed.section && !activeSections.includes(parsed.section)) {
+      return NextResponse.json({ cards: [], total: 0, limit: parsed.limit, offset: parsed.offset })
+    }
+    const activePrismaSections = activeSections as unknown as CpaSection[]
 
     const where = {
       ...(parsed.topicId ? { topicId: parsed.topicId } : {}),
       ...(parsed.section
         ? { section: parsed.section as CpaSection }
-        : { section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] } }),
+        : { section: { in: activePrismaSections } }),
       ...(parsed.q
         ? {
             OR: [

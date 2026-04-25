@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, respond } from "@/lib/api-error";
 import { isActiveCpaSection } from "@/lib/cpa-sections";
+import { getActiveExamSections } from "@/lib/exam-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const activeSections = await getActiveExamSections();
 
     const textbook = await prisma.textbook.findUnique({
       where: { id },
@@ -26,7 +28,9 @@ export async function GET(
     return NextResponse.json({
       textbook: {
         ...textbook,
-        sections: textbook.sections.filter(isActiveCpaSection),
+        sections: textbook.sections.filter((section) => (
+          isActiveCpaSection(section) && activeSections.includes(section)
+        )),
         sizeBytes: textbook.sizeBytes?.toString() ?? null,
         chunkCount: textbook._count.chunks,
       },

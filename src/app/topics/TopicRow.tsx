@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import { SectionBadge, Bar } from '@/components/ui'
+import { normalizePercent } from '@/lib/percent'
 import { TopicDetail } from './TopicDetail'
 import type { Topic } from './types'
 
@@ -39,7 +40,7 @@ function errorColor(pct: number | null): string {
 }
 
 export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }: Props) {
-  const mastery = Math.round(topic.mastery)
+  const mastery = normalizePercent(topic.mastery)
   const errorRate = topic.errorRate != null ? Math.round(topic.errorRate * 100) : null
 
   const handleToggle = useCallback(() => {

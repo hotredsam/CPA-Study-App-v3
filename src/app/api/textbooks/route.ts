@@ -4,14 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { respond } from "@/lib/api-error";
 import { bucket, r2Client } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { ACTIVE_CPA_SECTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
+import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
+import { getActiveExamSections } from "@/lib/exam-settings";
 
 export const dynamic = "force-dynamic";
 
-const CpaSectionSchema = z.enum(ACTIVE_CPA_SECTIONS);
+const CpaSectionSchema = z.enum(CPA_SECTION_OPTIONS);
 
 export async function GET() {
   try {
+    const activeSections = await getActiveExamSections();
     const textbooks = await prisma.textbook.findMany({
       orderBy: { uploadedAt: "desc" },
       include: {
@@ -24,7 +26,9 @@ export async function GET() {
         id: t.id,
         title: t.title,
         publisher: t.publisher,
-        sections: t.sections.filter(isActiveCpaSection),
+        sections: t.sections.filter((section) => (
+          isActiveCpaSection(section) && activeSections.includes(section)
+        )),
         pages: t.pages,
         chunkCount: t._count.chunks,
         indexStatus: t.indexStatus,

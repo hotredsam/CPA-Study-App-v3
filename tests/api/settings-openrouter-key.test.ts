@@ -33,6 +33,7 @@ describe("POST /api/settings/openrouter-key", () => {
       density: "comfortable",
       serifFamily: "Instrument Serif",
       activeModelConfig: null,
+      examSections: null,
       updatedAt: new Date(),
     });
   });
@@ -143,6 +144,7 @@ describe("GET /api/settings/openrouter-key", () => {
       density: "comfortable",
       serifFamily: "Instrument Serif",
       activeModelConfig: null,
+      examSections: null,
       updatedAt: new Date(),
     });
 
@@ -160,6 +162,7 @@ describe("GET /api/settings/openrouter-key", () => {
       density: "comfortable",
       serifFamily: "Instrument Serif",
       activeModelConfig: null,
+      examSections: null,
       updatedAt: new Date(),
     });
 
@@ -178,6 +181,7 @@ describe("GET /api/settings/openrouter-key", () => {
       density: "comfortable",
       serifFamily: "Instrument Serif",
       activeModelConfig: null,
+      examSections: null,
       updatedAt: new Date(),
     });
 

@@ -4,10 +4,10 @@ import { useCallback, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { EyebrowHeading, Btn, Card } from '@/components/ui'
 import { bulkRefreshTopicNotes } from '@/lib/api-client'
+import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
 import { TopicRow } from './TopicRow'
 import type { Topic, SortField, SectionFilter } from './types'
 
-const SECTIONS: SectionFilter[] = ['all', 'FAR', 'REG', 'AUD', 'TCP']
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'error', label: 'Highest error rate' },
   { value: 'mastery', label: 'Lowest mastery' },
@@ -26,6 +26,11 @@ export function TopicsClient() {
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [bulkRefreshing, setBulkRefreshing] = useState(false)
+  const { data: examSettings } = useExamSections()
+  const sections: SectionFilter[] = useMemo(
+    () => ['all', ...(examSettings?.sections ?? DEFAULT_EXAM_SECTIONS_SETTINGS.sections)],
+    [examSettings?.sections],
+  )
 
   const queryKey = useMemo(
     () => ['topics', sectionFilter, sort, search] as const,
@@ -94,7 +99,7 @@ export function TopicsClient() {
         sub={`${topics.length} topics shown across the active CPA sections. Click a row to open notes, history, and re-index actions.`}
         right={
           <div className="flex flex-wrap justify-end gap-1.5">
-            {SECTIONS.map((s) => (
+            {sections.map((s) => (
               <Btn
                 key={s}
                 size="sm"
