@@ -11,6 +11,26 @@ export const dynamic = "force-dynamic";
 
 const CpaSectionSchema = z.enum(CPA_SECTION_OPTIONS);
 
+type TextbookWithCount = Awaited<ReturnType<typeof prisma.textbook.findFirstOrThrow>> & {
+  _count?: { chunks: number };
+};
+
+function serializeTextbook(textbook: TextbookWithCount) {
+  return {
+    id: textbook.id,
+    title: textbook.title,
+    publisher: textbook.publisher,
+    sections: textbook.sections.filter(isActiveCpaSection),
+    pages: textbook.pages,
+    chunkCount: textbook._count?.chunks ?? textbook.chunkCount,
+    indexStatus: textbook.indexStatus,
+    sizeBytes: textbook.sizeBytes?.toString() ?? null,
+    citedCount: textbook.citedCount,
+    uploadedAt: textbook.uploadedAt,
+    indexedAt: textbook.indexedAt,
+  };
+}
+
 export async function GET() {
   try {
     const activeSections = await getActiveExamSections();
@@ -23,19 +43,10 @@ export async function GET() {
 
     const items = textbooks
       .map((t) => ({
-        id: t.id,
-        title: t.title,
-        publisher: t.publisher,
+        ...serializeTextbook(t),
         sections: t.sections.filter((section) => (
           isActiveCpaSection(section) && activeSections.includes(section)
         )),
-        pages: t.pages,
-        chunkCount: t._count.chunks,
-        indexStatus: t.indexStatus,
-        sizeBytes: t.sizeBytes?.toString() ?? null,
-        citedCount: t.citedCount,
-        uploadedAt: t.uploadedAt,
-        indexedAt: t.indexedAt,
       }))
       .filter((t) => t.sections.length > 0 || textbooks.find((book) => book.id === t.id)?.sections.length === 0);
 
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
       parsed = CreateBody.parse(body);
     }
 
-    const textbook = await prisma.textbook.create({
+    let textbook = await prisma.textbook.create({
       data: {
         title: parsed.title,
         publisher: parsed.publisher ?? null,
@@ -96,15 +107,13 @@ export async function POST(request: Request) {
           ContentType: file.type || "application/octet-stream",
         }),
       );
-      await prisma.textbook.update({
+      textbook = await prisma.textbook.update({
         where: { id: textbook.id },
         data: {
           r2Key,
           sizeBytes: BigInt(buffer.byteLength),
         },
       });
-      textbook.r2Key = r2Key;
-      textbook.sizeBytes = BigInt(buffer.byteLength);
     }
 
     // Trigger textbook-indexer task if credentials are available
@@ -119,7 +128,14 @@ export async function POST(request: Request) {
       console.warn("[textbooks/POST] TRIGGER_SECRET_KEY not set, skipping trigger");
     }
 
-    return NextResponse.json({ textbook }, { status: 201 });
+    const textbookWithCount = await prisma.textbook.findUniqueOrThrow({
+      where: { id: textbook.id },
+      include: {
+        _count: { select: { chunks: true } },
+      },
+    });
+
+    return NextResponse.json({ textbook: serializeTextbook(textbookWithCount) }, { status: 201 });
   } catch (err) {
     return respond(err);
   }

@@ -73,7 +73,6 @@ function UploadModal({
   const [file, setFile] = useState<File | null>(initialFile)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
   const { data: examSettings } = useExamSections()
   const sectionOptions = examSettings?.sections ?? FALLBACK_SECTIONS
 
@@ -221,18 +220,28 @@ function UploadModal({
             >
               PDF file
             </label>
-            <input
-              ref={fileRef}
-              id="tb-file"
-              type="file"
-              accept=".pdf,.epub,.html,.htm,application/pdf,application/epub+zip,text/html"
-              onChange={(e) => {
-                const f = e.target.files?.[0] ?? null
-                setFile(f)
-                if (f && !title) setTitle(f.name.replace(/\.(pdf|epub|html|htm)$/i, ''))
-              }}
-              className="block w-full text-sm text-[color:var(--ink-dim)] file:mr-3 file:rounded file:border-0 file:bg-[color:var(--canvas-2)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[color:var(--ink-dim)]"
-            />
+            <div className="flex items-center gap-3 rounded border border-[color:var(--border)] bg-[color:var(--canvas)] px-3 py-2">
+              <label
+                htmlFor="tb-file"
+                className="shrink-0 cursor-pointer rounded bg-[color:var(--canvas-2)] px-3 py-1.5 text-xs font-medium text-[color:var(--ink-dim)] hover:text-[color:var(--ink)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[color:var(--accent)]"
+              >
+                {file ? 'Replace file' : 'Choose file'}
+                <input
+                  id="tb-file"
+                  type="file"
+                  accept=".pdf,.epub,.html,.htm,application/pdf,application/epub+zip,text/html"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null
+                    setFile(f)
+                    if (f && !title) setTitle(f.name.replace(/\.(pdf|epub|html|htm)$/i, ''))
+                  }}
+                  className="sr-only"
+                />
+              </label>
+              <span className="min-w-0 truncate text-sm text-[color:var(--ink-dim)]">
+                {file ? `${file.name} selected` : 'No file selected'}
+              </span>
+            </div>
             {file && (
               <p className="mt-1 text-xs text-[color:var(--ink-faint)]">
                 {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
