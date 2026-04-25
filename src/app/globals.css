@@ -15,14 +15,27 @@ body {
 }
 
 .textbook-html-render {
+  --tb-rule: color-mix(in oklab, var(--border) 78%, transparent);
+  --tb-soft: color-mix(in oklab, var(--accent) 9%, var(--surface));
+  --tb-softer: color-mix(in oklab, var(--accent) 5%, var(--surface));
+  --tb-ink: var(--ink);
+  --tb-muted: var(--ink-dim);
   color: var(--ink);
   font-family: var(--font-serif), Georgia, serif;
   font-size: 1rem;
-  line-height: 1.65;
+  line-height: 1.72;
 }
 
 .textbook-html-render > * + * {
+  margin-top: 1rem;
+}
+
+.textbook-html-render :where(section, article) > * + * {
   margin-top: 0.9rem;
+}
+
+.textbook-html-render :where(.tb-book-header, .tb-module, .tb-section) {
+  padding-block: 0.15rem;
 }
 
 .textbook-html-render h1,
@@ -31,30 +44,48 @@ body {
 .textbook-html-render h4 {
   color: var(--ink);
   font-family: var(--font-sans);
-  font-weight: 650;
-  line-height: 1.18;
+  font-weight: 680;
+  line-height: 1.22;
+  margin-top: 1.35rem;
 }
 
 .textbook-html-render h1 {
-  font-size: 1.5rem;
+  font-size: 1.55rem;
 }
 
 .textbook-html-render h2 {
-  font-size: 1.25rem;
+  font-size: 1.3rem;
 }
 
 .textbook-html-render h3 {
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+}
+
+.textbook-html-render h4 {
+  font-size: 0.96rem;
+  color: var(--ink-dim);
 }
 
 .textbook-html-render p,
 .textbook-html-render li {
-  color: var(--ink-dim);
+  color: var(--tb-muted);
+}
+
+.textbook-html-render p {
+  margin-block: 0.62rem;
+}
+
+.textbook-html-render strong {
+  color: var(--tb-ink);
+  font-weight: 680;
 }
 
 .textbook-html-render ul,
 .textbook-html-render ol {
-  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.34rem;
+  margin-block: 0.75rem;
+  padding-left: 1.25rem;
 }
 
 .textbook-html-render ul {
@@ -65,34 +96,79 @@ body {
   list-style: decimal;
 }
 
+.textbook-html-render .tb-book-header {
+  border-bottom: 1px solid var(--tb-rule);
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.9rem;
+}
+
+.textbook-html-render .tb-book-title,
+.textbook-html-render .tb-module-title {
+  margin-top: 0;
+}
+
+.textbook-html-render .tb-toc {
+  border: 1px solid var(--tb-rule);
+  background: var(--tb-softer);
+  margin-top: 0.9rem;
+  padding: 0.8rem 0.95rem;
+}
+
+.textbook-html-render .tb-toc-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding-left: 1.15rem;
+}
+
+.textbook-html-render .tb-section + .tb-section,
+.textbook-html-render .tb-module + .tb-module {
+  border-top: 1px solid var(--tb-rule);
+  margin-top: 1.45rem;
+  padding-top: 1.15rem;
+}
+
 .textbook-html-render table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-family: var(--font-sans);
   font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .textbook-html-render th,
 .textbook-html-render td {
-  border: 1px solid var(--border);
-  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--tb-rule);
+  padding: 0.58rem 0.68rem;
   text-align: left;
   vertical-align: top;
 }
 
 .textbook-html-render th {
-  background: var(--surface-2);
+  background: var(--tb-soft);
   color: var(--ink);
   font-weight: 650;
+}
+
+.textbook-html-render tr:nth-child(even) td {
+  background: color-mix(in oklab, var(--surface-2) 58%, transparent);
 }
 
 .textbook-html-render figure,
 .textbook-html-render .tb-callout,
 .textbook-html-render .tb-example,
 .textbook-html-render .tb-equation {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  padding: 0.8rem;
+  border: 1px solid var(--tb-rule);
+  background: var(--tb-softer);
+  margin-block: 1.05rem;
+  overflow-x: auto;
+  padding: 0.95rem;
+  border-radius: 6px;
+}
+
+.textbook-html-render .tb-callout,
+.textbook-html-render .tb-example,
+.textbook-html-render .tb-equation {
+  border-left: 3px solid var(--accent);
 }
 
 .textbook-html-render figcaption,
@@ -106,9 +182,38 @@ body {
   text-transform: uppercase;
 }
 
+.textbook-html-render figcaption {
+  margin-bottom: 0.65rem;
+}
+
 .textbook-html-render svg {
   display: block;
   max-width: 100%;
   height: auto;
+  color: var(--accent);
+  margin-inline: auto;
+}
+
+.textbook-html-render svg :where(path, rect, circle, ellipse, polygon, polyline, line) {
+  stroke: currentColor;
+}
+
+.textbook-html-render svg :where(path, rect, circle, ellipse, polygon):not([fill="none"]) {
+  fill: color-mix(in oklab, var(--accent) 14%, var(--surface));
+}
+
+.textbook-html-render svg text {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.textbook-html-render code,
+.textbook-html-render kbd {
+  border: 1px solid var(--tb-rule);
+  background: var(--surface-2);
   color: var(--ink);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.86em;
+  padding: 0.05rem 0.28rem;
+  border-radius: 4px;
 }

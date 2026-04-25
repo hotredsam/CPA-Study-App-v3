@@ -192,7 +192,7 @@ function UploadModal({
               onChange={(e) => setTitle(e.target.value)}
               disabled={isBulk}
               className="w-full rounded border border-[color:var(--border)] bg-[color:var(--canvas)] px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-faint)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
-              placeholder="Becker FAR Textbook 2025"
+              placeholder="Financial Reporting Unit 1"
               required={!isBulk}
             />
             {isBulk && (
@@ -213,7 +213,7 @@ function UploadModal({
               value={publisher}
               onChange={(e) => setPublisher(e.target.value)}
               className="w-full rounded border border-[color:var(--border)] bg-[color:var(--canvas)] px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-faint)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
-              placeholder="Becker Professional Education"
+              placeholder="Publisher"
             />
           </div>
 
