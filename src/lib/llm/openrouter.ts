@@ -47,7 +47,7 @@ function envOpenRouterKey(): string | null {
   return key && key.length > 0 ? key : null;
 }
 
-async function getOpenRouterKey(): Promise<string> {
+export async function getOpenRouterApiKey(): Promise<string> {
   const envKey = envOpenRouterKey();
   if (envKey) return envKey;
 
@@ -111,7 +111,7 @@ function estimateCost(promptTokens: number, completionTokens: number): number {
 export async function callOpenRouter(
   params: LLMCallParams,
 ): Promise<LLMCallResult> {
-  const apiKey = await getOpenRouterKey();
+  const apiKey = await getOpenRouterApiKey();
 
   const body: Record<string, unknown> = {
     model: params.model,

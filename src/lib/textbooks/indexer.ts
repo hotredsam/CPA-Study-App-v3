@@ -92,18 +92,18 @@ async function createChunksFromPdf(args: {
     const extraction = await extractPdfText({
       buffer,
       ocrMode: config.ocrMode,
+      fileName: textbook.r2Key.split("/").pop() ?? "textbook.pdf",
       onProgress: (progress) => {
-        const pct = 10 + (progress.pageNumber / progress.pageCount) * 35;
         return emit(onProgress, {
-          pct,
+          pct: progress.pageNumber > 0 ? 45 : 12,
           message:
-            progress.mode === "ocr"
-              ? `OCR page ${progress.pageNumber} of ${progress.pageCount}`
-              : `Read page ${progress.pageNumber} of ${progress.pageCount}`,
+            progress.pageNumber > 0
+              ? `Parsed ${progress.pageCount} PDF sections with OpenRouter`
+              : "Parsing PDF with OpenRouter",
           sub: {
             current: progress.pageNumber,
             total: progress.pageCount,
-            itemLabel: `Page ${progress.pageNumber}`,
+            itemLabel: "OpenRouter PDF parser",
           },
         });
       },
