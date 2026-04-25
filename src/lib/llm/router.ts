@@ -24,11 +24,16 @@ async function claudeCliCall(payload: unknown): Promise<LLMCallResult> {
   // If payload carries a `prompt` field, send that as the actual prompt text.
   // Passing JSON.stringify(payload) would confuse Claude with wrapper metadata.
   const isObj = payload !== null && typeof payload === "object";
+  const payloadRecord = isObj ? (payload as Record<string, unknown>) : null;
   const promptText =
-    isObj && "prompt" in (payload as object) && typeof (payload as Record<string, unknown>)["prompt"] === "string"
-      ? (payload as Record<string, unknown>)["prompt"] as string
+    payloadRecord && typeof payloadRecord["prompt"] === "string"
+      ? payloadRecord["prompt"]
       : JSON.stringify(payload);
-  const result = await callClaude(promptText);
+  const systemPrompt =
+    payloadRecord && typeof payloadRecord["systemPrompt"] === "string"
+      ? payloadRecord["systemPrompt"]
+      : undefined;
+  const result = await callClaude(promptText, { systemPrompt });
   return {
     content: result,
     inputTokens: 0,
@@ -47,6 +52,18 @@ function buildMessages(
   _functionKey: AiFunctionKey,
   payload: unknown,
 ): LLMMessage[] {
+  if (payload !== null && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    if (typeof record["prompt"] === "string") {
+      const messages: LLMMessage[] = [];
+      if (typeof record["systemPrompt"] === "string") {
+        messages.push({ role: "system", content: record["systemPrompt"] });
+      }
+      messages.push({ role: "user", content: record["prompt"] });
+      return messages;
+    }
+  }
+
   return [{ role: "user", content: JSON.stringify(payload) }];
 }
 

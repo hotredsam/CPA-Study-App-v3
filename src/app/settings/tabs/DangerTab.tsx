@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Btn } from '@/components/ui/Btn'
 import { Card } from '@/components/ui/Card'
 
@@ -9,7 +10,8 @@ import { Card } from '@/components/ui/Card'
 // ---------------------------------------------------------------------------
 
 function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-  window.dispatchEvent(new CustomEvent('cpa-toast', { detail: { message, type } }))
+  const variant = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'
+  window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message, variant } }))
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +206,8 @@ function DeleteAllDataRow() {
 // ---------------------------------------------------------------------------
 
 export function DangerTab() {
+  const router = useRouter()
+
   return (
     <div
       className="flex flex-col gap-5"
@@ -220,7 +224,13 @@ export function DangerTab() {
           label="Reset study hours"
           description="Clears all stored study hours data."
           onConfirm={async () => {
-            emitToast('Hours reset.', 'success')
+            const res = await fetch('/api/settings/study-hours', { method: 'DELETE' })
+            if (!res.ok) {
+              emitToast(`Failed: HTTP ${res.status}`, 'error')
+              return
+            }
+            emitToast('Study hours reset.', 'success')
+            router.push('/')
           }}
         />
 

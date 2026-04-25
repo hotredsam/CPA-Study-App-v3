@@ -1,7 +1,9 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
+import { AiFunctionKey } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { makeThrottledStage } from "./progress";
-import { callClaude, extractJsonFromResponse } from "@/lib/claude-cli";
+import { extractJsonFromResponse } from "@/lib/claude-cli";
+import { runFunction } from "@/lib/llm/router";
 import { EXTRACTION_SYSTEM_PROMPT } from "@/lib/prompts/extraction";
 import { ExtractedQuestion, ExtractedQuestionIncomplete } from "@/lib/schemas/extracted";
 import { Transcript } from "@/lib/schemas/transcript";
@@ -56,7 +58,7 @@ export const extractQuestion = task({
   maxDuration: 60 * 15,
   run: async (payload: { questionId: string }) => {
     const { questionId } = payload;
-    const setStage = makeThrottledStage();
+    let setStage = makeThrottledStage();
 
     setStage({ stage: "extracting", pct: 0, message: "Fetching question…" });
 
@@ -65,6 +67,7 @@ export const extractQuestion = task({
       where: { id: questionId },
       include: { recording: true },
     });
+    setStage = makeThrottledStage(question.recordingId);
 
     await prisma.question.update({
       where: { id: questionId },
@@ -99,16 +102,22 @@ export const extractQuestion = task({
 
     setStage({ stage: "extracting", pct: 20, message: "Calling Claude…" });
 
-    // 4. Call Claude via CLI
-    let raw: string;
+    setStage({ stage: "extracting", pct: 20, message: "Calling OpenRouter..." });
+
+    // 4. Call the configured extraction model through OpenRouter/router.
+    let rawJson: unknown;
     try {
-      raw = await callClaude(prompt, { systemPrompt: EXTRACTION_SYSTEM_PROMPT });
+      const result = await runFunction(
+        AiFunctionKey.PIPELINE_EXTRACT,
+        { prompt, systemPrompt: EXTRACTION_SYSTEM_PROMPT },
+        { bypassBatch: true },
+      );
+      rawJson = result.output;
     } catch (err) {
-      logger.warn("callClaude failed in extractQuestion", { questionId, err: String(err) });
-      // Persist stub with incomplete:true
+      logger.warn("OpenRouter extraction failed", { questionId, err: String(err) });
       const stubExtracted = {
         incomplete: true as const,
-        reason: `Claude CLI call failed: ${String(err).slice(0, 200)}`,
+        reason: `Extraction model call failed: ${String(err).slice(0, 200)}`,
         _precision: "provisional",
       };
       await prisma.question.update({
@@ -118,21 +127,23 @@ export const extractQuestion = task({
           status: "incomplete",
         },
       });
-      setStage({ stage: "extracting", pct: 100, message: "Extraction incomplete (Claude error)" });
+      setStage({ stage: "extracting", pct: 100, message: "Extraction incomplete (model error)" });
       return { questionId, ok: true };
     }
 
     setStage({ stage: "extracting", pct: 70, message: "Parsing response…" });
 
-    // 5. Parse JSON from Claude response
+    // 5. Parse JSON from model response
     let parsed: ReturnType<typeof ExtractedQuestion.safeParse>;
-    let rawJson: unknown;
 
-    try {
-      rawJson = extractJsonFromResponse(raw);
-    } catch (err) {
-      logger.warn("extractJsonFromResponse failed", { questionId, raw: raw.slice(0, 300), err: String(err) });
-      rawJson = null;
+    if (typeof rawJson === "string") {
+      const rawText = rawJson;
+      try {
+        rawJson = extractJsonFromResponse(rawText);
+      } catch (err) {
+        logger.warn("extractJsonFromResponse failed", { questionId, raw: rawText.slice(0, 300), err: String(err) });
+        rawJson = null;
+      }
     }
 
     if (rawJson !== null) {

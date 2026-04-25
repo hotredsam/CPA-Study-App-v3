@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
 import { CpaSection } from '@prisma/client'
 import { z } from 'zod'
+import { ACTIVE_CPA_SECTIONS } from '@/lib/cpa-sections'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ const SortField = z.enum(['mastery', 'error', 'cards', 'seen'])
 type SortField = z.infer<typeof SortField>
 
 const QuerySchema = z.object({
-  section: z.nativeEnum(CpaSection).optional(),
+  section: z.enum(ACTIVE_CPA_SECTIONS).optional(),
   sort: SortField.optional(),
   q: z.string().optional(),
 })
@@ -43,7 +44,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const topics = await prisma.topic.findMany({
       where: {
-        ...(data.section ? { section: data.section } : {}),
+        ...(data.section
+          ? { section: data.section as CpaSection }
+          : { section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] } }),
         ...(data.q
           ? { name: { contains: data.q, mode: 'insensitive' } }
           : {}),

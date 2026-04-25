@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { auth } from "@trigger.dev/sdk/v3";
 import { prisma } from "@/lib/prisma";
 import StatusClient from "./StatusClient";
 
@@ -18,6 +17,7 @@ export default async function StatusPage({ params }: { params: Promise<{ id: str
   let publicAccessToken: string | null = null;
   if (recording.triggerRunId && process.env.TRIGGER_SECRET_KEY) {
     try {
+      const { auth } = await import("@trigger.dev/sdk/v3");
       publicAccessToken = await auth.createPublicToken({
         scopes: { read: { runs: [recording.triggerRunId] } },
       });
@@ -30,7 +30,7 @@ export default async function StatusPage({ params }: { params: Promise<{ id: str
     <main className="mx-auto max-w-4xl p-8">
       <h1 className="text-3xl font-bold mb-2">Processing</h1>
       <p className="text-sm text-slate-500 mb-6">
-        Recording <code>{recording.id}</code> — status{" "}
+        Recording <code>{recording.id}</code> - status{" "}
         <span className="font-mono">{recording.status}</span>
       </p>
       <StatusClient

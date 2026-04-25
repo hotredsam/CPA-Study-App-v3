@@ -1,15 +1,15 @@
 import { EyebrowHeading } from "@/components/ui/EyebrowHeading";
 import { RecordClient } from "./RecordClient";
 
-export const metadata = { title: "Record — CPA Study Servant" };
+export const metadata = { title: "Record - CPA Study Servant" };
 
 export default function RecordPage() {
   return (
     <div>
       <EyebrowHeading
-        eyebrow="Record"
-        title="Record a Session"
-        sub="Capture your screen and microphone while working through practice questions. The pipeline grades your performance automatically."
+        eyebrow="NEW RECORDING"
+        title="Preflight"
+        sub="Capture screen and mic. Claude will segment the video into questions, transcribe your reasoning, and grade each one."
       />
       <RecordClient />
     </div>

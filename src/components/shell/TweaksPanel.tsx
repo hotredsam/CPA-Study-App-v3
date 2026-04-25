@@ -23,6 +23,12 @@ const DEFAULT_TWEAKS: Tweaks = {
   serif: 'instrument',
 }
 
+const SERIF_LABELS: Record<Serif, string> = {
+  instrument: 'Instrument Serif',
+  tiempos: 'Tiempos',
+  source: 'Source Serif',
+}
+
 function applyTweaks(tweaks: Tweaks) {
   const el = document.documentElement
   el.dataset['theme'] = tweaks.theme
@@ -44,12 +50,12 @@ async function saveTweaksToServer(tweaks: Tweaks) {
     await fetch('/api/settings', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        theme: tweaks.theme,
-        accentHue: tweaks.accentHue,
-        density: tweaks.density,
-        serifFamily: tweaks.serif,
-      }),
+        body: JSON.stringify({
+          theme: tweaks.theme,
+          accentHue: tweaks.accentHue,
+          density: tweaks.density,
+          serifFamily: SERIF_LABELS[tweaks.serif],
+        }),
     })
   } catch {
     // non-fatal
@@ -65,8 +71,16 @@ export function TweaksPanel() {
     try {
       const raw = localStorage.getItem('cpa-tweaks')
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Tweaks>
-        setTweaks((prev) => ({ ...prev, ...parsed }))
+        const parsed = JSON.parse(raw) as Partial<Tweaks> & { serifFamily?: string }
+        const serifFromFamily =
+          parsed.serifFamily === 'Tiempos'
+            ? 'tiempos'
+            : parsed.serifFamily === 'Source Serif'
+              ? 'source'
+              : parsed.serifFamily === 'Instrument Serif'
+                ? 'instrument'
+                : undefined
+        setTweaks((prev) => ({ ...prev, ...parsed, serif: parsed.serif ?? serifFromFamily ?? prev.serif }))
       }
     } catch {
       // ignore

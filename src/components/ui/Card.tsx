@@ -29,9 +29,9 @@ export function Card({
       onClick={onClick}
       type={isClickable ? 'button' : undefined}
       className={[
-        'relative rounded border border-[color:var(--border)] bg-[color:var(--surface)]',
+        'relative rounded-[4px] border border-[color:var(--border)] bg-[color:var(--surface)]',
         'overflow-hidden',
-        pad ? 'p-4' : '',
+        pad ? 'p-[18px]' : '',
         isClickable
           ? 'w-full text-left hov cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]'
           : '',
@@ -44,7 +44,7 @@ export function Card({
       {/* Left accent stripe */}
       {accent && (
         <span
-          className="absolute left-0 top-0 bottom-0 w-[3px]"
+          className="absolute left-0 top-0 bottom-0 w-[2px]"
           style={{ background: accent }}
           aria-hidden="true"
         />

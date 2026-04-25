@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/prisma";
-import { r2Client, bucket } from "@/lib/r2";
 import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
 /** Delete all R2 objects under a prefix. */
 async function deleteR2Prefix(prefix: string): Promise<void> {
+  const { r2Client, bucket } = await import("@/lib/r2");
   const client = r2Client();
   const bkt = bucket();
   let token: string | undefined;
@@ -26,6 +26,11 @@ async function deleteR2Prefix(prefix: string): Promise<void> {
 
     token = list.IsTruncated ? list.NextContinuationToken : undefined;
   } while (token);
+}
+
+async function deleteR2Object(key: string): Promise<void> {
+  const { r2Client, bucket } = await import("@/lib/r2");
+  await r2Client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
 }
 
 export async function DELETE(
@@ -49,11 +54,7 @@ export async function DELETE(
     // 2. Clean up R2: delete raw recording + all clip objects
     const r2Deletes: Promise<void>[] = [];
     if (recording.r2Key) {
-      r2Deletes.push(
-        r2Client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: recording.r2Key }))
-          .then(() => undefined)
-          .catch(() => undefined)
-      );
+      r2Deletes.push(deleteR2Object(recording.r2Key).catch(() => undefined));
     }
     for (const q of questions) {
       r2Deletes.push(deleteR2Prefix(`clips/${q.id}/`).catch(() => undefined));

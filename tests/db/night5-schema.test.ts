@@ -64,7 +64,7 @@ describe.skipIf(!canReachDb)("Textbook", () => {
       data: {
         title: `Test Textbook ${uid()}`,
         publisher: "TestPub",
-        sections: ["FAR", "BAR"],
+        sections: ["FAR", "REG"],
         pages: 300,
         chunkCount: 0,
         indexStatus: "READY",
@@ -219,7 +219,12 @@ describe.skipIf(!canReachDb)("UserSettings", () => {
   it("upserts and reads back UserSettings singleton", async () => {
     const settings = await prisma.userSettings.upsert({
       where: { id: "singleton" },
-      update: { accentHue: 99 },
+      update: {
+        theme: "paper",
+        accentHue: 99,
+        density: "comfortable",
+        serifFamily: "Instrument Serif",
+      },
       create: {
         id: "singleton",
         theme: "paper",

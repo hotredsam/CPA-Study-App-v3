@@ -2,7 +2,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { TweaksPanel } from './TweaksPanel'
 
 // ─── Inline SVG icon set ───────────────────────────────────────────────────────
 
@@ -97,15 +96,16 @@ function IconSettings() {
 function Logo() {
   return (
     <div
-      className="flex items-center justify-center w-8 h-8 rounded"
-      style={{ background: 'var(--accent)' }}
+      className="flex items-center justify-center w-[30px] h-[30px] rounded-[4px] shrink-0"
+      style={{
+        background: 'var(--accent)',
+        boxShadow: '0 1px 0 rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)',
+      }}
       aria-hidden="true"
     >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="3" width="12" height="10" rx="1" stroke="white" strokeWidth="1.5" />
-        <line x1="5" y1="6" x2="11" y2="6" stroke="white" strokeWidth="1" strokeLinecap="round" />
-        <line x1="5" y1="8" x2="11" y2="8" stroke="white" strokeWidth="1" strokeLinecap="round" />
-        <line x1="5" y1="10" x2="8" y2="10" stroke="white" strokeWidth="1" strokeLinecap="round" />
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="1" />
+        <path d="M3 9h18M3 14h18M8 4v16" />
       </svg>
     </div>
   )
@@ -127,7 +127,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Pipeline', key: 's', route: '/pipeline', icon: <IconActivity />, badgeType: 'pipeline' },
   { label: 'Review', key: 'v', route: '/review', icon: <IconList /> },
   { label: 'Topics', key: 'y', route: '/topics', icon: <IconTopics /> },
-  { label: 'Study', key: 'u', route: '/study', icon: <IconBookOpen /> },
+  { label: 'Study Textbook', key: 'u', route: '/study', icon: <IconBookOpen /> },
   { label: 'Anki', key: 'a', route: '/anki', icon: <IconCards />, badgeType: 'anki' },
   { label: 'Library', key: 'l', route: '/library', icon: <IconBook /> },
   { label: 'Settings', key: 't', route: '/settings', icon: <IconSettings /> },
@@ -135,11 +135,25 @@ const NAV_ITEMS: NavItem[] = [
 
 // ─── Badge data fetching ───────────────────────────────────────────────────────
 
+function useTotalHours() {
+  return useQuery({
+    queryKey: ['sidebar-hours'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings/study-hours')
+      if (!res.ok) return null
+      const data = (await res.json()) as { totalHours?: number }
+      return data.totalHours ?? null
+    },
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  })
+}
+
 function usePipelineBadge() {
   return useQuery({
     queryKey: ['pipeline-badge'],
     queryFn: async () => {
-      const res = await fetch('/api/recordings?status=segmenting,processing_questions&limit=50')
+      const res = await fetch('/api/recordings?status=uploaded,segmenting,processing_questions&liveOnly=true&limit=50')
       if (!res.ok) return 0
       const data = (await res.json()) as { items?: unknown[] }
       return data.items?.length ?? 0
@@ -167,6 +181,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: pipelineCount = 0 } = usePipelineBadge()
   const { data: ankiCount = 0 } = useAnkiBadge()
+  const { data: totalHours } = useTotalHours()
 
   function getBadgeCount(badgeType?: 'pipeline' | 'anki'): number {
     if (badgeType === 'pipeline') return pipelineCount
@@ -182,13 +197,14 @@ export function Sidebar() {
   return (
     <nav className="side" aria-label="Main navigation">
       {/* Logo / brand */}
-      <div className="flex items-center gap-3 px-4 py-5">
+      <div className="flex items-center gap-2.5 px-4 py-[18px] border-b border-[color:var(--border)]">
         <Logo />
-        <span className="font-semibold text-sm text-[color:var(--ink)] leading-tight">
-          Study
-          <br />
-          Servant
-        </span>
+        <div>
+          <div className="text-sm font-medium tracking-[-0.01em] text-[color:var(--ink)]">Study Servant</div>
+          <div className="mono mt-0.5 text-[10px] tracking-[0.08em] text-[color:var(--ink-faint)]">
+            {totalHours != null ? `CPA · ${totalHours.toFixed(1)} h` : 'CPA Study'}
+          </div>
+        </div>
       </div>
 
       {/* Nav items */}
@@ -223,11 +239,8 @@ export function Sidebar() {
                 <span className="flex-1">{item.label}</span>
 
                 {/* Keyboard hint */}
-                <span
-                  className="font-mono text-[10px] text-[color:var(--ink-faint)] opacity-60"
-                  aria-hidden="true"
-                >
-                  g+{item.key}
+                <span className="font-mono text-[9px] text-[color:var(--ink-faint)]" aria-hidden="true">
+                  {item.key}
                 </span>
 
                 {/* Badge */}
@@ -246,8 +259,16 @@ export function Sidebar() {
         })}
       </ul>
 
-      {/* Tweaks panel anchored to bottom */}
-      <TweaksPanel />
+      <div className="mt-auto border-t border-[color:var(--border)] px-3.5 py-3">
+        <div className="eyebrow">LIVE</div>
+        <div className="mt-1.5 text-[11px] text-[color:var(--ink-dim)]">
+          <span
+            className="pulse-dot mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]"
+            aria-hidden="true"
+          />
+          {pipelineCount} recording{pipelineCount === 1 ? '' : 's'} processing
+        </div>
+      </div>
     </nav>
   )
 }

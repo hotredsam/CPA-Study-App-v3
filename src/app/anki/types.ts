@@ -23,6 +23,12 @@ export interface AnkiCard {
   createdAt: string
   updatedAt: string
   _count: { reviews: number }
+  notes?: Array<{
+    id: string
+    content: string
+    isVoice: boolean
+    createdAt: string
+  }>
 }
 
 export interface DueSectionBreakdown {

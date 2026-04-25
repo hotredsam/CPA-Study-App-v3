@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CpaSection = z.enum(["AUD", "BAR", "FAR", "REG", "ISC", "TCP"]);
+export const CpaSection = z.enum(["AUD", "FAR", "REG", "TCP"]);
 export type CpaSection = z.infer<typeof CpaSection>;
 
 export const Choice = z.object({

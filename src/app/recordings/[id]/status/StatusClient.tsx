@@ -96,7 +96,7 @@ function StatusStream({ recordingId, runId, publicAccessToken, questions }: Stre
               </span>
               <span className="text-xs">{q.status}</span>
               <Link
-                href={`/review/${q.id}`}
+                href={`/review/${recordingId}`}
                 className="text-sm text-brand-700 hover:underline"
               >
                 Review →
@@ -109,7 +109,7 @@ function StatusStream({ recordingId, runId, publicAccessToken, questions }: Stre
       {state === "COMPLETED" && questions[0] ? (
         <div>
           <Link
-            href={`/review/${questions[0].id}`}
+            href={`/review/${recordingId}`}
             className="rounded bg-brand-500 px-4 py-2 text-white hover:bg-brand-700"
           >
             Start review →

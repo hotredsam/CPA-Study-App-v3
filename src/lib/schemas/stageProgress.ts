@@ -22,6 +22,7 @@ export const StageProgress = z.object({
       itemLabel: z.string().optional(),
     })
     .optional(),
+  subProgress: z.record(z.number().min(0).max(100)).optional(),
 });
 
 export type StageProgress = z.infer<typeof StageProgress>;

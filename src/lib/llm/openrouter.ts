@@ -30,7 +30,16 @@ const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 
+function envOpenRouterKey(): string | null {
+  if (process.env.NODE_ENV === "test") return null;
+  const key = process.env["OPENROUTER_API_KEY"]?.trim();
+  return key && key.length > 0 ? key : null;
+}
+
 async function getOpenRouterKey(): Promise<string> {
+  const envKey = envOpenRouterKey();
+  if (envKey) return envKey;
+
   const settings = await prisma.userSettings.findUnique({
     where: { id: "singleton" },
     select: { openRouterKeyEnc: true },
@@ -41,6 +50,17 @@ async function getOpenRouterKey(): Promise<string> {
   }
 
   return decryptKey(settings.openRouterKeyEnc);
+}
+
+export async function hasOpenRouterKeyConfigured(): Promise<boolean> {
+  if (envOpenRouterKey()) return true;
+
+  const settings = await prisma.userSettings.findUnique({
+    where: { id: "singleton" },
+    select: { openRouterKeyEnc: true },
+  });
+
+  return settings?.openRouterKeyEnc != null;
 }
 
 function isRetryableStatus(status: number): boolean {
@@ -65,7 +85,7 @@ interface OpenRouterChoice {
 interface OpenRouterResponse {
   model: string;
   choices: OpenRouterChoice[];
-  usage: OpenRouterUsage;
+  usage?: OpenRouterUsage;
 }
 
 function estimateCost(promptTokens: number, completionTokens: number): number {
@@ -147,8 +167,8 @@ export async function callOpenRouter(
     }
 
     const content = firstChoice.message.content;
-    const inputTokens = data.usage.prompt_tokens;
-    const outputTokens = data.usage.completion_tokens;
+    const inputTokens = data.usage?.prompt_tokens ?? 0;
+    const outputTokens = data.usage?.completion_tokens ?? 0;
     const usdCost = estimateCost(inputTokens, outputTokens);
 
     return {

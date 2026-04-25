@@ -21,4 +21,4 @@ export interface Topic {
 }
 
 export type SortField = 'mastery' | 'error' | 'cards' | 'seen'
-export type SectionFilter = 'all' | 'FAR' | 'REG' | 'AUD' | 'TCP' | 'BAR' | 'ISC'
+export type SectionFilter = 'all' | 'FAR' | 'REG' | 'AUD' | 'TCP'

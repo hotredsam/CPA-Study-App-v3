@@ -112,7 +112,7 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
             onChange={(e) => handleNotesChange(e.target.value)}
             onBlur={handleNotesBlur}
             rows={4}
-            placeholder="Add your notes here…"
+            placeholder="Add your notes here..."
             className="w-full rounded border border-[color:var(--border)] bg-[color:var(--surface)] text-[color:var(--ink)] text-sm p-2 resize-y focus:outline focus:outline-2 focus:outline-[color:var(--accent)] placeholder:text-[color:var(--ink-faint)]"
           />
         </div>
@@ -146,7 +146,7 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
           href={`/anki?topicId=${topic.id}`}
           className="flex w-full items-center justify-center rounded-[3px] border border-[color:var(--border)] text-[color:var(--ink-dim)] text-sm px-3.5 py-2 hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
         >
-          Practice Anki
+          Practice {topic.cardsDue} cards
         </a>
         <Btn
           size="sm"
@@ -155,14 +155,35 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
           disabled={regenning}
           aria-label="Regenerate Anki cards for this topic"
         >
-          {regenning ? 'Regenerating…' : 'Regen Anki cards'}
+          {regenning ? 'Regenerating...' : 'Regen Anki cards'}
         </Btn>
         <a
           href={`/study?topicId=${topic.id}`}
           className="flex w-full items-center justify-center rounded-[3px] border border-[color:var(--border)] text-[color:var(--ink-dim)] text-sm px-3.5 py-2 hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
         >
-          Open in study
+          Open in book
         </a>
+        <a
+          href={`/record?topicId=${topic.id}`}
+          className="flex w-full items-center justify-center rounded-[3px] border border-[color:var(--border)] text-[color:var(--ink-dim)] text-sm px-3.5 py-2 hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+        >
+          Drill this topic
+        </a>
+        <Btn
+          size="sm"
+          variant="subtle"
+          className="w-full"
+          onClick={handleNotesBlur}
+          aria-label="Save notes"
+        >
+          Save notes
+        </Btn>
+        <div className="mt-3 rounded-[3px] border border-[color:var(--accent-border)] bg-[color:var(--accent-faint)] p-3">
+          <p className="eyebrow text-[color:var(--accent)]">WHERE COVERED</p>
+          <p className="mt-1 text-xs leading-5 text-[color:var(--ink-dim)]">
+            Becker FAR 7.3 - FASB ASC 606-10-32 - Ninja FAR Notes p.68
+          </p>
+        </div>
       </div>
     </div>
   )

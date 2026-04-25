@@ -1,6 +1,7 @@
-import { logger, metadata, task } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { prisma } from "@/lib/prisma";
 import type { StageProgress } from "@/lib/schemas/stageProgress";
+import { setStageForRecording } from "./progress";
 import { segmentRecording } from "@/trigger/segmentRecording";
 import { extractQuestion } from "@/trigger/extractQuestion";
 import { transcribeQuestion } from "@/trigger/transcribeQuestion";
@@ -39,20 +40,56 @@ export const processRecording = task({
 
     // Process questions sequentially — trigger.dev v3 does not support
     // Promise.all() around triggerAndWait calls.
+    if (questionIds.length === 0) {
+      await fail(recordingId, "segmentation produced no usable question clips");
+      throw new Error("segmentation produced no usable question clips");
+    }
+
+    let gradedCount = 0;
+    let failedCount = 0;
+
     for (const questionId of questionIds) {
-      const extractRes = await extractQuestion.triggerAndWait({ questionId });
       const transcribeRes = await transcribeQuestion.triggerAndWait({ questionId });
-      if (!extractRes.ok || !transcribeRes.ok) continue;
+      if (!transcribeRes.ok) {
+        failedCount++;
+        continue;
+      }
+
+      const extractRes = await extractQuestion.triggerAndWait({ questionId });
+      if (!extractRes.ok) {
+        failedCount++;
+        continue;
+      }
+
       // Tag stage: non-blocking on failure (tagQuestion catches its own errors)
       await tagQuestion.triggerAndWait({ questionId });
-      await gradeQuestion.triggerAndWait({ questionId });
+      const gradeRes = await gradeQuestion.triggerAndWait({ questionId });
+      if (!gradeRes.ok) {
+        failedCount++;
+        await prisma.question.update({
+          where: { id: questionId },
+          data: { status: "failed" },
+        }).catch(() => undefined);
+        continue;
+      }
+      gradedCount++;
+    }
+
+    if (gradedCount === 0) {
+      await fail(recordingId, `all ${failedCount} question(s) failed during processing`);
+      throw new Error("all questions failed during processing");
     }
 
     await prisma.recording.update({
       where: { id: recordingId },
       data: {
         status: "done",
-        tagStage: { status: "completed", completedAt: new Date().toISOString(), pct: 100 },
+        tagStage: {
+          status: failedCount > 0 ? "completed_with_warnings" : "completed",
+          completedAt: new Date().toISOString(),
+          pct: 100,
+          failedCount,
+        },
       },
     });
     await setStage(recordingId, {
@@ -65,16 +102,7 @@ export const processRecording = task({
 });
 
 async function setStage(recordingId: string, progress: StageProgress): Promise<void> {
-  metadata.set("progress", progress);
-  await prisma.stageProgress.create({
-    data: {
-      recordingId,
-      stage: progress.stage,
-      pct: progress.pct,
-      etaSec: progress.etaSec ?? null,
-      message: progress.message,
-    },
-  });
+  await setStageForRecording(recordingId, progress);
 }
 
 async function fail(recordingId: string, message: string): Promise<void> {

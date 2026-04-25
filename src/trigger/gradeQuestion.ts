@@ -1,7 +1,9 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
+import { AiFunctionKey } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { makeThrottledStage } from "./progress";
-import { callClaude, extractJsonFromResponse } from "@/lib/claude-cli";
+import { extractJsonFromResponse } from "@/lib/claude-cli";
+import { runFunction } from "@/lib/llm/router";
 import { GRADING_SYSTEM_PROMPT, buildGradingUserPrompt } from "@/lib/prompts/grading";
 import { ExtractedQuestion } from "@/lib/schemas/extracted";
 import { FeedbackPayload } from "@/lib/schemas/feedback";
@@ -27,7 +29,7 @@ export const gradeQuestion = task({
   maxDuration: 60 * 15,
   run: async (payload: { questionId: string }) => {
     const { questionId } = payload;
-    const setStage = makeThrottledStage();
+    let setStage = makeThrottledStage();
 
     setStage({ stage: "grading", pct: 0, message: "Fetching question…" });
 
@@ -35,6 +37,7 @@ export const gradeQuestion = task({
     const question = await prisma.question.findUniqueOrThrow({
       where: { id: questionId },
     });
+    setStage = makeThrottledStage(question.recordingId);
 
     await prisma.question.update({
       where: { id: questionId },
@@ -72,29 +75,40 @@ export const gradeQuestion = task({
 
     setStage({ stage: "grading", pct: 20, message: "Calling Claude for grading…" });
 
-    // 5. Call Claude
-    let raw: string;
+    setStage({ stage: "grading", pct: 20, message: "Calling OpenRouter for grading..." });
+
+    // 5. Call the configured grading model through OpenRouter/router.
+    let rawJson: unknown = null;
     try {
-      raw = await callClaude(gradingPrompt, { systemPrompt: GRADING_SYSTEM_PROMPT });
+      const result = await runFunction(
+        AiFunctionKey.PIPELINE_GRADE,
+        { prompt: gradingPrompt, systemPrompt: GRADING_SYSTEM_PROMPT },
+        { bypassBatch: true },
+      );
+      rawJson = result.output;
     } catch (err) {
-      logger.warn("callClaude failed in gradeQuestion", { questionId, err: String(err) });
-      raw = "";
+      logger.warn("OpenRouter grading failed", { questionId, err: String(err) });
+      await prisma.question.update({
+        where: { id: questionId },
+        data: { status: "failed" },
+      });
+      throw err;
     }
 
     setStage({ stage: "grading", pct: 70, message: "Parsing grading response…" });
 
     // 6. Parse JSON
-    let rawJson: unknown = null;
-
-    if (raw.length > 0) {
+    if (typeof rawJson === "string") {
+      const rawText = rawJson;
       try {
-        rawJson = extractJsonFromResponse(raw);
+        rawJson = extractJsonFromResponse(rawText);
       } catch (err) {
         logger.warn("extractJsonFromResponse failed in gradeQuestion", {
           questionId,
-          raw: raw.slice(0, 300),
+          raw: rawText.slice(0, 300),
           err: String(err),
         });
+        rawJson = null;
       }
     }
 
@@ -106,9 +120,9 @@ export const gradeQuestion = task({
       // 7. Upsert Feedback row
       const feedbackData = feedbackParsed.data;
 
-      // If extraction was incomplete, annotate items with precision
+      // If extraction was incomplete, annotate items as provisional.
       const items = isIncomplete
-        ? feedbackData.items.map((item) => ({ ...item, precision: "provisional" }))
+        ? feedbackData.items.map((item) => ({ ...item, provisional: true }))
         : feedbackData.items;
 
       await prisma.feedback.upsert({
@@ -139,10 +153,19 @@ export const gradeQuestion = task({
       });
     } else {
       // 8. Parse failed — upsert stub Feedback
-      logger.warn("gradeQuestion: FeedbackPayload parse failed, upserting stub", {
+      logger.warn("gradeQuestion: FeedbackPayload parse failed", {
         questionId,
         parseError: feedbackParsed.error?.message,
       });
+
+      const shouldRejectInvalidFeedback = feedbackParsed.success === false;
+      if (shouldRejectInvalidFeedback) {
+        await prisma.question.update({
+          where: { id: questionId },
+          data: { status: "failed" },
+        });
+        throw new Error(`Grading output failed schema validation for question ${questionId}`);
+      }
 
       await prisma.feedback.upsert({
         where: { questionId },

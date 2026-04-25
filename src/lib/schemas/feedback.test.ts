@@ -2,19 +2,21 @@ import { describe, expect, it } from "vitest";
 import { FeedbackPayload, FeedbackItem, PROVISIONAL_RUBRIC_KEYS } from "./feedback";
 
 describe("FeedbackPayload", () => {
-  it("accepts a payload with arbitrary keyed items", () => {
+  it("accepts a payload with all 10 rubric items", () => {
     const parsed = FeedbackPayload.parse({
-      items: [
-        { key: "analysis", comment: "clear" },
-        { key: "method", comment: "solid", score: 8 },
-      ],
+      items: PROVISIONAL_RUBRIC_KEYS.map((item) => ({
+        key: item.key,
+        label: item.label,
+        comment: "clear",
+        score: 8,
+      })),
       accountingScore: 7,
       consultingScore: 8,
       combinedScore: 7.5,
       whatYouNeedToLearn: "deferred tax",
       weakTopicTags: ["deferred-tax", "consulting-brevity"],
     });
-    expect(parsed.items).toHaveLength(2);
+    expect(parsed.items).toHaveLength(10);
     expect(parsed.combinedScore).toBeCloseTo(7.5);
   });
 
@@ -42,10 +44,30 @@ describe("FeedbackPayload", () => {
 
   it("rejects a score out of range", () => {
     const result = FeedbackPayload.safeParse({
-      items: [],
+      items: PROVISIONAL_RUBRIC_KEYS.map((item) => ({
+        key: item.key,
+        label: item.label,
+        comment: "clear",
+      })),
       accountingScore: 11,
       consultingScore: 5,
       combinedScore: 5,
+      whatYouNeedToLearn: null,
+      weakTopicTags: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing rubric items", () => {
+    const result = FeedbackPayload.safeParse({
+      items: PROVISIONAL_RUBRIC_KEYS.slice(0, 9).map((item) => ({
+        key: item.key,
+        label: item.label,
+        comment: "clear",
+      })),
+      accountingScore: 7,
+      consultingScore: 8,
+      combinedScore: 7.5,
       whatYouNeedToLearn: null,
       weakTopicTags: [],
     });

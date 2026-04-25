@@ -2,6 +2,7 @@ import { logger, task } from "@trigger.dev/sdk/v3";
 import { prisma } from "@/lib/prisma";
 import { runPipelineTag } from "@/lib/ai/pipeline-tag";
 import { Transcript } from "@/lib/schemas/transcript";
+import { makeThrottledStage } from "./progress";
 
 export const tagQuestion = task({
   id: "tagQuestion",
@@ -14,6 +15,8 @@ export const tagQuestion = task({
     const question = await prisma.question.findUniqueOrThrow({
       where: { id: questionId },
     });
+    const setStage = makeThrottledStage(question.recordingId);
+    setStage({ stage: "tagging", pct: 0, message: "Tagging question" });
 
     await prisma.question.update({
       where: { id: questionId },
@@ -43,9 +46,11 @@ export const tagQuestion = task({
       });
 
       logger.log("tagQuestion complete", { questionId });
+      setStage({ stage: "tagging", pct: 100, message: "Tagging complete" });
     } catch (err) {
       // Tagging failure is non-fatal — log and continue
       logger.warn("tagQuestion failed (non-fatal)", { questionId, err: String(err) });
+      setStage({ stage: "tagging", pct: 100, message: "Tagging skipped" });
     }
 
     return { questionId, ok: true };

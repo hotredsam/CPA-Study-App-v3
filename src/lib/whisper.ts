@@ -27,7 +27,7 @@ export async function transcribeWithWhisper(opts: WhisperOptions): Promise<Trans
   }
 }
 
-type RawWord = { start: number; end: number; text?: string; word?: string };
+type RawWord = { start: number; end: number; text?: string; word?: string; probability?: number };
 type RawSegment = { start: number; end: number; text: string; tokens?: RawWord[] };
 
 export function normalizeResult(segments: RawSegment[], language = "en"): Transcript {
@@ -41,6 +41,7 @@ export function normalizeResult(segments: RawSegment[], language = "en"): Transc
         start: w.start,
         end: w.end,
         word: (w.text ?? w.word ?? "").trim(),
+        probability: w.probability,
       })),
     })),
   };

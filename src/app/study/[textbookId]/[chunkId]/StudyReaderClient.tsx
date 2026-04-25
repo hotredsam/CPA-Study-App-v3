@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Bar } from "@/components/ui/Bar";
 import { Btn } from "@/components/ui/Btn";
@@ -61,8 +60,6 @@ export function StudyReaderClient({
   prevChunkIdx,
   nextChunkIdx,
 }: Props) {
-  const router = useRouter();
-
   // Session timer
   const [sessionSec, setSessionSec] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -138,14 +135,11 @@ export function StudyReaderClient({
             <p className="mt-1 text-sm text-[color:var(--ink-faint)]">{chunk.chapterRef}</p>
           )}
         </div>
-        <Btn
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          aria-label="Go back"
-        >
-          Back
-        </Btn>
+        <Link href="/study" tabIndex={-1}>
+          <Btn variant="ghost" size="sm" aria-label="Back to study home">
+            Back to study home
+          </Btn>
+        </Link>
       </div>
 
       {/* Progress strip */}
@@ -363,7 +357,7 @@ export function StudyReaderClient({
                   Prev
                 </span>
               )}
-              {nextChunkIdx !== null ? (
+              {nextChunkIdx !== null && submitted ? (
                 <Link
                   href={`/study/${textbook.id}/${nextChunkIdx}`}
                   className="flex-1 inline-flex items-center justify-center text-xs font-medium rounded-[3px] px-2.5 py-1.5 border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
@@ -373,7 +367,7 @@ export function StudyReaderClient({
                 </Link>
               ) : (
                 <span className="flex-1 inline-flex items-center justify-center text-xs rounded-[3px] px-2.5 py-1.5 text-[color:var(--ink-faint)] opacity-40 border border-[color:var(--border)]">
-                  Next
+                  {nextChunkIdx === null ? "Next" : "Complete checkpoint"}
                 </span>
               )}
             </div>

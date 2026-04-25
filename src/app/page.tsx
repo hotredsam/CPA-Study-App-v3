@@ -1,13 +1,13 @@
 import { DashboardClient, type DashboardData } from './DashboardClient'
 
-export const metadata = { title: 'Dashboard — CPA Study Servant' }
+export const metadata = { title: 'Dashboard - CPA Study Servant' }
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3001'
 
 async function getDashboardData(): Promise<DashboardData> {
   try {
     const res = await fetch(`${BASE}/api/dashboard`, {
-      next: { revalidate: 30 },
+      cache: 'no-store',
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json() as Promise<DashboardData>

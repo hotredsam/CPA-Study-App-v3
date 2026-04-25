@@ -12,13 +12,17 @@
   --border-hi: oklch(0.78 0.010 60);
   --track: oklch(0.92 0.008 60);
   --accent: oklch(0.52 0.18 var(--accent-hue));
-  --accent-faint: oklch(0.93 0.04 var(--accent-hue));
+  --accent-dark: oklch(0.42 0.18 var(--accent-hue));
+  --accent-faint: oklch(0.96 0.04 var(--accent-hue));
+  --accent-border: oklch(0.85 0.08 var(--accent-hue));
   --good: oklch(0.48 0.12 145);
-  --good-soft: oklch(0.92 0.06 145);
+  --good-soft: oklch(0.94 0.05 145);
+  --good-border: oklch(0.82 0.08 145);
   --warn: oklch(0.58 0.14 60);
-  --warn-soft: oklch(0.93 0.06 60);
+  --warn-soft: oklch(0.94 0.06 60);
   --bad: oklch(0.52 0.20 28);
-  --bad-soft: oklch(0.94 0.07 28);
+  --bad-soft: oklch(0.95 0.04 28);
+  --bad-border: oklch(0.84 0.10 28);
   --font-sans: 'Geist', system-ui, sans-serif;
   --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
   --font-serif: 'Instrument Serif', Georgia, serif;
@@ -27,18 +31,21 @@
 /* ─── Night theme ───────────────────────────────────────────────────────────── */
 html[data-theme="night"] {
   --canvas: oklch(0.14 0.008 260);
-  --canvas-2: oklch(0.17 0.009 260);
+  --canvas-2: oklch(0.16 0.010 260);
   --surface: oklch(0.19 0.010 260);
-  --surface-2: oklch(0.22 0.010 260);
+  --surface-2: oklch(0.22 0.012 260);
   --ink: oklch(0.96 0.006 260);
-  --ink-dim: oklch(0.75 0.008 260);
-  --ink-faint: oklch(0.55 0.008 260);
+  --ink-dim: oklch(0.72 0.010 260);
+  --ink-faint: oklch(0.52 0.010 260);
   --border: oklch(0.28 0.012 260);
-  --border-hi: oklch(0.38 0.012 260);
-  --track: oklch(0.24 0.010 260);
+  --border-hi: oklch(0.36 0.014 260);
+  --track: oklch(0.24 0.012 260);
   --accent-faint: oklch(0.28 0.08 var(--accent-hue));
+  --accent-border: oklch(0.40 0.10 var(--accent-hue));
   --good-soft: oklch(0.26 0.05 145);
+  --good-border: oklch(0.38 0.08 145);
   --bad-soft: oklch(0.28 0.07 28);
+  --bad-border: oklch(0.42 0.12 28);
   --warn-soft: oklch(0.28 0.06 60);
 }
 
@@ -69,6 +76,7 @@ html[data-theme="sakura"] {
   --border-hi: oklch(0.76 0.040 10);
   --track: oklch(0.90 0.028 10);
   --accent-faint: oklch(0.94 0.050 10);
+  --accent-border: oklch(0.80 0.08 10);
 }
 
 /* ─── Scientific theme ──────────────────────────────────────────────────────── */
@@ -85,6 +93,7 @@ html[data-theme="scientific"] {
   --track: oklch(0.20 0.012 240);
   --accent-hue: 145 !important;
   --accent-faint: oklch(0.22 0.06 145);
+  --accent-border: oklch(0.42 0.14 145);
   --font-sans: 'JetBrains Mono', monospace;
 }
 
@@ -134,6 +143,34 @@ html[data-serif="instrument"] {
   padding: 28px 36px 80px;
   max-width: 1500px;
   width: 100%;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .side {
+    position: relative;
+    height: auto;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .side ul {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .side li {
+    flex: 0 0 auto;
+  }
+
+  .main {
+    padding: 20px 16px 64px;
+  }
 }
 
 /* ─── Utilities ─────────────────────────────────────────────────────────────── */

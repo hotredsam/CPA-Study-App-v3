@@ -9,7 +9,7 @@ export default async function LibraryPage() {
     id: string
     title: string
     publisher: string | null
-    sections: Array<'AUD' | 'BAR' | 'FAR' | 'REG' | 'ISC' | 'TCP' | 'BEC'>
+    sections: Array<'AUD' | 'FAR' | 'REG' | 'TCP'>
     pages: number | null
     chunkCount: number
     indexStatus: 'QUEUED' | 'INDEXING' | 'READY' | 'NEEDS_UPDATE' | 'FAILED'

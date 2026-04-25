@@ -29,7 +29,7 @@ export type PipelineTagOutput = z.infer<typeof PipelineTagOutput>;
 
 function buildPrompt(input: PipelineTagInput): string {
   const parts: string[] = [
-    "You are a CPA exam content tagger. Given this question transcript and extracted text, identify the CPA exam section (AUD/BAR/FAR/REG/ISC/TCP), unit (a broad subtopic within that section), topic (specific concept), and difficulty. Return JSON only.",
+    "You are a CPA exam content tagger. Given this question transcript and extracted text, identify the CPA exam section (AUD/FAR/REG/TCP), unit (a broad subtopic within that section), topic (specific concept), and difficulty. Return JSON only.",
     "",
   ];
 

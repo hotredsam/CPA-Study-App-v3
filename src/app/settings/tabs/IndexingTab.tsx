@@ -12,6 +12,7 @@ import { Toggle } from '@/components/ui/Toggle'
 
 interface IndexingConfig {
   id: string
+  indexDepth: number
   ocrMode: boolean
   formulaExtraction: boolean
   exampleDetection: boolean
@@ -23,6 +24,7 @@ interface IndexingConfig {
   ankiCardGen: boolean
   piiScrubbing: boolean
   reindexOnUpdate: boolean
+  embeddingModel: string
   indexModel: string
   batchMode: boolean
   offPeakTier: boolean
@@ -40,7 +42,8 @@ type BooleanKey = keyof {
 // ---------------------------------------------------------------------------
 
 function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-  window.dispatchEvent(new CustomEvent('cpa-toast', { detail: { message, type } }))
+  const variant = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'
+  window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message, variant } }))
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +98,7 @@ export function IndexingTab() {
 
   const merged: IndexingConfig = {
     id: 'singleton',
+    indexDepth: 3,
     ocrMode: true,
     formulaExtraction: true,
     exampleDetection: true,
@@ -106,6 +110,7 @@ export function IndexingTab() {
     ankiCardGen: true,
     piiScrubbing: true,
     reindexOnUpdate: false,
+    embeddingModel: 'text-embedding-3-large',
     indexModel: 'anthropic/claude-haiku-4.5',
     batchMode: true,
     offPeakTier: false,
@@ -187,6 +192,22 @@ export function IndexingTab() {
             />
           </label>
 
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium" style={{ color: 'var(--ink-dim)' }}>
+              Embedding model
+            </span>
+            <select
+              value={merged.embeddingModel}
+              onChange={(e) => setDraft((prev) => ({ ...prev, embeddingModel: e.target.value }))}
+              aria-label="Embedding model"
+              className="rounded border border-[color:var(--border)] bg-[color:var(--canvas)] text-[color:var(--ink)] px-2.5 py-1.5 text-sm font-mono focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
+            >
+              <option value="text-embedding-3-large">text-embedding-3-large</option>
+              <option value="text-embedding-3-small">text-embedding-3-small</option>
+              <option value="@cf/baai/bge-large-en-v1.5">@cf/baai/bge-large-en-v1.5</option>
+            </select>
+          </label>
+
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm" style={{ color: 'var(--ink)' }}>Batch mode</span>
@@ -209,6 +230,33 @@ export function IndexingTab() {
           {/* Concurrency */}
           <div>
             <div className="flex items-center justify-between mb-1">
+              <label htmlFor="index-depth-slider" className="text-xs font-medium" style={{ color: 'var(--ink-dim)' }}>
+                Index depth
+              </label>
+              <span className="text-xs mono tabular" style={{ color: 'var(--ink)' }}>
+                {merged.indexDepth}
+              </span>
+            </div>
+            <input
+              id="index-depth-slider"
+              type="range"
+              min="1"
+              max="5"
+              step="1"
+              value={merged.indexDepth}
+              onChange={(e) => setDraft((prev) => ({ ...prev, indexDepth: Number(e.target.value) }))}
+              aria-label="Index depth"
+              aria-valuemin={1}
+              aria-valuemax={5}
+              aria-valuenow={merged.indexDepth}
+              className="w-full h-2 rounded-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
+              style={{ accentColor: 'var(--accent)' }}
+            />
+          </div>
+
+          {/* Concurrency */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
               <label htmlFor="concurrency-slider" className="text-xs font-medium" style={{ color: 'var(--ink-dim)' }}>
                 Concurrency
               </label>
@@ -219,22 +267,22 @@ export function IndexingTab() {
             <input
               id="concurrency-slider"
               type="range"
-              min="1"
-              max="16"
+              min="4"
+              max="32"
               step="1"
               value={merged.concurrency}
               onChange={(e) => setDraft((prev) => ({ ...prev, concurrency: Number(e.target.value) }))}
               aria-label="Concurrency level"
-              aria-valuemin={1}
-              aria-valuemax={16}
+              aria-valuemin={4}
+              aria-valuemax={32}
               aria-valuenow={merged.concurrency}
               aria-valuetext={`${merged.concurrency} concurrent workers`}
               className="w-full h-2 rounded-full cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
               style={{ accentColor: 'var(--accent)' }}
             />
             <div className="flex justify-between text-[10px] mt-0.5" style={{ color: 'var(--ink-faint)' }}>
-              <span>1</span>
-              <span>16</span>
+              <span>4</span>
+              <span>32</span>
             </div>
           </div>
 
@@ -309,12 +357,24 @@ export function IndexingTab() {
         <h2 className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>
           Cost Estimator
         </h2>
-        <p className="text-xs mb-1" style={{ color: 'var(--ink-dim)' }}>
-          Estimated cost to index a 500-page book:
-        </p>
-        <p className="text-2xl font-semibold mono tabular" style={{ color: 'var(--ink)' }}>
-          {estimatedCost}
-        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="rounded border border-[color:var(--border)] bg-[color:var(--canvas-2)] p-3">
+            <p className="text-xs mb-1" style={{ color: 'var(--ink-dim)' }}>
+              Batch + off-peak
+            </p>
+            <p className="text-2xl font-semibold mono tabular" style={{ color: 'var(--good)' }}>
+              {estimatedCost}
+            </p>
+          </div>
+          <div className="rounded border border-[color:var(--border)] bg-[color:var(--canvas-2)] p-3">
+            <p className="text-xs mb-1" style={{ color: 'var(--ink-dim)' }}>
+              Live, no batch
+            </p>
+            <p className="text-2xl font-semibold mono tabular" style={{ color: 'var(--warn)' }}>
+              ${((parseFloat(estimatedCost.slice(1)) || 0) * 2.4).toFixed(4)}
+            </p>
+          </div>
+        </div>
         <p className="text-xs mt-1" style={{ color: 'var(--ink-faint)' }}>
           500 pages × 0.5 chunks/page × {merged.chunkSize} tokens × $0.0005/1k tokens (Haiku input)
         </p>

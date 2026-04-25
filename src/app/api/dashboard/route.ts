@@ -1,22 +1,50 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
+import { ACTIVE_CPA_SECTIONS } from '@/lib/cpa-sections'
+import { CpaSection, RecordingStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
+const STALE_PIPELINE_MS = 2 * 60 * 60 * 1000
+
 export async function GET(): Promise<NextResponse> {
   try {
+    const staleBefore = new Date(Date.now() - STALE_PIPELINE_MS)
+    await prisma.recording.updateMany({
+      where: {
+        status: { in: ['uploading', 'uploaded', 'segmenting', 'processing_questions'] },
+        updatedAt: { lt: staleBefore },
+      },
+      data: { status: 'failed' },
+    })
+
+    const freshPipelineCutoff = new Date(Date.now() - STALE_PIPELINE_MS)
+    const liveStatuses: RecordingStatus[] = ['uploaded', 'segmenting', 'processing_questions']
+    const activeRecordingWhere = {
+      OR: [
+        { status: 'done' as const },
+        {
+          status: { in: liveStatuses },
+          updatedAt: { gte: freshPipelineCutoff },
+        },
+      ],
+    }
+
     // Recordings aggregation
     const [allRecordings, recentRecordings, topics, ankiDueRaw] = await Promise.all([
       prisma.recording.findMany({
+        where: activeRecordingWhere,
         select: {
           id: true,
           durationSec: true,
           createdAt: true,
           segmentsCount: true,
+          status: true,
         },
       }),
       prisma.recording.findMany({
+        where: activeRecordingWhere,
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
@@ -28,6 +56,7 @@ export async function GET(): Promise<NextResponse> {
         },
       }),
       prisma.topic.findMany({
+        where: { section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] } },
         select: {
           id: true,
           section: true,
@@ -41,6 +70,7 @@ export async function GET(): Promise<NextResponse> {
       // Count Anki cards due now
       prisma.ankiCard.count({
         where: {
+          section: { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] },
           srsState: {
             path: ['nextDue'],
             lte: new Date().toISOString(),
@@ -89,20 +119,17 @@ export async function GET(): Promise<NextResponse> {
       sectionMap.set(key, existing)
     }
 
-    const sections = Array.from(sectionMap.entries()).map(([section, agg]) => ({
-      section,
-      hoursStudied: Number(
-        (
-          allRecordings.reduce((sum, r) => sum + (r.durationSec ?? 0), 0) /
-          3600 /
-          Math.max(sectionMap.size, 1)
-        ).toFixed(1),
-      ),
-      mastery:
-        agg.topicCount > 0 ? Math.round(agg.masterySum / agg.topicCount) : 0,
-      examDate: null,
-      topicCount: agg.topicCount,
-    }))
+    const sectionHoursShare = Number((totalHours / ACTIVE_CPA_SECTIONS.length).toFixed(1))
+    const sections = ACTIVE_CPA_SECTIONS.map((section) => {
+      const agg = sectionMap.get(section) ?? { topicCount: 0, masterySum: 0, hoursStudied: 0 }
+      return {
+        section,
+        hoursStudied: sectionHoursShare,
+        mastery: agg.topicCount > 0 ? Math.round(agg.masterySum / agg.topicCount) : 0,
+        examDate: null,
+        topicCount: agg.topicCount,
+      }
+    })
 
     // Weakest topics: bottom 5
     const weakestTopics = topics.slice(0, 5).map((t) => ({
@@ -119,6 +146,7 @@ export async function GET(): Promise<NextResponse> {
         weekHours: Number(weekHours.toFixed(1)),
         streak,
         recordingsCount: allRecordings.length,
+        processingCount: allRecordings.filter((r) => r.status !== 'done').length,
       },
       sections,
       weakestTopics,

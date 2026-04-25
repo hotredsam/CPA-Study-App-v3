@@ -96,13 +96,23 @@ function buildSegments(
 }
 
 /** Fallback: split total duration into equal thirds (each ≥ 30s). */
-function equalThirds(totalDurationSec: number): Array<{ startSec: number; endSec: number }> {
-  const third = totalDurationSec / 3;
-  return [
-    { startSec: 0, endSec: third },
-    { startSec: third, endSec: third * 2 },
-    { startSec: third * 2, endSec: totalDurationSec },
-  ];
+function filterSceneBoundaries(sceneTimes: number[], totalDurationSec: number): number[] {
+  return [...new Set(sceneTimes)]
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b)
+    .filter((t) => t >= 10 && t <= totalDurationSec - 10);
+}
+
+function equalSegments(
+  totalDurationSec: number,
+  count: number,
+): Array<{ startSec: number; endSec: number }> {
+  const safeCount = Math.max(1, Math.min(25, Math.round(count)));
+  const span = totalDurationSec / safeCount;
+  return Array.from({ length: safeCount }, (_, index) => ({
+    startSec: index * span,
+    endSec: index + 1 === safeCount ? totalDurationSec : (index + 1) * span,
+  })).filter((segment) => segment.endSec - segment.startSec >= 30);
 }
 
 /**
@@ -157,7 +167,7 @@ export const segmentRecording = task({
   maxDuration: 60 * 30,
   run: async (payload: { recordingId: string }) => {
     const { recordingId } = payload;
-    const setStage = makeThrottledStage();
+    const setStage = makeThrottledStage(recordingId);
 
     setStage({ stage: "segmenting", pct: 0, message: "Fetching recording…" });
 
@@ -215,21 +225,30 @@ export const segmentRecording = task({
       }
 
       // 5. Signal B — plausibility check
+      const usableSceneTimestamps = filterSceneBoundaries(sceneTimestamps, totalDurationSec);
+      const fallbackCount = recording.segmentsCount && recording.segmentsCount > 0
+        ? recording.segmentsCount
+        : 3;
+
       let segments: Array<{ startSec: number; endSec: number }>;
 
-      if (sceneTimestamps.length < 2 && totalDurationSec > 120 || sceneTimestamps.length === 0) {
+      if (
+        usableSceneTimestamps.length < 2 && totalDurationSec > 120 ||
+        usableSceneTimestamps.length === 0
+      ) {
         logger.log("insufficient scene changes, falling back to equal thirds", {
-          sceneCount: sceneTimestamps.length,
+          sceneCount: usableSceneTimestamps.length,
           totalDurationSec,
+          fallbackCount,
         });
-        segments = equalThirds(totalDurationSec);
-        detectionMethod = "equal-thirds-fallback";
+        segments = equalSegments(totalDurationSec, fallbackCount);
+        detectionMethod = "equal-segments-fallback";
       } else {
         // 6. Merge: filter scenes < 15s apart, ensure >= 30s segments
-        segments = buildSegments(sceneTimestamps, totalDurationSec);
+        segments = buildSegments(usableSceneTimestamps, totalDurationSec);
         if (segments.length === 0) {
-          segments = equalThirds(totalDurationSec);
-          detectionMethod = "equal-thirds-fallback";
+          segments = equalSegments(totalDurationSec, fallbackCount);
+          detectionMethod = "equal-segments-fallback";
         }
       }
 
@@ -262,7 +281,8 @@ export const segmentRecording = task({
             status: "pending",
             noAudio: false,
             segmentationSignals: {
-              sceneCount: sceneTimestamps.length,
+              sceneCount: usableSceneTimestamps.length,
+              rawSceneCount: sceneTimestamps.length,
               totalDurationSec,
               method: detectionMethod,
               precision: "provisional",

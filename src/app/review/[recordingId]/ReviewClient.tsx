@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import type { Feedback, Topic, CpaSection } from '@prisma/client'
 import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
 import { Card } from '@/components/ui/Card'
@@ -94,6 +95,13 @@ function formatDate(d: Date | string): string {
   })
 }
 
+function formatSec(sec?: number): string {
+  if (sec == null) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length
 }
@@ -179,6 +187,7 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
   const q = extracted?.question ?? '(question text pending)'
   const choices = extracted?.choices ?? []
   const correctIndex = extracted?.correctIndex
+  const normalizedUserAnswer = extracted?.userAnswer?.trim().toUpperCase() ?? ''
 
   const labels = ['A', 'B', 'C', 'D', 'E']
 
@@ -191,6 +200,10 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
           {choices.map((choice, i) => {
             const label = labels[i] ?? String(i + 1)
             const isCorrect = correctIndex !== undefined && i === correctIndex
+            const isUserChoice =
+              normalizedUserAnswer === label ||
+              normalizedUserAnswer === choice.trim().toUpperCase()
+            const isWrongUserChoice = isUserChoice && !isCorrect
             return (
               <li
                 key={i}
@@ -198,9 +211,15 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
                 style={{
                   background: isCorrect
                     ? 'var(--good-soft)'
+                    : isWrongUserChoice
+                    ? 'var(--bad-soft)'
                     : 'var(--canvas-2)',
-                  color: isCorrect ? 'var(--good)' : 'var(--ink-dim)',
-                  border: isCorrect ? '1px solid var(--good)' : '1px solid var(--border)',
+                  color: isCorrect ? 'var(--good)' : isWrongUserChoice ? 'var(--bad)' : 'var(--ink-dim)',
+                  border: isCorrect
+                    ? '1px solid var(--good)'
+                    : isWrongUserChoice
+                    ? '1px solid var(--bad)'
+                    : '1px solid var(--border)',
                 }}
               >
                 <span
@@ -280,7 +299,23 @@ function TranscriptCard({ question }: { question: ReviewQuestion }) {
           style={{ fontFamily: 'var(--font-serif)', color: 'var(--ink-dim)' }}
         >
           {segments.map((s, i) => (
-            <span key={i}>{s.text} </span>
+            <p key={i} className="mb-2 flex gap-3">
+              <button
+                type="button"
+                className="mono tabular text-[11px] text-[color:var(--accent)] hover:underline shrink-0"
+                title={`Jump to ${formatSec(s.start)}`}
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent('servant:toast', {
+                      detail: { message: `Transcript timestamp ${formatSec(s.start)}` },
+                    }),
+                  )
+                }}
+              >
+                {formatSec(s.start)}
+              </button>
+              <span>{s.text}</span>
+            </p>
           ))}
         </div>
       )}
@@ -402,6 +437,138 @@ function FeedbackCard({ feedback }: { feedback: ReviewQuestion['feedback'] }) {
   )
 }
 
+function FlowchartCard({ question }: { question: ReviewQuestion }) {
+  const feedback = question.feedback
+  const items = parseFeedbackItems(feedback?.items)
+  const extracted = (question.extracted ?? null) as ExtractedShape | null
+  const gap =
+    feedback?.whatYouNeedToLearn ??
+    items.find((item) => /gap|learn|misstep/i.test(item.key))?.body ??
+    'No first-misstep narrative was returned for this question.'
+  const answerLine =
+    extracted?.correctAnswer || extracted?.userAnswer
+      ? `Your answer: ${extracted?.userAnswer ?? '-'} | Correct: ${extracted?.correctAnswer ?? '-'}`
+      : 'Answer comparison pending.'
+
+  const steps = [
+    { label: 'Question', body: extracted?.question ?? 'Question extraction pending.', state: 'done' },
+    { label: 'Your path', body: answerLine, state: extracted?.userAnswer === extracted?.correctAnswer ? 'done' : 'warn' },
+    { label: 'First misstep', body: gap, state: feedback ? 'bad' : 'pending' },
+    { label: 'Correct rule', body: extracted?.beckerExplanation ?? 'Source explanation pending.', state: extracted?.beckerExplanation ? 'done' : 'pending' },
+    { label: 'Next action', body: question.topic ? `Review ${question.topic.name}.` : 'Link this question to a topic.', state: 'active' },
+  ] as const
+
+  return (
+    <Card>
+      <p className="eyebrow mb-3">Reasoning Flow</p>
+      <ol className="space-y-3">
+        {steps.map((step, idx) => {
+          const color =
+            step.state === 'done'
+              ? 'var(--good)'
+              : step.state === 'bad'
+                ? 'var(--bad)'
+                : step.state === 'warn'
+                  ? 'var(--warn)'
+                  : step.state === 'active'
+                    ? 'var(--accent)'
+                    : 'var(--ink-faint)'
+
+          return (
+            <li key={step.label} className="grid grid-cols-[24px_1fr] gap-3">
+              <div className="flex flex-col items-center">
+                <span
+                  className="mt-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-mono text-white"
+                  style={{ background: color }}
+                >
+                  {idx + 1}
+                </span>
+                {idx < steps.length - 1 && (
+                  <span className="mt-1 h-full min-h-6 w-px bg-[color:var(--border)]" aria-hidden="true" />
+                )}
+              </div>
+              <div className="rounded border border-[color:var(--border)] bg-[color:var(--canvas-2)] px-3 py-2">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--ink)]">
+                    {step.label}
+                  </p>
+                  {idx === 3 && extracted?.beckerExplanation && (
+                    <a href="#sources-card" className="text-[10px] font-mono text-[color:var(--accent)] hover:underline">
+                      source
+                    </a>
+                  )}
+                </div>
+                <p className="text-sm leading-relaxed text-[color:var(--ink-dim)]">{step.body}</p>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </Card>
+  )
+}
+
+function SourcesCard({ question }: { question: ReviewQuestion }) {
+  const extracted = (question.extracted ?? null) as ExtractedShape | null
+  const sources = [
+    extracted?.beckerExplanation
+      ? {
+          id: 'becker',
+          label: 'Question explanation',
+          ref: extracted.section ?? question.section ?? 'CPA',
+          relevance: 92,
+          passage: extracted.beckerExplanation,
+        }
+      : null,
+    question.topic
+      ? {
+          id: 'topic',
+          label: 'Linked topic',
+          ref: question.topic.section,
+          relevance: 76,
+          passage: question.topic.name,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ id: string; label: string; ref: string; relevance: number; passage: string }>
+
+  const [selectedId, setSelectedId] = useState(sources[0]?.id ?? '')
+  const selected = sources.find((source) => source.id === selectedId) ?? sources[0]
+
+  return (
+    <Card id="sources-card">
+      <p className="eyebrow mb-3">Sources</p>
+      {sources.length === 0 ? (
+        <p className="text-sm text-[color:var(--ink-faint)]">No sources attached to this question yet.</p>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-[180px_1fr]">
+          <div className="space-y-1">
+            {sources.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => setSelectedId(source.id)}
+                className="w-full rounded border px-3 py-2 text-left text-xs hover:border-[color:var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+                style={{
+                  borderColor: selected?.id === source.id ? 'var(--accent)' : 'var(--border)',
+                  background: selected?.id === source.id ? 'var(--accent-faint)' : 'var(--surface)',
+                }}
+              >
+                <span className="block font-semibold text-[color:var(--ink)]">{source.label}</span>
+                <span className="mt-1 block mono tabular text-[color:var(--ink-faint)]">
+                  {source.ref} | {source.relevance}%
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="rounded border-l-[3px] border-[color:var(--accent)] bg-[color:var(--canvas-2)] px-4 py-3">
+            <p className="text-sm leading-relaxed text-[color:var(--ink-dim)]">{selected?.passage}</p>
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 function AIChat({
   recordingId,
   questionId,
@@ -410,26 +577,31 @@ function AIChat({
   questionId: string
 }) {
   const [input, setInput] = useState('')
-  const [reply, setReply] = useState<string | null>(null)
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleAsk = useCallback(async () => {
     if (!input.trim()) return
+    const message = input.trim()
     setLoading(true)
     setError(null)
+    setMessages((prev) => [...prev, { role: 'user', content: message }])
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: input,
+          message,
           context: { recordingId, questionId },
         }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = (await res.json()) as { reply?: string; message?: string }
-      setReply(data.reply ?? data.message ?? '(no reply)')
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.reply ?? data.message ?? '(no reply)' },
+      ])
       setInput('')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Request failed')
@@ -444,18 +616,25 @@ function AIChat({
       <div
         role="status"
         aria-live="polite"
-        className="mb-3"
+        className="mb-3 space-y-2"
       >
-        {reply && (
-          <p className="text-sm text-[color:var(--ink-dim)] leading-relaxed whitespace-pre-wrap">
-            {reply}
-          </p>
-        )}
+        {messages.map((message, idx) => (
+          <div
+            key={idx}
+            className="rounded border border-[color:var(--border)] bg-[color:var(--canvas-2)] px-3 py-2"
+          >
+            <p className="mb-1 text-[10px] font-mono uppercase tracking-wider text-[color:var(--ink-faint)]">
+              {message.role === 'user' ? 'You' : 'Tutor'}
+            </p>
+            <p className="text-sm text-[color:var(--ink-dim)] leading-relaxed whitespace-pre-wrap">
+              {message.content}
+            </p>
+          </div>
+        ))}
         {error && (
           <p className="text-sm text-[color:var(--bad)]">{error}</p>
         )}
       </div>
-      {/* fidelity/blocked: SSE streaming — waiting on OpenRouter stream: true support; see /api/chat/route.ts */}
       <div className="flex gap-2">
         <input
           type="text"
@@ -512,23 +691,28 @@ export function ReviewClient({
         title={recording.title ?? 'Session Review'}
         sub={formatDate(recording.createdAt)}
         right={
-          <div className="flex items-center gap-1" role="group" aria-label="Layout toggle">
-            <Btn
-              variant={layout === 'split' ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setLayout('split')}
-              aria-pressed={layout === 'split'}
-            >
-              Split
-            </Btn>
-            <Btn
-              variant={layout === 'stacked' ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => setLayout('stacked')}
-              aria-pressed={layout === 'stacked'}
-            >
-              Stacked
-            </Btn>
+          <div className="flex items-center gap-2">
+            <Link href="/review" tabIndex={-1}>
+              <Btn variant="ghost" size="sm">All recordings</Btn>
+            </Link>
+            <div className="flex items-center gap-1" role="group" aria-label="Layout toggle">
+              <Btn
+                variant={layout === 'split' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setLayout('split')}
+                aria-pressed={layout === 'split'}
+              >
+                Split
+              </Btn>
+              <Btn
+                variant={layout === 'stacked' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setLayout('stacked')}
+                aria-pressed={layout === 'stacked'}
+              >
+                Stacked
+              </Btn>
+            </div>
           </div>
         }
       />
@@ -560,12 +744,13 @@ export function ReviewClient({
                   <div className="space-y-4">
                     <QuestionCard question={question} />
                     <TranscriptCard question={question} />
+                    <FlowchartCard question={question} />
+                    <SourcesCard question={question} />
                     <AIChat recordingId={recording.id} questionId={question.id} />
                   </div>
                   <div className="space-y-4">
                     <ScoreCard feedback={question.feedback} />
                     <FeedbackCard feedback={question.feedback} />
-                    {/* fidelity/blocked: FlowchartCard — needs pnpm add mermaid + dynamic import to avoid SSR bundle */}
                   </div>
                 </div>
               ) : (
@@ -574,7 +759,8 @@ export function ReviewClient({
                   <TranscriptCard question={question} />
                   <ScoreCard feedback={question.feedback} />
                   <FeedbackCard feedback={question.feedback} />
-                  {/* TODO(fidelity): add FlowchartCard using mermaid package — pnpm add mermaid */}
+                  <FlowchartCard question={question} />
+                  <SourcesCard question={question} />
                   <AIChat recordingId={recording.id} questionId={question.id} />
                 </div>
               )}

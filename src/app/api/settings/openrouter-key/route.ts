@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { encryptKey } from "@/lib/llm/crypto";
+import { hasOpenRouterKeyConfigured } from "@/lib/llm/openrouter";
 import { respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
@@ -49,13 +50,8 @@ export async function POST(request: Request): Promise<NextResponse> {
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const settings = await prisma.userSettings.findUnique({
-      where: { id: "singleton" },
-      select: { openRouterKeyEnc: true },
-    });
-
     return NextResponse.json({
-      hasKey: settings?.openRouterKeyEnc != null,
+      hasKey: await hasOpenRouterKeyConfigured(),
     });
   } catch (err) {
     return respond(err);

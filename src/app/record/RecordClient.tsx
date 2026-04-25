@@ -31,14 +31,29 @@ type Check = {
   status: "ok" | "warn" | "fail" | "loading";
 };
 
-const CPA_SECTIONS = ["AUD", "BAR", "FAR", "REG", "ISC", "TCP"] as const;
+const CPA_SECTIONS = ["FAR", "REG", "AUD", "TCP"] as const;
 type CpaSection = (typeof CPA_SECTIONS)[number];
 
+type ScreenSource = "full-screen" | "window" | "browser-tab";
+
+type RecordingOptions = {
+  micId: string;
+  sections: CpaSection[];
+  model: string;
+  screenSource: ScreenSource;
+};
+
+const SCREEN_SOURCES: { id: ScreenSource; label: string; detail: string }[] = [
+  { id: "full-screen", label: "Entire screen", detail: "Best for full Becker/Ninja sessions." },
+  { id: "window", label: "Application window", detail: "Use when only the question bank should be captured." },
+  { id: "browser-tab", label: "Browser tab", detail: "Use for a single browser-based practice set." },
+];
+
 const GRADING_MODELS = [
-  { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
-  { id: "claude-haiku-4.5", label: "Claude Haiku 4.5" },
-  { id: "openrouter-default", label: "OpenRouter / default" },
-  { id: "local-claude", label: "Local Claude" },
+  { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
+  { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  { id: "openai/gpt-5", label: "GPT-5" },
 ] as const;
 
 // ─── Upload-with-progress helper ─────────────────────────────────────────────
@@ -73,17 +88,14 @@ function uploadWithProgress(
 function SetupPhase({
   onStart,
 }: {
-  onStart: (opts: {
-    micId: string;
-    sections: CpaSection[];
-    model: string;
-  }) => void;
+  onStart: (opts: RecordingOptions) => void;
 }) {
   const [mics, setMics] = useState<DeviceInfo[]>([]);
   const [selectedMic, setSelectedMic] = useState<string>("");
+  const [screenSource, setScreenSource] = useState<ScreenSource>("full-screen");
   const [micPermDenied, setMicPermDenied] = useState(false);
   const [selectedSections, setSelectedSections] = useState<CpaSection[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("claude-sonnet-4-6");
+  const [selectedModel, setSelectedModel] = useState<string>("anthropic/claude-sonnet-4.6");
   const [health, setHealth] = useState<HealthData | null>(null);
   const [hasOpenRouterKey, setHasOpenRouterKey] = useState<boolean | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -208,20 +220,16 @@ function SetupPhase({
 
   const checks: Check[] = [
     {
-      label: "Screen source selected",
-      status: "ok", // screen is selected during recording start
+      label: "Display captured",
+      status: screenSource ? "ok" : "warn",
     },
     {
-      label: "Microphone selected",
+      label: "Mic signal",
       status: micPermDenied ? "fail" : selectedMic || mics.length > 0 ? "ok" : "warn",
     },
     {
-      label: "Section selected",
-      status: selectedSections.length > 0 ? "ok" : "warn",
-    },
-    {
-      label: "API health",
-      status: healthLoading ? "loading" : health ? "ok" : "fail",
+      label: "OpenRouter API",
+      status: hasOpenRouterKey === null ? "loading" : hasOpenRouterKey ? "ok" : "warn",
     },
     {
       label: "R2 storage",
@@ -234,15 +242,7 @@ function SetupPhase({
         : "fail",
     },
     {
-      label: "Database",
-      status: healthLoading
-        ? "loading"
-        : health?.db === "ok"
-        ? "ok"
-        : "fail",
-    },
-    {
-      label: "Trigger.dev",
+      label: "Workers pipeline",
       status: healthLoading
         ? "loading"
         : health?.trigger === "ok"
@@ -250,13 +250,21 @@ function SetupPhase({
         : "warn",
     },
     {
-      label: "OpenRouter key",
-      status: hasOpenRouterKey === null ? "loading" : hasOpenRouterKey ? "ok" : "warn",
+      label: "Textbook sources",
+      status: "ok",
+    },
+    {
+      label: "Sections assigned",
+      status: selectedSections.length > 0 ? "ok" : "warn",
+    },
+    {
+      label: "Budget OK",
+      status: healthLoading ? "loading" : health ? "ok" : "fail",
     },
   ];
 
   const canStart =
-    !micPermDenied && selectedSections.length > 0 && health !== null;
+    !micPermDenied && Boolean(screenSource) && selectedSections.length > 0 && health !== null;
 
   const selectedMicLabel =
     mics.find((m) => m.deviceId === selectedMic)?.label ?? "Default";
@@ -267,6 +275,47 @@ function SetupPhase({
       <div className="space-y-4">
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-[color:var(--ink)]">Recording Setup</h2>
+
+          {/* Screen capture */}
+          <div className="space-y-2 mb-4">
+            <p className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink-faint)]">
+              Screen Capture
+            </p>
+            <div
+              className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+              role="radiogroup"
+              aria-label="Choose screen capture source"
+            >
+              {SCREEN_SOURCES.map((source) => {
+                const active = screenSource === source.id;
+                return (
+                  <button
+                    key={source.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setScreenSource(source.id)}
+                    className={[
+                      "rounded border px-3 py-2 text-left hov focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]",
+                      active
+                        ? "border-[color:var(--accent)] bg-[color:var(--accent-faint)]"
+                        : "border-[color:var(--border)] bg-[color:var(--surface)]",
+                    ].join(" ")}
+                  >
+                    <span className="block text-sm font-medium text-[color:var(--ink)]">
+                      {source.label}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-snug text-[color:var(--ink-faint)]">
+                      {source.detail}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-[color:var(--ink-faint)]">
+              Your browser will ask you to confirm the exact screen, window, or tab when recording starts.
+            </p>
+          </div>
 
           {/* Microphone */}
           <div className="space-y-2 mb-4">
@@ -392,6 +441,10 @@ function SetupPhase({
           {/* Session summary */}
           <div className="mt-5 rounded bg-[color:var(--surface-2)] border border-[color:var(--border)] p-3 space-y-1 text-xs text-[color:var(--ink-faint)]">
             <p>
+              <span className="font-medium">Screen:</span>{" "}
+              {SCREEN_SOURCES.find((s) => s.id === screenSource)?.label ?? "Not selected"}
+            </p>
+            <p>
               <span className="font-medium">Mic:</span> {selectedMicLabel}
             </p>
             <p>
@@ -413,11 +466,12 @@ function SetupPhase({
                   micId: selectedMic,
                   sections: selectedSections,
                   model: selectedModel,
+                  screenSource,
                 })
               }
               aria-label="Start recording"
             >
-              Start Recording
+              Start Screen Recording
             </Btn>
             {!canStart && selectedSections.length === 0 && (
               <p className="mt-2 text-xs text-[color:var(--ink-faint)]">
@@ -729,6 +783,7 @@ export function RecordClient() {
   const pausedRef = useRef(false);
   const elapsedSecRef = useRef(0);
   const uploadStartRef = useRef<number>(0);
+  const currentOptionsRef = useRef<RecordingOptions | null>(null);
   // Ref so handleStart doesn't need finalizeUpload in its dependency array
   const finalizeRef = useRef<() => Promise<void>>(async () => {});
 
@@ -744,8 +799,9 @@ export function RecordClient() {
   }, []);
 
   const handleStart = useCallback(
-    async (opts: { micId: string; sections: CpaSection[]; model: string }) => {
+    async (opts: RecordingOptions) => {
       setError(null);
+      currentOptionsRef.current = opts;
       chunksRef.current = [];
       setElapsedSec(0);
       elapsedSecRef.current = 0;
@@ -861,6 +917,12 @@ export function RecordClient() {
           body: JSON.stringify({
             durationSec: elapsedSecRef.current > 0 ? elapsedSecRef.current : undefined,
             contentType: "video/webm",
+            sections: currentOptionsRef.current?.sections ?? [],
+            modelUsed: currentOptionsRef.current?.model,
+            title:
+              currentOptionsRef.current?.sections.length
+                ? `${currentOptionsRef.current.sections.join("+")} screen recording`
+                : "Screen recording",
           }),
         });
         if (!startRes.ok) throw new Error(`Failed to create recording: HTTP ${startRes.status}`);

@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { respond } from "@/lib/api-error";
 import { runTopicNotes } from "@/lib/ai/topic-notes";
 import { CpaSection } from "@prisma/client";
+import { ACTIVE_CPA_SECTIONS } from "@/lib/cpa-sections";
 
 export const dynamic = "force-dynamic";
 
 const PostBodySchema = z.object({
-  section: z.nativeEnum(CpaSection).optional(),
+  section: z.enum(ACTIVE_CPA_SECTIONS).optional(),
   topicIds: z.array(z.string()).optional(),
 });
 
@@ -23,7 +24,9 @@ export async function POST(request: NextRequest) {
     if (parsed.topicIds && parsed.topicIds.length > 0) {
       where.id = { in: parsed.topicIds };
     } else if (parsed.section) {
-      where.section = parsed.section;
+      where.section = parsed.section as CpaSection;
+    } else {
+      where.section = { in: ACTIVE_CPA_SECTIONS as unknown as CpaSection[] };
     }
 
     const topics = await prisma.topic.findMany({ where });

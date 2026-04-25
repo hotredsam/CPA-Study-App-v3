@@ -57,6 +57,15 @@ export async function POST(
       data: { voiceNoteR2Key: r2Key },
     });
 
+    await prisma.ankiNote.create({
+      data: {
+        cardId,
+        content: transcript || "(voice note had no detected speech)",
+        isVoice: true,
+        r2Key,
+      },
+    });
+
     return NextResponse.json({ transcript, r2Key });
   } catch (err) {
     return respond(err);

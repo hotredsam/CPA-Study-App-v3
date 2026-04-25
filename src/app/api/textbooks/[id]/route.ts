@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ApiError, respond } from "@/lib/api-error";
+import { isActiveCpaSection } from "@/lib/cpa-sections";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function GET(
     return NextResponse.json({
       textbook: {
         ...textbook,
+        sections: textbook.sections.filter(isActiveCpaSection),
         sizeBytes: textbook.sizeBytes?.toString() ?? null,
         chunkCount: textbook._count.chunks,
       },

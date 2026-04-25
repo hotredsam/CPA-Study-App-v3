@@ -8,7 +8,7 @@ import { SectionBadge } from '@/components/ui/SectionBadge'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CpaSection = 'AUD' | 'BAR' | 'FAR' | 'REG' | 'ISC' | 'TCP' | 'BEC'
+type CpaSection = 'AUD' | 'FAR' | 'REG' | 'TCP'
 
 type TextbookRow = {
   id: string
@@ -24,7 +24,7 @@ type TextbookRow = {
   indexedAt: string | Date | null
 }
 
-const ALL_SECTIONS: CpaSection[] = ['AUD', 'BAR', 'FAR', 'REG', 'ISC', 'TCP']
+const ALL_SECTIONS: CpaSection[] = ['FAR', 'REG', 'AUD', 'TCP']
 
 // ─── Index status badge ───────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ function UploadModal({
   onClose: () => void
   onSuccess: (textbook: TextbookRow) => void
 }) {
-  const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.pdf$/i, '') : '')
+  const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.(pdf|epub|html|htm)$/i, '') : '')
   const [publisher, setPublisher] = useState('')
   const [sections, setSections] = useState<CpaSection[]>([])
   const [file, setFile] = useState<File | null>(initialFile)
@@ -89,10 +89,15 @@ function UploadModal({
     setLoading(true)
     setError(null)
     try {
+      const form = new FormData()
+      form.set('title', title.trim())
+      if (publisher) form.set('publisher', publisher)
+      sections.forEach((section) => form.append('sections', section))
+      if (file) form.set('file', file)
+
       const res = await fetch('/api/textbooks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), publisher: publisher || undefined, sections }),
+        body: form,
       })
       if (!res.ok) {
         const data = (await res.json()) as { error?: { message?: string } }
@@ -216,18 +221,18 @@ function UploadModal({
               ref={fileRef}
               id="tb-file"
               type="file"
-              accept=".pdf"
+              accept=".pdf,.epub,.html,.htm,application/pdf,application/epub+zip,text/html"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null
                 setFile(f)
-                if (f && !title) setTitle(f.name.replace(/\.pdf$/i, ''))
+                if (f && !title) setTitle(f.name.replace(/\.(pdf|epub|html|htm)$/i, ''))
               }}
               className="block w-full text-sm text-[color:var(--ink-dim)] file:mr-3 file:rounded file:border-0 file:bg-[color:var(--canvas-2)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[color:var(--ink-dim)]"
             />
             {file && (
               <p className="mt-1 text-xs text-[color:var(--ink-faint)]">
                 {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
-                {estimatedCost && <> — {estimatedCost}</>}
+                {estimatedCost && <> - {estimatedCost}</>}
               </p>
             )}
           </div>
@@ -381,7 +386,16 @@ export function LibraryClient({ initialTextbooks }: { initialTextbooks: Textbook
       e.preventDefault()
       setDragOver(false)
       const file = e.dataTransfer?.files[0]
-      if (file?.type === 'application/pdf') {
+      const name = file?.name.toLowerCase() ?? ''
+      const supported =
+        file?.type === 'application/pdf' ||
+        file?.type === 'application/epub+zip' ||
+        file?.type === 'text/html' ||
+        name.endsWith('.pdf') ||
+        name.endsWith('.epub') ||
+        name.endsWith('.html') ||
+        name.endsWith('.htm')
+      if (file && supported) {
         openUploadModal(file)
       }
     }

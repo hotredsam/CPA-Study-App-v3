@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { respond } from "@/lib/api-error";
+import { bucket, r2Client } from "@/lib/r2";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { ACTIVE_CPA_SECTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
 
 export const dynamic = "force-dynamic";
 
-const CpaSectionSchema = z.enum(["AUD", "BAR", "FAR", "REG", "ISC", "TCP", "BEC"]);
+const CpaSectionSchema = z.enum(ACTIVE_CPA_SECTIONS);
 
 export async function GET() {
   try {
@@ -16,19 +19,21 @@ export async function GET() {
       },
     });
 
-    const items = textbooks.map((t) => ({
-      id: t.id,
-      title: t.title,
-      publisher: t.publisher,
-      sections: t.sections,
-      pages: t.pages,
-      chunkCount: t._count.chunks,
-      indexStatus: t.indexStatus,
-      sizeBytes: t.sizeBytes?.toString() ?? null,
-      citedCount: t.citedCount,
-      uploadedAt: t.uploadedAt,
-      indexedAt: t.indexedAt,
-    }));
+    const items = textbooks
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        publisher: t.publisher,
+        sections: t.sections.filter(isActiveCpaSection),
+        pages: t.pages,
+        chunkCount: t._count.chunks,
+        indexStatus: t.indexStatus,
+        sizeBytes: t.sizeBytes?.toString() ?? null,
+        citedCount: t.citedCount,
+        uploadedAt: t.uploadedAt,
+        indexedAt: t.indexedAt,
+      }))
+      .filter((t) => t.sections.length > 0 || textbooks.find((book) => book.id === t.id)?.sections.length === 0);
 
     return NextResponse.json({ items });
   } catch (err) {
@@ -44,8 +49,27 @@ const CreateBody = z.object({
 
 export async function POST(request: Request) {
   try {
-    const body: unknown = await request.json();
-    const parsed = CreateBody.parse(body);
+    const contentType = request.headers.get("content-type") ?? "";
+    let parsed: z.infer<typeof CreateBody>;
+    let file: Blob | null = null;
+    let fileName = "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      parsed = CreateBody.parse({
+        title: form.get("title"),
+        publisher: form.get("publisher") || undefined,
+        sections: form.getAll("sections"),
+      });
+      const rawFile = form.get("file");
+      if (rawFile instanceof Blob) {
+        file = rawFile;
+        fileName = rawFile instanceof File ? rawFile.name : "textbook";
+      }
+    } else {
+      const body: unknown = await request.json();
+      parsed = CreateBody.parse(body);
+    }
 
     const textbook = await prisma.textbook.create({
       data: {
@@ -55,6 +79,29 @@ export async function POST(request: Request) {
         indexStatus: "QUEUED",
       },
     });
+
+    if (file) {
+      const ext = fileName.split(".").pop()?.toLowerCase() || "bin";
+      const r2Key = `textbooks/${textbook.id}/source.${ext}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      await r2Client().send(
+        new PutObjectCommand({
+          Bucket: bucket(),
+          Key: r2Key,
+          Body: buffer,
+          ContentType: file.type || "application/octet-stream",
+        }),
+      );
+      await prisma.textbook.update({
+        where: { id: textbook.id },
+        data: {
+          r2Key,
+          sizeBytes: BigInt(buffer.byteLength),
+        },
+      });
+      textbook.r2Key = r2Key;
+      textbook.sizeBytes = BigInt(buffer.byteLength);
+    }
 
     // Trigger textbook-indexer task if credentials are available
     if (process.env.TRIGGER_SECRET_KEY) {

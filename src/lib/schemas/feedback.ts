@@ -16,8 +16,21 @@ export const PROVISIONAL_RUBRIC_KEYS: Array<{ key: string; label: string; domain
   { key: "con-recommendation-quality",  label: "Recommendation Quality",   domain: "consulting" },
 ];
 
+const RUBRIC_KEYS = [
+  "acc-conceptual-understanding",
+  "acc-application-accuracy",
+  "acc-standard-citation",
+  "acc-calculation-mechanics",
+  "acc-journal-entry",
+  "con-risk-identification",
+  "con-professional-judgement",
+  "con-communication-clarity",
+  "con-synthesis",
+  "con-recommendation-quality",
+] as const;
+
 export const FeedbackItem = z.object({
-  key: z.string().min(1),
+  key: z.enum(RUBRIC_KEYS),
   label: z.string().optional(),
   comment: z.string(),
   score: z.number().min(0).max(10).optional(),
@@ -26,11 +39,31 @@ export const FeedbackItem = z.object({
 export type FeedbackItem = z.infer<typeof FeedbackItem>;
 
 export const FeedbackPayload = z.object({
-  items: z.array(FeedbackItem),
+  items: z.array(FeedbackItem).length(RUBRIC_KEYS.length),
   accountingScore: z.number().min(0).max(10),
   consultingScore: z.number().min(0).max(10),
   combinedScore: z.number().min(0).max(10),
   whatYouNeedToLearn: z.string().nullable(),
   weakTopicTags: z.array(z.string()),
+}).superRefine((payload, ctx) => {
+  const seen = new Set(payload.items.map((item) => item.key));
+
+  if (seen.size !== payload.items.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["items"],
+      message: "FeedbackPayload must contain each rubric key exactly once",
+    });
+  }
+
+  for (const key of RUBRIC_KEYS) {
+    if (!seen.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: `FeedbackPayload is missing rubric key: ${key}`,
+      });
+    }
+  }
 });
 export type FeedbackPayload = z.infer<typeof FeedbackPayload>;

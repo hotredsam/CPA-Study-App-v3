@@ -60,6 +60,14 @@ function extractPcm(
 type RawWord = { start: number; end: number; text?: string; word?: string };
 type RawSegment = { start: number; end: number; text: string; tokens?: RawWord[] };
 
+function allowEmptyTranscriptFallback(): boolean {
+  return process.env["ALLOW_EMPTY_TRANSCRIPT"] === "1" || process.env.NODE_ENV === "test";
+}
+
+function isSilentTranscript(transcript: Transcript): boolean {
+  return transcript.segments.every((segment) => segment.text.trim().length === 0);
+}
+
 // ---------------------------------------------------------------------------
 // Task
 // ---------------------------------------------------------------------------
@@ -69,7 +77,7 @@ export const transcribeQuestion = task({
   maxDuration: 60 * 30,
   run: async (payload: { questionId: string }) => {
     const { questionId } = payload;
-    const setStage = makeThrottledStage();
+    let setStage = makeThrottledStage();
 
     setStage({ stage: "transcribing", pct: 0, message: "Fetching question…" });
 
@@ -77,6 +85,7 @@ export const transcribeQuestion = task({
     const question = await prisma.question.findUniqueOrThrow({
       where: { id: questionId },
     });
+    setStage = makeThrottledStage(question.recordingId);
 
     await prisma.question.update({
       where: { id: questionId },
@@ -90,7 +99,12 @@ export const transcribeQuestion = task({
         where: { id: questionId },
         data: {
           noAudio: true,
-          transcript: { language: "en", segments: [] },
+          transcript: {
+            language: "en",
+            segments: [],
+            durationSec: 0,
+            noSpeechDetected: true,
+          },
         },
       });
       setStage({ stage: "transcribing", pct: 100, message: "No audio — skipped" });
@@ -137,9 +151,21 @@ export const transcribeQuestion = task({
         process.env.WHISPER_MODEL_PATH ??
         join(homedir(), ".cache/whisper.cpp/ggml-small.en.bin");
 
-      let transcript: Transcript = { language: "en", segments: [] };
+      let transcript: Transcript = {
+        language: "en",
+        segments: [],
+        durationSec: clipDuration,
+        noSpeechDetected: true,
+      };
 
       if (!existsSync(modelPath)) {
+        if (!allowEmptyTranscriptFallback()) {
+          await prisma.question.update({
+            where: { id: questionId },
+            data: { status: "failed" },
+          });
+          throw new Error(`Whisper model not found at ${modelPath}`);
+        }
         logger.log("whisper model not found — using empty transcript", { modelPath });
       } else {
         setStage({ stage: "transcribing", pct: 35, message: "Transcribing with Whisper…" });
@@ -159,7 +185,11 @@ export const transcribeQuestion = task({
 
             const parsed = Transcript.safeParse(normalized);
             if (parsed.success) {
-              transcript = parsed.data;
+              transcript = {
+                ...parsed.data,
+                durationSec: clipDuration,
+                noSpeechDetected: isSilentTranscript(parsed.data),
+              };
             } else {
               logger.warn("Transcript schema parse failed — using empty", {
                 questionId,
@@ -175,7 +205,13 @@ export const transcribeQuestion = task({
             "smart-whisper not available on this platform (expected in Trigger.dev Linux container)",
             { questionId, err: String(importErr) },
           );
-          // transcript stays as empty-but-valid shape
+          if (!allowEmptyTranscriptFallback()) {
+            await prisma.question.update({
+              where: { id: questionId },
+              data: { status: "failed" },
+            });
+            throw importErr;
+          }
         }
       }
 
@@ -184,7 +220,10 @@ export const transcribeQuestion = task({
       // 7. Persist transcript
       await prisma.question.update({
         where: { id: questionId },
-        data: { transcript },
+        data: {
+          transcript,
+          noAudio: transcript.noSpeechDetected ?? false,
+        },
       });
 
       setStage({ stage: "transcribing", pct: 100, message: "Transcription complete" });

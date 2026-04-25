@@ -4,6 +4,7 @@ node_modules/
 
 # next
 .next/
+*.tsbuildinfo
 out/
 build/
 dist/
@@ -29,6 +30,8 @@ dist/
 test-results/
 playwright-report/
 blob-report/
+output/
+.playwright-cli/
 
 # claude
 .claude/cache/

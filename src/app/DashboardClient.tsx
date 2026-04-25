@@ -2,25 +2,16 @@
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import {
-  EyebrowHeading,
-  Btn,
-  Card,
-  SectionBadge,
-  Bar,
-  Score,
-} from '@/components/ui'
+import { EyebrowHeading, Btn, Card, SectionBadge, Bar } from '@/components/ui'
+import { ACTIVE_CPA_SECTIONS, CPA_SECTION_META } from '@/lib/cpa-sections'
 import type { ParsedBlock, ParsedRoutine } from '@/lib/routine/xml-parser'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface StudyStats {
   totalHours: number
   weekHours: number
   streak: number
   recordingsCount: number
+  processingCount?: number
 }
 
 interface SectionData {
@@ -56,9 +47,13 @@ export interface DashboardData {
   routine: null
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const EXAM_DEFAULTS: Record<string, string | null> = {
+  FAR: '2026-08-31',
+  REG: '2026-08-31',
+  AUD: '2026-10-15',
+  TCP: null,
+}
+
 
 function relTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -70,125 +65,127 @@ function relTime(iso: string): string {
   return `${Math.floor(hours / 24)}d ago`
 }
 
-function statusColor(status: string): string {
-  switch (status) {
-    case 'done': return 'var(--good)'
-    case 'failed': return 'var(--bad)'
-    default: return 'var(--warn)'
-  }
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-interface StatProps {
-  label: string
-  value: string | number
-  sub?: string
+function daysUntil(iso: string | null): number | null {
+  if (!iso) return null
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)
 }
 
-function Stat({ label, value, sub }: StatProps) {
+function statBar(pct: number, hue?: number) {
+  return <Bar pct={Math.max(0, Math.min(100, pct))} height={3} accent={hue ? `oklch(0.50 0.12 ${hue})` : 'var(--accent)'} />
+}
+
+function Stat({ label, value, unit, bar }: { label: string; value: string | number; unit?: string; bar?: number }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span
-        className="mono tabular text-2xl font-semibold"
-        style={{ color: 'var(--ink)' }}
-      >
-        {value}
-      </span>
-      <span className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>
-        {label}
-      </span>
-      {sub && (
-        <span className="text-[11px]" style={{ color: 'var(--ink-dim)' }}>
-          {sub}
+    <Card>
+      <div className="eyebrow">{label}</div>
+      <div className="mt-2.5 flex items-baseline gap-1.5">
+        <span className="mono tabular text-[28px] font-medium leading-none tracking-[-0.03em] text-[color:var(--ink)]">
+          {value}
         </span>
-      )}
-    </div>
+        {unit && <span className="mono text-[11px] text-[color:var(--ink-faint)]">{unit}</span>}
+      </div>
+      {bar != null && <div className="mt-2.5">{statBar(bar)}</div>}
+    </Card>
   )
 }
 
-interface FocusStatProps {
-  label: string
-  value: string | number
-  sub?: string
-}
-
-function FocusStat({ label, value, sub }: FocusStatProps) {
-  return (
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <span
-        className="mono tabular text-xl font-semibold"
-        style={{ color: 'var(--ink)' }}
-      >
-        {value}
-      </span>
-      <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--ink-faint)' }}>
-        {label}
-      </span>
-      {sub && (
-        <span className="text-[10px]" style={{ color: 'var(--ink-dim)' }}>
-          {sub}
-        </span>
-      )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Today's schedule sub-component
-// ---------------------------------------------------------------------------
-
-function BlockPill({ block }: { block: ParsedBlock }) {
-  return (
-    <div
-      className="flex items-center gap-2 px-3 py-2 rounded border border-[color:var(--border)] bg-[color:var(--surface-2)]"
-    >
-      {block.time && (
-        <span className="text-xs mono tabular shrink-0" style={{ color: 'var(--ink-faint)' }}>
-          {block.time}
-        </span>
-      )}
-      {block.duration != null && (
-        <span className="text-xs mono tabular shrink-0" style={{ color: 'var(--ink-dim)' }}>
-          {block.duration}m
-        </span>
-      )}
-      {block.type && (
-        <span
-          className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
-          style={{ background: 'var(--accent-faint)', color: 'var(--accent)' }}
-        >
-          {block.type}
-        </span>
-      )}
-    </div>
-  )
-}
-
-interface PeriodRowProps {
-  label: string
-  blocks: ParsedBlock[]
-}
-
-function PeriodRow({ label, blocks }: PeriodRowProps) {
-  if (blocks.length === 0) return null
+function FocusStat({ label, value, sub, bar }: { label: string; value: string | number; sub?: string; bar?: number }) {
   return (
     <div>
-      <p className="eyebrow mb-2" style={{ color: 'var(--ink-faint)' }}>
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {blocks.map((b, i) => (
-          <BlockPill key={i} block={b} />
-        ))}
+      <div className="eyebrow">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="mono tabular text-[22px] font-medium tracking-[-0.02em] text-[color:var(--ink)]">{value}</span>
+        {sub && <span className="mono text-[11px] text-[color:var(--ink-faint)]">{sub}</span>}
       </div>
+      {bar != null && <div className="mt-1.5">{statBar(bar)}</div>}
     </div>
   )
 }
 
-function TodaySchedule() {
+function SectionCard({ data }: { data: SectionData }) {
+  const meta = CPA_SECTION_META[data.section as keyof typeof CPA_SECTION_META]
+  const due = data.examDate ?? EXAM_DEFAULTS[data.section] ?? null
+  const days = daysUntil(due)
+  const hue = meta?.hue ?? 0
+  const unitsDone = Math.max(0, Math.round((data.mastery / 100) * Math.max(data.topicCount, 1)))
+  const unitsTotal = Math.max(data.topicCount, 1)
+
+  return (
+    <Card accent={`oklch(0.55 0.10 ${hue})`}>
+      <div className="flex items-start justify-between gap-3">
+        <SectionBadge section={data.section} size="md" />
+        <div className="text-right">
+          <div className="mono text-[10px] uppercase tracking-[0.08em] text-[color:var(--ink-faint)]">Exam</div>
+          <div
+            className="mono tabular text-xs"
+            style={{ color: days == null ? 'var(--ink-faint)' : days < 60 ? 'var(--bad)' : 'var(--ink-dim)' }}
+          >
+            {days == null ? 'TBD' : `${days}d - ${fmtDate(due!)}`}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 text-[13px] font-medium text-[color:var(--ink)]">{meta?.name ?? data.section}</div>
+      <div className="mt-3.5 grid grid-cols-2 gap-3">
+        <FocusStat label="Hours" value={data.hoursStudied.toFixed(1)} />
+        <FocusStat label="Progress" value={`${data.mastery}%`} />
+      </div>
+      <div className="mt-3">
+        <div className="mono mb-1 text-[11px] text-[color:var(--ink-dim)]">
+          {unitsDone}/{unitsTotal} units
+        </div>
+        {statBar(data.mastery, hue)}
+      </div>
+    </Card>
+  )
+}
+
+function labelForBlock(block: ParsedBlock): string {
+  const tasks = Array.isArray(block.task) ? block.task : block.task ? [block.task] : []
+  const first = tasks[0]
+  if (first?.unit || first?.chapter) return [first.section, first.unit, first.chapter].filter(Boolean).join(' - ')
+  return block.type ? `${block.type} block` : 'Study block'
+}
+
+function RoutineBlock({ label, blocks }: { label: string; blocks: ParsedBlock[] }) {
+  return (
+    <Card pad={false}>
+      <div className="flex items-baseline justify-between border-b border-[color:var(--border)] px-4 py-3">
+        <div>
+          <div className="text-sm font-medium text-[color:var(--ink)]">{label}</div>
+          <div className="mono mt-0.5 text-[11px] text-[color:var(--ink-faint)]">{blocks.length} task blocks</div>
+        </div>
+      </div>
+      <div>
+        {blocks.length === 0 ? (
+          <div className="px-4 py-3 text-xs text-[color:var(--ink-faint)]">No tasks scheduled.</div>
+        ) : (
+          blocks.map((block, i) => (
+            <div
+              key={`${label}-${i}`}
+              className={i === blocks.length - 1 ? 'grid items-center gap-2 px-3.5 py-2.5' : 'grid items-center gap-2 border-b border-[color:var(--border)] px-3.5 py-2.5'}
+              style={{ gridTemplateColumns: '44px 1fr auto' }}
+            >
+              <div className="mono tabular text-[11px] text-[color:var(--ink-dim)]">{block.time ?? '--:--'}</div>
+              <div className="min-w-0">
+                <div className="truncate text-xs text-[color:var(--ink)]">{labelForBlock(block)}</div>
+                <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.06em] text-[color:var(--ink-faint)]">
+                  {block.type ?? 'study'}
+                </div>
+              </div>
+              <div className="mono tabular text-[11px] text-[color:var(--ink-faint)]">{block.duration ?? 0}m</div>
+            </div>
+          ))
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function RoutineSection() {
   const { data, isLoading } = useQuery<ParsedRoutine>({
     queryKey: ['study-routine-today'],
     queryFn: async () => {
@@ -198,298 +195,187 @@ function TodaySchedule() {
     },
   })
 
-  const hasBlocks =
-    (data?.morning.length ?? 0) > 0 ||
-    (data?.midday.length ?? 0) > 0 ||
-    (data?.evening.length ?? 0) > 0
-
   if (isLoading) return null
+  const routine = data ?? { morning: [], midday: [], evening: [] }
+  const totalTasks = routine.morning.length + routine.midday.length + routine.evening.length
+  const totalMinutes = [...routine.morning, ...routine.midday, ...routine.evening].reduce((sum, block) => sum + (block.duration ?? 0), 0)
 
   return (
-    <section aria-label="Today's schedule">
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Today&apos;s Schedule
-          </h2>
-          <Link href="/settings?tab=study" tabIndex={0}>
-            <span className="text-xs" style={{ color: 'var(--accent)' }}>
-              Edit
-            </span>
-          </Link>
-        </div>
-
-        {hasBlocks ? (
-          <div className="flex flex-col gap-4">
-            <PeriodRow label="Morning" blocks={data?.morning ?? []} />
-            <PeriodRow label="Midday" blocks={data?.midday ?? []} />
-            <PeriodRow label="Evening" blocks={data?.evening ?? []} />
+    <section aria-label="Today from study routine">
+      <div className="mb-2.5 flex items-center justify-between gap-3">
+        <div>
+          <div className="eyebrow">TODAY - FROM study-routine.xml</div>
+          <div className="mt-0.5 text-sm text-[color:var(--ink)]">
+            {totalTasks} task blocks - {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m scheduled
           </div>
-        ) : (
-          <p className="text-sm" style={{ color: 'var(--ink-dim)' }}>
-            Set up your study schedule in{' '}
-            <Link href="/settings?tab=study" style={{ color: 'var(--accent)' }}>
-              Settings &rarr; Study tab
-            </Link>
-            .
-          </p>
-        )}
-      </Card>
+        </div>
+        <Link href="/settings?tab=study" tabIndex={-1}>
+          <Btn variant="subtle" size="sm">Edit routine</Btn>
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3">
+        <RoutineBlock label="Morning" blocks={routine.morning} />
+        <RoutineBlock label="Midday" blocks={routine.midday} />
+        <RoutineBlock label="Evening" blocks={routine.evening} />
+      </div>
     </section>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main client component
-// ---------------------------------------------------------------------------
-
-interface Props {
-  data: DashboardData
-}
-
-export function DashboardClient({ data }: Props) {
+export function DashboardClient({ data }: { data: DashboardData }) {
   const { studyStats, sections, weakestTopics, recentRecordings, cardsDue } = data
-  const hasSections = sections.length > 0
-  const focusSection = hasSections ? sections[0] : null
-  const isEmpty = studyStats.recordingsCount === 0 && sections.length === 0
+  const displayTotalHours = studyStats.totalHours
+  const displayWeekHours = studyStats.weekHours
+  const displayStreak = studyStats.streak
+  const displayCardsDue = cardsDue > 0 ? cardsDue : 0
+  const displayRecordingsCount = studyStats.recordingsCount
+  const bySection = new Map(sections.map((section) => [section.section, section]))
+  const sectionRows: SectionData[] = ACTIVE_CPA_SECTIONS.map((section) => bySection.get(section) ?? {
+    section,
+    hoursStudied: 0,
+    mastery: 0,
+    examDate: EXAM_DEFAULTS[section] ?? null,
+    topicCount: 0,
+  })
+  const displaySectionRows = sectionRows
+  const focus = displaySectionRows[0]!
+  const totalTarget = 1200
+  const totalPct = Math.round((displayTotalHours / totalTarget) * 100)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <EyebrowHeading
-        eyebrow="Dashboard"
-        title="CPA Study Servant"
+        eyebrow={`DASHBOARD - ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
+        title={`${displayTotalHours.toFixed(1)} hours in, ${displayWeekHours.toFixed(1)} this week, on pace.`}
+        sub={`${focus.section} Unit 3 today. Anki has ${displayCardsDue} reviews due. ${studyStats.processingCount ?? 0} recordings processing in the background.`}
         right={
           <div className="flex gap-2">
-            <Btn
-              variant="ghost"
-              size="sm"
-              aria-label="Open Anki flashcard review"
-            >
-              Anki
-            </Btn>
+            <Link href="/anki" tabIndex={-1}>
+              <Btn variant="ghost">Anki - {displayCardsDue} due</Btn>
+            </Link>
             <Link href="/record" tabIndex={-1}>
-              <Btn variant="primary" size="sm" aria-label="Start a new recording session">
-                Record
-              </Btn>
+              <Btn variant="primary" size="lg">Record session</Btn>
             </Link>
           </div>
         }
       />
 
-      {/* Empty state */}
-      {isEmpty && (
-        <div
-          className="flex flex-col items-center justify-center py-24 gap-4 text-center"
-          role="status"
-          aria-live="polite"
-        >
-          <p className="text-base" style={{ color: 'var(--ink-dim)' }}>
-            No recordings yet. Record your first session to get started.
-          </p>
-          <Link href="/record" tabIndex={-1}>
-            <Btn variant="primary" size="lg" aria-label="Start recording">
-              Record
-            </Btn>
-          </Link>
+      <Card
+        pad={false}
+        style={{ background: `linear-gradient(180deg, oklch(0.70 0.06 ${CPA_SECTION_META.FAR.hue} / 0.12) 0%, var(--surface) 70%)` }}
+      >
+        <div className="grid items-center gap-7 px-7 py-5 xl:grid-cols-[1fr_auto]">
+          <div>
+            <div className="mb-2.5 flex items-center gap-2.5">
+              <span className="eyebrow">CURRENT FOCUS - RIGHT NOW</span>
+              <span className="mono text-[10px] uppercase tracking-[0.1em] text-[color:var(--accent)]">IN PROGRESS</span>
+            </div>
+            <div className="flex flex-wrap items-baseline gap-3.5">
+              <SectionBadge section={focus.section} size="lg" />
+              <div>
+                <div className="text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-[color:var(--ink)]">
+                  Unit 3 - Revenue recognition
+                </div>
+                <div className="mt-1 text-sm text-[color:var(--ink-dim)]">
+                  Currently reading <span className="text-[color:var(--ink)]">Becker FAR · Ch 7.3c · Allocation when SSPs ≠ transaction price</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 grid max-w-[680px] grid-cols-2 gap-6 md:grid-cols-4">
+              <FocusStat label="Unit progress" value={`${focus.mastery}%`} bar={focus.mastery} />
+              <FocusStat label="Hours - unit" value={focus.hoursStudied.toFixed(1)} sub="hrs" />
+              <FocusStat label="Topics - seen" value={focus.topicCount} />
+              <FocusStat label="Cards - due" value={displayCardsDue} />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Link href="/study" tabIndex={-1}>
+              <Btn variant="primary" size="lg" className="w-full">Continue reading</Btn>
+            </Link>
+            <Link href="/anki" tabIndex={-1}>
+              <Btn variant="ghost" className="w-full">Practice Anki - {displayCardsDue}</Btn>
+            </Link>
+            <Link href="/record" tabIndex={-1}>
+              <Btn variant="ghost" className="w-full">Record drill</Btn>
+            </Link>
+          </div>
         </div>
-      )}
+      </Card>
 
-      {/* Current focus card */}
-      {focusSection && (
-        <Card>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <SectionBadge section={focusSection.section} size="md" />
-              <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                {focusSection.section} — Current Focus
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <FocusStat label="Mastery" value={`${focusSection.mastery}%`} />
-              <FocusStat label="Cards Due" value={cardsDue} />
-              <FocusStat label="This Week" value={`${studyStats.weekHours}h`} />
-              <FocusStat label="Topics" value={focusSection.topicCount} />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Btn variant="subtle" size="sm" aria-label="Continue reading current chapter">
-                Continue reading
-              </Btn>
-              <Btn variant="subtle" size="sm" aria-label="Open Anki for practice">
-                Practice Anki
-              </Btn>
-              <Link href="/record" tabIndex={-1}>
-                <Btn variant="ghost" size="sm" aria-label="Record a drill session">
-                  Record drill
-                </Btn>
-              </Link>
-            </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Stat label="TOTAL HOURS" value={displayTotalHours.toFixed(1)} unit={`/ ${totalTarget}`} bar={totalPct} />
+        <Stat label="THIS WEEK" value={displayWeekHours.toFixed(1)} unit="hrs of 35" bar={(displayWeekHours / 35) * 100} />
+        <Stat label="STREAK" value={displayStreak} unit="days" />
+        <Stat label="RECORDINGS" value={displayRecordingsCount} unit={`${studyStats.processingCount ?? 0} processing`} />
+      </div>
+
+      <section aria-label="Section progress">
+        <div className="eyebrow mb-2.5">SECTIONS - HOURS, PROGRESS & DUE DATES</div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {displaySectionRows.map((section) => (
+            <SectionCard key={section.section} data={section} />
+          ))}
+        </div>
+      </section>
+
+      <RoutineSection />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card pad={false}>
+          <div className="border-b border-[color:var(--border)] px-4 py-3">
+            <div className="eyebrow">WEAKEST TOPICS</div>
+          </div>
+          <div>
+            {weakestTopics.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-[color:var(--ink-faint)]">No topic history yet.</div>
+            ) : (
+              weakestTopics.map((topic, i) => (
+                <Link
+                  key={topic.id}
+                  href={`/topics?topicId=${topic.id}`}
+                  className={`grid items-center gap-3 px-4 py-3 hov ${i === weakestTopics.length - 1 ? '' : 'border-b border-[color:var(--border)]'}`}
+                  style={{ gridTemplateColumns: '52px 1fr 64px' }}
+                >
+                  <SectionBadge section={topic.section} size="xs" />
+                  <span className="truncate text-[13px] text-[color:var(--ink)]">{topic.name}</span>
+                  <span className="mono tabular text-right text-xs" style={{ color: topic.errorRate >= 50 ? 'var(--bad)' : 'var(--warn)' }}>
+                    {topic.errorRate}%
+                  </span>
+                </Link>
+              ))
+            )}
           </div>
         </Card>
-      )}
 
-      {/* Stats row */}
-      {!isEmpty && (
-        <Card>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            <Stat label="Total Hours" value={studyStats.totalHours} />
-            <Stat label="This Week" value={`${studyStats.weekHours}h`} />
-            <Stat label="Streak" value={`${studyStats.streak}d`} sub="consecutive days" />
-            <Stat label="Recordings" value={studyStats.recordingsCount} />
+        <Card pad={false}>
+          <div className="border-b border-[color:var(--border)] px-4 py-3">
+            <div className="eyebrow">RECENT RECORDINGS</div>
           </div>
-        </Card>
-      )}
-
-      {/* Today's Schedule */}
-      <TodaySchedule />
-
-      {/* Section cards */}
-      {sections.length > 0 && (
-        <section aria-label="Section progress">
-          <h2
-            className="eyebrow mb-3"
-            style={{ color: 'var(--ink-faint)' }}
-          >
-            Sections
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sections.map((sec) => (
-              <Card key={sec.section}>
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <SectionBadge section={sec.section} size="sm" />
-                    <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                      {sec.section}
-                    </span>
-                  </div>
-                  {sec.examDate && (
-                    <span
-                      className="text-[11px] mono tabular shrink-0"
-                      style={{ color: 'var(--ink-faint)' }}
-                    >
-                      {sec.examDate}
-                    </span>
-                  )}
-                </div>
-                <Bar
-                  pct={sec.mastery}
-                  height={6}
-                  aria-label={`${sec.section} mastery: ${sec.mastery}%`}
-                />
-                <div className="flex justify-between mt-2">
-                  <span className="text-xs mono tabular" style={{ color: 'var(--ink-dim)' }}>
-                    {sec.mastery}% mastery
-                  </span>
-                  <span className="text-xs mono tabular" style={{ color: 'var(--ink-faint)' }}>
-                    {sec.hoursStudied}h
-                  </span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Weakest topics */}
-        {weakestTopics.length > 0 && (
-          <section aria-label="Weakest topics">
-            <Card pad={false}>
-              <div className="px-4 py-3 border-b border-[color:var(--border)]">
-                <h2 className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                  Weakest Topics
-                </h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs" role="table">
-                  <thead>
-                    <tr
-                      className="border-b border-[color:var(--border)]"
-                      style={{ color: 'var(--ink-faint)' }}
-                    >
-                      <th className="px-4 py-2 text-left font-medium uppercase tracking-wider">
-                        Section
-                      </th>
-                      <th className="px-4 py-2 text-left font-medium uppercase tracking-wider">
-                        Topic
-                      </th>
-                      <th className="px-4 py-2 text-right font-medium uppercase tracking-wider">
-                        Mastery
-                      </th>
-                      <th className="px-4 py-2 text-right font-medium uppercase tracking-wider">
-                        Error
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {weakestTopics.map((t, i) => (
-                      <tr
-                        key={t.id}
-                        className={i < weakestTopics.length - 1 ? 'border-b border-[color:var(--border)]' : ''}
-                      >
-                        <td className="px-4 py-2">
-                          <SectionBadge section={t.section} size="xs" />
-                        </td>
-                        <td className="px-4 py-2 max-w-[140px] truncate" style={{ color: 'var(--ink)' }}>
-                          {t.name}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <Score value={t.mastery / 10} size="sm" suffix="" />
-                        </td>
-                        <td
-                          className="px-4 py-2 text-right mono tabular"
-                          style={{ color: t.errorRate > 50 ? 'var(--bad)' : 'var(--ink-dim)' }}
-                        >
-                          {t.errorRate}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </section>
-        )}
-
-        {/* Recent recordings */}
-        {recentRecordings.length > 0 && (
-          <section aria-label="Recent recordings">
-            <Card pad={false}>
-              <div className="px-4 py-3 border-b border-[color:var(--border)]">
-                <h2 className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                  Recent Recordings
-                </h2>
-              </div>
-              <ul className="divide-y divide-[color:var(--border)]">
-                {recentRecordings.map((rec) => (
-                  <li key={rec.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <span
-                        className="text-sm truncate"
-                        style={{ color: 'var(--ink)' }}
-                      >
-                        {rec.title ?? rec.id.slice(0, 12)}
-                      </span>
-                      <span className="text-[11px]" style={{ color: 'var(--ink-faint)' }}>
-                        {relTime(rec.createdAt)}
-                        {rec.segmentsCount != null && ` · ${rec.segmentsCount} segments`}
-                      </span>
+          <div>
+            {recentRecordings.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-[color:var(--ink-faint)]">No recordings yet.</div>
+            ) : (
+              recentRecordings.map((recording, i) => (
+                <div
+                  key={recording.id}
+                  className={`grid items-center gap-3 px-4 py-3 ${i === recentRecordings.length - 1 ? '' : 'border-b border-[color:var(--border)]'}`}
+                  style={{ gridTemplateColumns: '1fr auto' }}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] text-[color:var(--ink)]">{recording.title ?? recording.id.slice(0, 12)}</div>
+                    <div className="mono mt-0.5 text-[10px] text-[color:var(--ink-faint)]">
+                      {relTime(recording.createdAt)}
+                      {recording.segmentsCount != null ? ` - ${recording.segmentsCount} segments` : ''}
                     </div>
-                    <span
-                      className="text-[10px] mono font-semibold px-2 py-0.5 rounded shrink-0"
-                      style={{
-                        color: statusColor(rec.status),
-                        background: 'var(--surface-2)',
-                        border: `1px solid ${statusColor(rec.status)}`,
-                      }}
-                    >
-                      {rec.status}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </section>
-        )}
+                  </div>
+                  <span className="mono rounded-[2px] border border-[color:var(--border)] bg-[color:var(--surface-2)] px-1.5 py-0.5 text-[10px] uppercase text-[color:var(--ink-dim)]">
+                    {recording.status}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   )

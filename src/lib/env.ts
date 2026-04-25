@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
   R2_ACCOUNT_ID: z.string().min(1),
@@ -12,10 +17,19 @@ const EnvSchema = z.object({
     .min(1)
     .refine((v) => !v.includes("placeholder"), {
       message: "TRIGGER_PROJECT_ID must not be the placeholder value — set a real project ID",
-    }),
+  }),
   TRIGGER_SECRET_KEY: z.string().min(1),
   ANTHROPIC_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: optionalNonEmptyString,
+  ENCRYPTION_KEY: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^[0-9a-fA-F]{64}$/, "ENCRYPTION_KEY must be 64 hex characters")
+      .optional(),
+  ),
   WHISPER_MODEL_PATH: z.string().optional(),
+  WHISPER_PREPASS_MODEL_PATH: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 

@@ -3,9 +3,26 @@ import { useQuery } from '@tanstack/react-query'
 interface RecordingListItem {
   id: string
   status: string
+  title: string | null
+  sections: string[]
+  modelUsed: string | null
   durationSec: number | null
+  segmentsCount: number | null
   createdAt: string
   _count: { questions: number }
+  progress: Array<{
+    stage: string
+    pct: number
+    etaSec: number | null
+    message: string
+    updatedAt: string
+  }>
+  questions: Array<{
+    id: string
+    status: string
+    section: string | null
+    feedback: { combinedScore: number } | null
+  }>
 }
 
 interface RecordingListResponse {

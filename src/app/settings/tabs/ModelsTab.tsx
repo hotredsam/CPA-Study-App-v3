@@ -60,12 +60,50 @@ const FUNCTION_LABELS: Record<string, string> = {
   TOPIC_NOTES: 'Topic AI Notes',
 }
 
+const FUNCTION_META: Record<string, { description: string; interest: string; downtime: string }> = {
+  PIPELINE_GRADE: { description: 'Scores accounting and consulting performance for each question.', interest: 'High', downtime: 'Live' },
+  PIPELINE_SEGMENT: { description: 'Splits recordings into question clips.', interest: 'High', downtime: 'Live' },
+  PIPELINE_TRANSCRIBE: { description: 'Converts speech to timestamped transcript.', interest: 'Medium', downtime: 'Live' },
+  PIPELINE_EXTRACT: { description: 'Extracts question text and choices from frames.', interest: 'High', downtime: 'Live' },
+  PIPELINE_TAG: { description: 'Maps each question to section, unit, topic, and difficulty.', interest: 'Medium', downtime: 'Live' },
+  TOPIC_EXTRACT: { description: 'Identifies canonical CPA topics in textbook chunks.', interest: 'Medium', downtime: 'Batch friendly' },
+  CHECKPOINT_QUIZ: { description: 'Generates checkpoint questions after reading chunks.', interest: 'Medium', downtime: 'Live' },
+  ANKI_GEN: { description: 'Creates flashcards from indexed textbook content.', interest: 'Medium', downtime: 'Batch friendly' },
+  CHAT_TUTOR: { description: 'Answers follow-up questions with review or card context.', interest: 'Low', downtime: 'Live' },
+  VOICE_NOTE: { description: 'Transcribes short card voice memos.', interest: 'Low', downtime: 'Live' },
+  TOPIC_NOTES: { description: 'Refreshes structured notes for each topic.', interest: 'Low', downtime: 'Batch friendly' },
+}
+
+const OPENROUTER_MODELS = [
+  'anthropic/claude-sonnet-4.6',
+  'anthropic/claude-haiku-4.5',
+  'google/gemini-2.5-pro',
+  'google/gemini-2.5-flash',
+  'openai/gpt-5',
+  'openai/gpt-5-mini',
+  'openai/gpt-4.1',
+  'openai/gpt-4.1-mini',
+  'openai/whisper-large-v3',
+  'meta-llama/llama-4-maverick',
+  'meta-llama/llama-4-scout',
+  'mistralai/mistral-large',
+  'mistralai/mistral-small',
+  'deepseek/deepseek-r1',
+  'deepseek/deepseek-chat',
+  'x-ai/grok-3',
+  'qwen/qwen-max',
+  'cohere/command-r-plus',
+  'perplexity/sonar-pro',
+  'moonshotai/kimi-k2',
+]
+
 // ---------------------------------------------------------------------------
 // Toast helper
 // ---------------------------------------------------------------------------
 
 function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-  window.dispatchEvent(new CustomEvent('cpa-toast', { detail: { message, type } }))
+  const variant = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'
+  window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message, variant } }))
 }
 
 // ---------------------------------------------------------------------------
@@ -338,6 +376,7 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
   })
 
   const label = FUNCTION_LABELS[config.functionKey] ?? config.functionKey
+  const meta = FUNCTION_META[config.functionKey]
 
   return (
     <div className="border border-[color:var(--border)] rounded">
@@ -355,6 +394,11 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
           <span className="text-xs mono" style={{ color: 'var(--ink-faint)' }}>
             {config.model}
           </span>
+          {meta && (
+            <span className="text-xs" style={{ color: 'var(--ink-faint)' }}>
+              {meta.description}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {config.batchEnabled && (
@@ -379,14 +423,37 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
             <span className="text-xs font-medium" style={{ color: 'var(--ink-dim)' }}>
               Model
             </span>
-            <input
-              type="text"
+            <select
               value={modelInput}
               onChange={(e) => setModelInput(e.target.value)}
               aria-label={`${label} model identifier`}
               className="rounded border border-[color:var(--border)] bg-[color:var(--canvas)] text-[color:var(--ink)] px-2.5 py-1.5 text-sm font-mono focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
-            />
+            >
+              {OPENROUTER_MODELS.map((model) => (
+                <option key={model} value={model}>{model}</option>
+              ))}
+              {!OPENROUTER_MODELS.includes(modelInput) && (
+                <option value={modelInput}>{modelInput}</option>
+              )}
+            </select>
           </label>
+
+          {meta && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded bg-[color:var(--canvas-2)] border border-[color:var(--border)] p-3">
+              <div>
+                <p className="eyebrow mb-1">Interest</p>
+                <p className="text-sm" style={{ color: 'var(--ink)' }}>{meta.interest}</p>
+              </div>
+              <div>
+                <p className="eyebrow mb-1">Downtime</p>
+                <p className="text-sm" style={{ color: 'var(--ink)' }}>{meta.downtime}</p>
+              </div>
+              <div>
+                <p className="eyebrow mb-1">Calls</p>
+                <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Tracked in model audit</p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex items-center justify-between gap-3">

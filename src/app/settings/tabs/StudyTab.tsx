@@ -149,7 +149,7 @@ Please structure your response as XML with this exact format:
 <study-routine>
   <morning>
     <block time="HH:MM" duration="minutes" type="reading|anki|questions|review">
-      <task section="FAR|REG|AUD|TCP|BAR|ISC" unit="Topic name" chapter="Ch X.Y" />
+      <task section="FAR|REG|AUD|TCP" unit="Topic name" chapter="Ch X.Y" />
     </block>
   </morning>
   <midday>...</midday>
@@ -198,7 +198,7 @@ Please structure your response as XML with this exact format:
 <study-routine>
   <morning>
     <block time="HH:MM" duration="minutes" type="reading|anki|questions|review">
-      <task section="FAR|REG|AUD|TCP|BAR|ISC" unit="Topic name" chapter="Ch X.Y" />
+      <task section="FAR|REG|AUD|TCP" unit="Topic name" chapter="Ch X.Y" />
     </block>
   </morning>
   <midday>...</midday>

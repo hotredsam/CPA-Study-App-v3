@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
 import { SectionBadge } from '@/components/ui/SectionBadge'
+import { isActiveCpaSection } from '@/lib/cpa-sections'
 import { TextbookViewerClient } from './TextbookViewerClient'
 
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,8 @@ export default async function TextbookPage({
 
   if (!textbook) notFound()
 
+  const activeSections = textbook.sections.filter(isActiveCpaSection)
+
   const [total, firstChunks] = await Promise.all([
     prisma.chunk.count({ where: { textbookId } }),
     prisma.chunk.findMany({
@@ -69,9 +72,9 @@ export default async function TextbookPage({
               : undefined
         }
         right={
-          textbook.sections.length > 0 ? (
+          activeSections.length > 0 ? (
             <div className="flex gap-1.5 flex-wrap">
-              {textbook.sections.map((s) => (
+              {activeSections.map((s) => (
                 <SectionBadge key={s} section={s} size="sm" />
               ))}
             </div>

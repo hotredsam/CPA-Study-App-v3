@@ -1,12 +1,4 @@
-const SECTION_HUES: Record<string, number> = {
-  AUD: 260,
-  BAR: 120,
-  FAR: 35,
-  REG: 200,
-  ISC: 280,
-  TCP: 170,
-  BEC: 45,
-}
+import { CPA_SECTION_META } from '@/lib/cpa-sections'
 
 type BadgeSize = 'xs' | 'sm' | 'md' | 'lg'
 
@@ -23,13 +15,14 @@ const SIZE_CLASSES: Record<BadgeSize, string> = {
 }
 
 export function SectionBadge({ section, size = 'sm' }: Props) {
-  const hue = SECTION_HUES[section] ?? 0
+  const hue = CPA_SECTION_META[section as keyof typeof CPA_SECTION_META]?.hue ?? 0
   return (
     <span
-      className={`inline-flex items-center font-mono font-semibold rounded uppercase tracking-wide ${SIZE_CLASSES[size]}`}
+      className={`inline-flex items-center justify-center font-mono font-semibold rounded-[3px] uppercase tracking-[0.08em] border ${SIZE_CLASSES[size]}`}
       style={{
-        background: `oklch(0.93 0.06 ${hue})`,
-        color: `oklch(0.32 0.10 ${hue})`,
+        background: `oklch(0.70 0.06 ${hue} / 0.22)`,
+        borderColor: `oklch(0.55 0.08 ${hue} / 0.35)`,
+        color: `oklch(0.42 0.10 ${hue})`,
       }}
       aria-label={`Section: ${section}`}
     >

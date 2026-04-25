@@ -22,21 +22,16 @@ async function main(): Promise<void> {
 
   const sections: CpaSection[] = [
     CpaSection.AUD,
-    CpaSection.BAR,
     CpaSection.FAR,
     CpaSection.REG,
-    CpaSection.ISC,
     CpaSection.TCP,
   ];
 
-  const topicNames: Record<CpaSection, { name: string; unit: string }> = {
+  const topicNames: Partial<Record<CpaSection, { name: string; unit: string }>> = {
     [CpaSection.AUD]: { name: "Audit Evidence", unit: "Audit Planning" },
-    [CpaSection.BAR]: { name: "Business Analysis", unit: "Ratio Analysis" },
     [CpaSection.FAR]: { name: "Revenue Recognition", unit: "ASC 606" },
     [CpaSection.REG]: { name: "Federal Taxation", unit: "Individual Income" },
-    [CpaSection.ISC]: { name: "IT General Controls", unit: "COSO Framework" },
     [CpaSection.TCP]: { name: "Tax Compliance", unit: "Corporate Returns" },
-    [CpaSection.BEC]: { name: "Economics", unit: "Micro" },
   };
 
   const topicsResult = await seedSection(
@@ -46,6 +41,7 @@ async function main(): Promise<void> {
       const createdTopics: { id: string; section: CpaSection }[] = [];
       for (const section of sections) {
         const info = topicNames[section];
+        if (!info) continue;
         const topic = await prisma.topic.create({
           data: {
             section,
@@ -83,7 +79,7 @@ async function main(): Promise<void> {
     {
       title: "Becker FAR Textbook",
       publisher: "Becker",
-      sections: [CpaSection.FAR, CpaSection.BAR] as CpaSection[],
+      sections: [CpaSection.FAR] as CpaSection[],
       pages: 720,
       sizeBytes: BigInt(18_500_000),
       r2Key: "fixtures/textbook-2.pdf",
@@ -297,17 +293,17 @@ async function main(): Promise<void> {
   }[] = [
     {
       functionKey: AiFunctionKey.PIPELINE_GRADE,
-      model: "anthropic/claude-sonnet-4-6",
+      model: "anthropic/claude-sonnet-4.6",
       batchEnabled: false,
       cacheEnabled: true,
-      useOAuthFallback: true,
+      useOAuthFallback: false,
     },
     {
       functionKey: AiFunctionKey.PIPELINE_SEGMENT,
       model: "anthropic/claude-haiku-4.5",
       batchEnabled: false,
       cacheEnabled: false,
-      useOAuthFallback: true,
+      useOAuthFallback: false,
     },
     {
       functionKey: AiFunctionKey.PIPELINE_TRANSCRIBE,
@@ -318,28 +314,28 @@ async function main(): Promise<void> {
     },
     {
       functionKey: AiFunctionKey.PIPELINE_EXTRACT,
-      model: "anthropic/claude-sonnet-4-6",
+      model: "anthropic/claude-sonnet-4.6",
       batchEnabled: false,
       cacheEnabled: true,
-      useOAuthFallback: true,
+      useOAuthFallback: false,
     },
     {
       functionKey: AiFunctionKey.PIPELINE_TAG,
       model: "anthropic/claude-haiku-4.5",
       batchEnabled: false,
       cacheEnabled: true,
-      useOAuthFallback: true,
+      useOAuthFallback: false,
     },
     {
       functionKey: AiFunctionKey.TOPIC_EXTRACT,
       model: "anthropic/claude-haiku-4.5",
-      batchEnabled: true,
+      batchEnabled: false,
       cacheEnabled: true,
       useOAuthFallback: false,
     },
     {
       functionKey: AiFunctionKey.CHECKPOINT_QUIZ,
-      model: "anthropic/claude-sonnet-4-6",
+      model: "anthropic/claude-sonnet-4.6",
       batchEnabled: false,
       cacheEnabled: true,
       useOAuthFallback: false,
@@ -347,13 +343,13 @@ async function main(): Promise<void> {
     {
       functionKey: AiFunctionKey.ANKI_GEN,
       model: "anthropic/claude-haiku-4.5",
-      batchEnabled: true,
+      batchEnabled: false,
       cacheEnabled: true,
       useOAuthFallback: false,
     },
     {
       functionKey: AiFunctionKey.CHAT_TUTOR,
-      model: "anthropic/claude-sonnet-4-6",
+      model: "anthropic/claude-sonnet-4.6",
       batchEnabled: false,
       cacheEnabled: true,
       useOAuthFallback: false,
@@ -368,7 +364,7 @@ async function main(): Promise<void> {
     {
       functionKey: AiFunctionKey.TOPIC_NOTES,
       model: "anthropic/claude-haiku-4.5",
-      batchEnabled: true,
+      batchEnabled: false,
       cacheEnabled: true,
       useOAuthFallback: false,
     },

@@ -11,19 +11,19 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_STYLES: Record<BtnVariant, string> = {
-  primary: 'bg-[color:var(--accent)] text-white hover:brightness-110 border border-transparent',
+  primary: 'bg-[color:var(--accent)] text-white hover:brightness-110 border border-[color:var(--accent-dark)]',
   ghost:
-    'border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] bg-transparent',
+    'border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] bg-[color:var(--surface)]',
   subtle:
-    'bg-[color:var(--surface-2)] text-[color:var(--ink-dim)] hover:bg-[color:var(--canvas-2)] border border-transparent',
-  danger: 'bg-[color:var(--bad)] text-white hover:brightness-110 border border-transparent',
-  good: 'bg-[color:var(--good)] text-white hover:brightness-110 border border-transparent',
+    'bg-transparent text-[color:var(--ink-dim)] hover:bg-[color:var(--surface-2)] border border-transparent',
+  danger: 'bg-[color:var(--bad-soft)] text-[color:var(--bad)] hover:brightness-105 border border-[color:var(--bad-border)]',
+  good: 'bg-[color:var(--good-soft)] text-[color:var(--good)] hover:brightness-105 border border-[color:var(--good-border)]',
 }
 
 const SIZE_STYLES: Record<BtnSize, string> = {
-  sm: 'text-xs px-2.5 py-1.5 gap-1.5',
-  md: 'text-sm px-3.5 py-2 gap-2',
-  lg: 'text-base px-5 py-2.5 gap-2.5',
+  sm: 'h-[26px] text-xs px-2.5 gap-1.5',
+  md: 'h-8 text-[13px] px-3 gap-2',
+  lg: 'h-10 text-sm px-[18px] gap-2.5',
 }
 
 export function Btn({

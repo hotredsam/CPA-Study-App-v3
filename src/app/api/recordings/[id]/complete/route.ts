@@ -24,6 +24,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       data: { status: "uploaded", triggerRunId: handle.id },
     });
 
+    await prisma.stageProgress.create({
+      data: {
+        recordingId: id,
+        stage: "uploading",
+        pct: 100,
+        etaSec: null,
+        message: "Upload complete; pipeline queued",
+      },
+    });
+
     return NextResponse.json({
       recording,
       runId: handle.id,

@@ -7,13 +7,14 @@ import type { Topic } from './types'
 
 interface Props {
   topic: Topic
+  isLast: boolean
   isExpanded: boolean
   onToggle: (id: string) => void
   onNotesChange: (id: string, notes: string) => void
 }
 
 function relTime(isoStr: string | null): string {
-  if (!isoStr) return '—'
+  if (!isoStr) return '-'
   const diff = Date.now() - new Date(isoStr).getTime()
   const days = Math.floor(diff / 86_400_000)
   if (days === 0) return 'today'
@@ -25,14 +26,20 @@ function relTime(isoStr: string | null): string {
 }
 
 function masteryColor(pct: number): string {
-  if (pct >= 75) return 'var(--good)'
-  if (pct >= 50) return 'var(--accent)'
-  if (pct >= 25) return 'var(--warn)'
+  if (pct >= 70) return 'var(--good)'
+  if (pct >= 40) return 'var(--warn)'
   return 'var(--bad)'
 }
 
-export function TopicRow({ topic, isExpanded, onToggle, onNotesChange }: Props) {
-  const mastery = Math.round(topic.mastery * 100)
+function errorColor(pct: number | null): string {
+  if (pct == null) return 'var(--ink-faint)'
+  if (pct > 50) return 'var(--bad)'
+  if (pct > 25) return 'var(--warn)'
+  return 'var(--good)'
+}
+
+export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }: Props) {
+  const mastery = Math.round(topic.mastery)
   const errorRate = topic.errorRate != null ? Math.round(topic.errorRate * 100) : null
 
   const handleToggle = useCallback(() => {
@@ -50,86 +57,48 @@ export function TopicRow({ topic, isExpanded, onToggle, onNotesChange }: Props) 
   )
 
   return (
-    <>
-      <tr
-        className={`border-b border-[color:var(--border)] cursor-pointer hover:bg-[color:var(--canvas)] transition-colors ${
-          isExpanded ? 'bg-[color:var(--canvas)]' : ''
-        }`}
+    <div className={isLast && !isExpanded ? '' : 'border-b border-[color:var(--border)]'}>
+      <div
+        className="grid cursor-pointer items-center gap-2 px-4 py-3 hov"
+        style={{ gridTemplateColumns: '60px minmax(220px,1fr) 130px 230px 150px 70px 80px 24px' }}
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
         tabIndex={0}
-        role="row"
+        role="button"
         aria-expanded={isExpanded}
-        aria-label={`${topic.name} — click to ${isExpanded ? 'collapse' : 'expand'} details`}
+        aria-label={`${topic.name} - click to ${isExpanded ? 'collapse' : 'expand'} details`}
       >
-        <td className="py-2.5 px-3 whitespace-nowrap">
-          <SectionBadge section={topic.section} size="sm" />
-        </td>
-        <td className="py-2.5 px-3 font-medium text-[color:var(--ink)] text-sm max-w-[200px] truncate">
-          {topic.name}
-        </td>
-        <td className="py-2.5 px-3 text-[color:var(--ink-dim)] text-xs max-w-[140px] truncate">
-          {topic.unit ?? '—'}
-        </td>
-        <td className="py-2.5 px-3">
-          <div className="flex items-center gap-2 min-w-[100px]">
-            <Bar
-              pct={mastery}
-              height={5}
-              accent={masteryColor(mastery)}
-              aria-label={`Mastery ${mastery}%`}
-              className="w-16 shrink-0"
-            />
-            <span className="text-xs font-mono text-[color:var(--ink-dim)] w-8 text-right">
-              {mastery}%
-            </span>
+        <SectionBadge section={topic.section} size="xs" />
+        <div className="min-w-0 text-[13px] text-[color:var(--ink)]">{topic.name}</div>
+        <div className="mono min-w-0 truncate text-[11px] text-[color:var(--ink-faint)]">
+          {topic.unit ?? '-'}
+        </div>
+        <div className="flex min-w-0 items-center gap-3 pr-10">
+          <div className="min-w-0 flex-1">
+            <Bar pct={mastery} height={4} accent={masteryColor(mastery)} aria-label={`Mastery ${mastery}%`} />
           </div>
-        </td>
-        <td className="py-2.5 px-3 text-xs font-mono text-[color:var(--ink-dim)]">
-          {errorRate != null ? (
-            <span
-              style={{
-                color:
-                  errorRate >= 50
-                    ? 'var(--bad)'
-                    : errorRate >= 25
-                      ? 'var(--warn)'
-                      : 'var(--ink-dim)',
-              }}
-            >
-              {errorRate}%
-            </span>
-          ) : (
-            '—'
-          )}
-        </td>
-        <td className="py-2.5 px-3 text-xs font-mono text-[color:var(--ink-dim)]">
-          {topic.cardsDue > 0 ? (
-            <span style={{ color: 'var(--accent)' }}>{topic.cardsDue}</span>
-          ) : (
-            '0'
-          )}
-        </td>
-        <td className="py-2.5 px-3 text-xs text-[color:var(--ink-faint)] whitespace-nowrap">
-          {relTime(topic.lastSeen)}
-        </td>
-        <td className="py-2.5 px-3 text-center" aria-hidden="true">
-          <span
-            className="inline-block transition-transform duration-200 text-[color:var(--ink-faint)]"
-            style={{ transform: isExpanded ? 'rotate(180deg)' : 'none' }}
-          >
-            ▾
+          <span className="mono tabular w-[48px] shrink-0 text-right text-[11px] text-[color:var(--ink-dim)]">
+            {mastery}%
           </span>
-        </td>
-      </tr>
+        </div>
+        <div
+          className="mono tabular whitespace-nowrap pl-8 text-[12px]"
+          style={{ color: errorColor(errorRate) }}
+        >
+          {errorRate == null ? '-' : `${errorRate}%`}
+        </div>
+        <div className="mono tabular text-[12px]" style={{ color: topic.cardsDue > 0 ? 'var(--accent)' : 'var(--ink-faint)' }}>
+          {topic.cardsDue}
+        </div>
+        <div className="mono tabular whitespace-nowrap text-[12px] text-[color:var(--ink-dim)]">
+          {relTime(topic.lastSeen)}
+        </div>
+        <div className="text-center text-[color:var(--ink-faint)]" aria-hidden="true">
+          {isExpanded ? '^' : 'v'}
+        </div>
+      </div>
 
-      {isExpanded && (
-        <tr role="row">
-          <td colSpan={8} className="p-0">
-            <TopicDetail topic={topic} onNotesChange={onNotesChange} />
-          </td>
-        </tr>
-      )}
-    </>
+      {isExpanded && <TopicDetail topic={topic} onNotesChange={onNotesChange} />}
+    </div>
   )
 }
