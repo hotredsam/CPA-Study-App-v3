@@ -41,13 +41,25 @@ export function buildGradingUserPrompt(args: {
   correctAnswer: string | null;
   beckerExplanation: string | null;
   transcript: string;
+  textbookContext?: { citation: string; content: string }[];
 }): string {
+  const textbookContext = args.textbookContext?.length
+    ? [
+        "Textbook context:",
+        ...args.textbookContext.map((chunk, index) => (
+          `[${index + 1}] ${chunk.citation}\n${chunk.content}`
+        )),
+        "When textbook context is relevant, cite it in whatYouNeedToLearn with bracket references like [1].",
+      ].join("\n\n")
+    : "Textbook context:\n(unavailable)";
+
   return [
     `Question:\n${args.question}`,
     `Choices:\n${args.choices.map((c) => `  ${c.label}. ${c.text}`).join("\n")}`,
     `User answered: ${args.userAnswer ?? "(none)"}`,
     `Correct answer: ${args.correctAnswer ?? "(unknown)"}`,
     `Becker explanation: ${args.beckerExplanation ?? "(unavailable)"}`,
+    textbookContext,
     `User transcript:\n${args.transcript || "(silent)"}`,
   ].join("\n\n");
 }

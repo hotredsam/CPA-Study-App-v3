@@ -13,3 +13,102 @@ html {
 body {
   font-family: var(--font-sans);
 }
+
+.textbook-html-render {
+  color: var(--ink);
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.textbook-html-render > * + * {
+  margin-top: 0.9rem;
+}
+
+.textbook-html-render h1,
+.textbook-html-render h2,
+.textbook-html-render h3,
+.textbook-html-render h4 {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 650;
+  line-height: 1.18;
+}
+
+.textbook-html-render h1 {
+  font-size: 1.5rem;
+}
+
+.textbook-html-render h2 {
+  font-size: 1.25rem;
+}
+
+.textbook-html-render h3 {
+  font-size: 1.05rem;
+}
+
+.textbook-html-render p,
+.textbook-html-render li {
+  color: var(--ink-dim);
+}
+
+.textbook-html-render ul,
+.textbook-html-render ol {
+  padding-left: 1.2rem;
+}
+
+.textbook-html-render ul {
+  list-style: disc;
+}
+
+.textbook-html-render ol {
+  list-style: decimal;
+}
+
+.textbook-html-render table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+}
+
+.textbook-html-render th,
+.textbook-html-render td {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.textbook-html-render th {
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.textbook-html-render figure,
+.textbook-html-render .tb-callout,
+.textbook-html-render .tb-example,
+.textbook-html-render .tb-equation {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 0.8rem;
+}
+
+.textbook-html-render figcaption,
+.textbook-html-render .tb-caption,
+.textbook-html-render .tb-eyebrow {
+  color: var(--ink-faint);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.textbook-html-render svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  color: var(--ink);
+}

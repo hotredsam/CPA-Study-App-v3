@@ -18,6 +18,7 @@ type Chunk = {
   title: string | null;
   chapterRef: string | null;
   content: string;
+  htmlContent: string | null;
   topicId: string | null;
   fasbCitation: string | null;
 };

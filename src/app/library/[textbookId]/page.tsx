@@ -40,18 +40,18 @@ export default async function TextbookPage({
 
   const activeSections = textbook.sections.filter(isActiveCpaSection)
 
-  const [total, firstChunks] = await Promise.all([
+  const [total, chunks] = await Promise.all([
     prisma.chunk.count({ where: { textbookId } }),
     prisma.chunk.findMany({
       where: { textbookId },
       orderBy: { order: 'asc' },
-      take: 5,
       select: {
         id: true,
         order: true,
         chapterRef: true,
         title: true,
         content: true,
+        htmlContent: true,
         topicId: true,
         fasbCitation: true,
         figures: true,
@@ -83,7 +83,7 @@ export default async function TextbookPage({
       />
       <TextbookViewerClient
         textbookId={textbook.id}
-        initialChunks={firstChunks}
+        initialChunks={chunks}
         total={total}
       />
     </div>

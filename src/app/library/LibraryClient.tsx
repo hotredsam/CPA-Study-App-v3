@@ -28,6 +28,23 @@ type TextbookRow = {
 
 const FALLBACK_SECTIONS: CpaSection[] = DEFAULT_EXAM_SECTIONS_SETTINGS.sections
 
+function titleFromFile(file: File): string {
+  return file.name.replace(/\.(pdf|epub|html|htm)$/i, '')
+}
+
+function isSupportedUploadFile(file: File): boolean {
+  const name = file.name.toLowerCase()
+  return (
+    file.type === 'application/pdf' ||
+    file.type === 'application/epub+zip' ||
+    file.type === 'text/html' ||
+    name.endsWith('.pdf') ||
+    name.endsWith('.epub') ||
+    name.endsWith('.html') ||
+    name.endsWith('.htm')
+  )
+}
+
 // ─── Index status badge ───────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: TextbookRow['indexStatus'] }) {
@@ -59,62 +76,70 @@ function StatusBadge({ status }: { status: TextbookRow['indexStatus'] }) {
 // ─── Upload modal ─────────────────────────────────────────────────────────────
 
 function UploadModal({
-  initialFile,
+  initialFiles,
   onClose,
   onSuccess,
 }: {
-  initialFile: File | null
+  initialFiles: File[]
   onClose: () => void
   onSuccess: (textbook: TextbookRow) => void
 }) {
-  const [title, setTitle] = useState(initialFile ? initialFile.name.replace(/\.(pdf|epub|html|htm)$/i, '') : '')
+  const [title, setTitle] = useState(initialFiles[0] ? titleFromFile(initialFiles[0]) : '')
   const [publisher, setPublisher] = useState('')
   const [sections, setSections] = useState<CpaSection[]>([])
-  const [file, setFile] = useState<File | null>(initialFile)
+  const [files, setFiles] = useState<File[]>(initialFiles)
   const [loading, setLoading] = useState(false)
+  const [uploadIndex, setUploadIndex] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const { data: examSettings } = useExamSections()
   const sectionOptions = examSettings?.sections ?? FALLBACK_SECTIONS
+  const isBulk = files.length > 1
 
   const toggleSection = (s: CpaSection) => {
     setSections((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   }
 
-  const estimatedCost = file
-    ? `~$${((file.size / 1024 / 1024 / 2) * 0.05).toFixed(2)} to index`
+  const totalBytes = files.reduce((sum, currentFile) => sum + currentFile.size, 0)
+  const estimatedCost = totalBytes > 0
+    ? `~$${((totalBytes / 1024 / 1024 / 2) * 0.05).toFixed(2)} to index`
     : null
 
   const handleSubmit = useCallback(async () => {
-    if (!title.trim()) {
+    if (!isBulk && !title.trim()) {
       setError('Title is required.')
       return
     }
     setLoading(true)
+    setUploadIndex(0)
     setError(null)
     try {
-      const form = new FormData()
-      form.set('title', title.trim())
-      if (publisher) form.set('publisher', publisher)
-      sections.forEach((section) => form.append('sections', section))
-      if (file) form.set('file', file)
+      const uploadFiles = files.length > 0 ? files : [null]
+      for (const [index, currentFile] of uploadFiles.entries()) {
+        setUploadIndex(index + 1)
+        const form = new FormData()
+        form.set('title', currentFile ? (isBulk ? titleFromFile(currentFile) : title.trim()) : title.trim())
+        if (publisher) form.set('publisher', publisher)
+        sections.forEach((section) => form.append('sections', section))
+        if (currentFile) form.set('file', currentFile)
 
-      const res = await fetch('/api/textbooks', {
-        method: 'POST',
-        body: form,
-      })
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: { message?: string } }
-        throw new Error(data.error?.message ?? `HTTP ${res.status}`)
+        const res = await fetch('/api/textbooks', {
+          method: 'POST',
+          body: form,
+        })
+        if (!res.ok) {
+          const data = (await res.json()) as { error?: { message?: string } }
+          throw new Error(data.error?.message ?? `HTTP ${res.status}`)
+        }
+        const data = (await res.json()) as { textbook: TextbookRow }
+        onSuccess(data.textbook)
       }
-      const data = (await res.json()) as { textbook: TextbookRow }
-      onSuccess(data.textbook)
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed')
     } finally {
       setLoading(false)
     }
-  }, [title, publisher, sections, file, onClose, onSuccess])
+  }, [files, isBulk, onClose, onSuccess, publisher, sections, title])
 
   // Trap focus on mount
   const firstRef = useRef<HTMLInputElement>(null)
@@ -157,7 +182,7 @@ function UploadModal({
               htmlFor="tb-title"
               className="block text-xs font-medium text-[color:var(--ink-dim)] mb-1"
             >
-              Title <span aria-hidden="true" style={{ color: 'var(--bad)' }}>*</span>
+              Title {!isBulk && <span aria-hidden="true" style={{ color: 'var(--bad)' }}>*</span>}
             </label>
             <input
               ref={firstRef}
@@ -165,10 +190,14 @@ function UploadModal({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              disabled={isBulk}
               className="w-full rounded border border-[color:var(--border)] bg-[color:var(--canvas)] px-3 py-2 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-faint)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)]"
               placeholder="Becker FAR Textbook 2025"
-              required
+              required={!isBulk}
             />
+            {isBulk && (
+              <p className="mt-1 text-xs text-[color:var(--ink-faint)]">Using filenames as textbook titles.</p>
+            )}
           </div>
 
           <div>
@@ -218,35 +247,46 @@ function UploadModal({
               htmlFor="tb-file"
               className="block text-xs font-medium text-[color:var(--ink-dim)] mb-1"
             >
-              PDF file
+              PDF files
             </label>
             <div className="flex items-center gap-3 rounded border border-[color:var(--border)] bg-[color:var(--canvas)] px-3 py-2">
               <label
                 htmlFor="tb-file"
                 className="shrink-0 cursor-pointer rounded bg-[color:var(--canvas-2)] px-3 py-1.5 text-xs font-medium text-[color:var(--ink-dim)] hover:text-[color:var(--ink)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-1 focus-within:outline-[color:var(--accent)]"
               >
-                {file ? 'Replace file' : 'Choose file'}
+                {files.length > 0 ? 'Replace files' : 'Choose files'}
                 <input
                   id="tb-file"
                   type="file"
+                  multiple
                   accept=".pdf,.epub,.html,.htm,application/pdf,application/epub+zip,text/html"
                   onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null
-                    setFile(f)
-                    if (f && !title) setTitle(f.name.replace(/\.(pdf|epub|html|htm)$/i, ''))
+                    const selected = Array.from(e.target.files ?? [])
+                    setFiles(selected)
+                    const first = selected[0]
+                    if (first && !title) setTitle(titleFromFile(first))
                   }}
                   className="sr-only"
                 />
               </label>
               <span className="min-w-0 truncate text-sm text-[color:var(--ink-dim)]">
-                {file ? `${file.name} selected` : 'No file selected'}
+                {files.length === 0
+                  ? 'No files selected'
+                  : files.length === 1
+                    ? `${files[0]?.name ?? '1 file'} selected`
+                    : `${files.length} files selected`}
               </span>
             </div>
-            {file && (
-              <p className="mt-1 text-xs text-[color:var(--ink-faint)]">
-                {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
-                {estimatedCost && <> - {estimatedCost}</>}
-              </p>
+            {files.length > 0 && (
+              <div className="mt-1 space-y-0.5 text-xs text-[color:var(--ink-faint)]">
+                {files.slice(0, 5).map((selectedFile) => (
+                  <p key={`${selectedFile.name}-${selectedFile.size}`} className="truncate">
+                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(1)} MB)
+                  </p>
+                ))}
+                {files.length > 5 && <p>{files.length - 5} more files</p>}
+                {estimatedCost && <p>{estimatedCost}</p>}
+              </div>
             )}
           </div>
 
@@ -257,6 +297,11 @@ function UploadModal({
           )}
 
           <div className="flex justify-end gap-2 pt-1">
+            {loading && files.length > 1 && (
+              <span className="self-center text-xs text-[color:var(--ink-faint)]">
+                Uploading {uploadIndex}/{files.length}
+              </span>
+            )}
             <Btn variant="ghost" size="sm" onClick={onClose} disabled={loading}>
               Cancel
             </Btn>
@@ -264,9 +309,9 @@ function UploadModal({
               variant="primary"
               size="sm"
               onClick={() => void handleSubmit()}
-              disabled={loading || !title.trim()}
+              disabled={loading || (!isBulk && !title.trim())}
             >
-              {loading ? 'Uploading…' : 'Upload'}
+              {loading ? 'Uploading...' : files.length > 1 ? `Upload ${files.length} Textbooks` : 'Upload'}
             </Btn>
           </div>
         </div>
@@ -365,17 +410,17 @@ function TextbookTableRow({
 export function LibraryClient({ initialTextbooks }: { initialTextbooks: TextbookRow[] }) {
   const [textbooks, setTextbooks] = useState<TextbookRow[]>(initialTextbooks)
   const [modalOpen, setModalOpen] = useState(false)
-  const [droppedFile, setDroppedFile] = useState<File | null>(null)
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [dragOver, setDragOver] = useState(false)
 
-  const openUploadModal = useCallback((file?: File) => {
-    setDroppedFile(file ?? null)
+  const openUploadModal = useCallback((files?: File[]) => {
+    setDroppedFiles(files ?? [])
     setModalOpen(true)
   }, [])
 
   const closeModal = useCallback(() => {
     setModalOpen(false)
-    setDroppedFile(null)
+    setDroppedFiles([])
   }, [])
 
   const handleSuccess = useCallback((textbook: TextbookRow) => {
@@ -399,18 +444,9 @@ export function LibraryClient({ initialTextbooks }: { initialTextbooks: Textbook
     const handleDrop = (e: DragEvent) => {
       e.preventDefault()
       setDragOver(false)
-      const file = e.dataTransfer?.files[0]
-      const name = file?.name.toLowerCase() ?? ''
-      const supported =
-        file?.type === 'application/pdf' ||
-        file?.type === 'application/epub+zip' ||
-        file?.type === 'text/html' ||
-        name.endsWith('.pdf') ||
-        name.endsWith('.epub') ||
-        name.endsWith('.html') ||
-        name.endsWith('.htm')
-      if (file && supported) {
-        openUploadModal(file)
+      const files = Array.from(e.dataTransfer?.files ?? []).filter(isSupportedUploadFile)
+      if (files.length > 0) {
+        openUploadModal(files)
       }
     }
     document.addEventListener('dragover', handleDragOver)
@@ -431,15 +467,15 @@ export function LibraryClient({ initialTextbooks }: { initialTextbooks: Textbook
           style={{ background: 'var(--accent-faint)', border: '3px dashed var(--accent)' }}
           role="status"
           aria-live="polite"
-          aria-label="Drop PDF here to upload"
+          aria-label="Drop PDFs here to upload"
         >
-          <p className="text-xl font-semibold text-[color:var(--accent)]">Drop PDF here</p>
+          <p className="text-xl font-semibold text-[color:var(--accent)]">Drop PDFs here</p>
         </div>
       )}
 
       {modalOpen && (
         <UploadModal
-          initialFile={droppedFile}
+          initialFiles={droppedFiles}
           onClose={closeModal}
           onSuccess={handleSuccess}
         />

@@ -8,6 +8,7 @@ import { GRADING_SYSTEM_PROMPT, buildGradingUserPrompt } from "@/lib/prompts/gra
 import { ExtractedQuestion } from "@/lib/schemas/extracted";
 import { FeedbackPayload } from "@/lib/schemas/feedback";
 import { Transcript } from "@/lib/schemas/transcript";
+import { retrieveTextbookChunksForQuestion } from "@/lib/textbooks/retrieval";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,7 +64,16 @@ export const gradeQuestion = task({
     // 3. Build transcript text
     const transcriptText = buildTranscriptText(question.transcript);
 
-    // 4. Build grading prompt
+    // 4. Pull matching textbook chunks, then build grading prompt.
+    const textbookContext = extractedResult.success
+      ? await retrieveTextbookChunksForQuestion({
+          question: extractedData.question,
+          choices: extractedData.choices,
+          beckerExplanation: extractedData.beckerExplanation,
+          section: extractedData.section,
+        })
+      : [];
+
     const gradingPrompt = buildGradingUserPrompt({
       question: extractedData.question,
       choices: extractedData.choices,
@@ -71,6 +81,10 @@ export const gradeQuestion = task({
       correctAnswer: extractedData.correctAnswer,
       beckerExplanation: extractedData.beckerExplanation,
       transcript: transcriptText,
+      textbookContext: textbookContext.map((chunk) => ({
+        citation: chunk.citation,
+        content: chunk.content,
+      })),
     });
 
     setStage({ stage: "grading", pct: 20, message: "Calling Claude for grading…" });

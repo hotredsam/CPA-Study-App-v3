@@ -1,10 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Card } from '@/components/ui/Card'
 import { Btn } from '@/components/ui/Btn'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { Card } from '@/components/ui/Card'
 
 type ChunkItem = {
   id: string
@@ -12,28 +10,25 @@ type ChunkItem = {
   chapterRef: string | null
   title: string | null
   content: string
+  htmlContent: string | null
   topicId: string | null
   fasbCitation: string | null
   figures: unknown
 }
 
 type TocEntry = {
-  chapterRef: string
+  label: string
   order: number
 }
 
-// ─── TOC sidebar ──────────────────────────────────────────────────────────────
-
 function buildToc(chunks: ChunkItem[]): TocEntry[] {
-  const seen = new Set<string>()
-  const entries: TocEntry[] = []
-  for (const c of chunks) {
-    if (c.chapterRef && !seen.has(c.chapterRef)) {
-      seen.add(c.chapterRef)
-      entries.push({ chapterRef: c.chapterRef, order: c.order })
-    }
-  }
-  return entries
+  return chunks
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .map((chunk) => ({
+      label: chunk.chapterRef ?? chunk.title ?? `Chunk ${chunk.order + 1}`,
+      order: chunk.order,
+    }))
 }
 
 function TocSidebar({
@@ -47,15 +42,15 @@ function TocSidebar({
 }) {
   if (entries.length === 0) return null
   return (
-    <nav aria-label="Table of contents" className="space-y-0.5">
+    <nav aria-label="Table of contents" className="max-h-[74vh] space-y-0.5 overflow-y-auto pr-1">
       <p className="eyebrow mb-2">Contents</p>
-      {entries.map((e) => {
-        const active = e.order === currentOrder
+      {entries.map((entry) => {
+        const active = entry.order === currentOrder
         return (
           <button
-            key={e.chapterRef}
+            key={entry.order}
             type="button"
-            onClick={() => onJump(e.order)}
+            onClick={() => onJump(entry.order)}
             aria-current={active ? 'location' : undefined}
             className="block w-full rounded px-2 py-1.5 text-left text-xs hov focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
             style={{
@@ -64,15 +59,13 @@ function TocSidebar({
               fontWeight: active ? 600 : 400,
             }}
           >
-            {e.chapterRef}
+            {entry.label}
           </button>
         )
       })}
     </nav>
   )
 }
-
-// ─── Main viewer ──────────────────────────────────────────────────────────────
 
 export function TextbookViewerClient({
   textbookId,
@@ -83,13 +76,10 @@ export function TextbookViewerClient({
   initialChunks: ChunkItem[]
   total: number
 }) {
-  // Cache of loaded chunks, keyed by order
   const [chunkCache, setChunkCache] = useState<Map<number, ChunkItem>>(
-    () => new Map(initialChunks.map((c) => [c.order, c])),
+    () => new Map(initialChunks.map((chunk) => [chunk.order, chunk])),
   )
-  const [currentOrder, setCurrentOrder] = useState<number>(
-    initialChunks[0]?.order ?? 0,
-  )
+  const [currentOrder, setCurrentOrder] = useState<number>(initialChunks[0]?.order ?? 0)
   const [loading, setLoading] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -102,11 +92,10 @@ export function TextbookViewerClient({
         setCurrentOrder(order)
         return
       }
+
       setLoading(true)
       try {
-        const res = await fetch(
-          `/api/textbooks/${textbookId}/chunks?offset=${order}&limit=1`,
-        )
+        const res = await fetch(`/api/textbooks/${textbookId}/chunks?offset=${order}&limit=1`)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = (await res.json()) as { chunks: ChunkItem[] }
         const chunk = data.chunks[0]
@@ -115,7 +104,7 @@ export function TextbookViewerClient({
           setCurrentOrder(chunk.order)
         }
       } catch {
-        // silently ignore — user can retry
+        // Keep the current chunk visible; the user can retry navigation.
       } finally {
         setLoading(false)
       }
@@ -127,22 +116,20 @@ export function TextbookViewerClient({
   const hasNext = currentOrder < total - 1
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' && hasPrev) void navigateTo(currentOrder - 1)
-      if (e.key === 'ArrowRight' && hasNext) void navigateTo(currentOrder + 1)
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft' && hasPrev) void navigateTo(currentOrder - 1)
+      if (event.key === 'ArrowRight' && hasNext) void navigateTo(currentOrder + 1)
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [hasPrev, hasNext, currentOrder, navigateTo])
 
-  const toc = buildToc(Array.from(chunkCache.values()).sort((a, b) => a.order - b.order))
-
-  const figureCount =
-    Array.isArray(currentChunk?.figures) ? (currentChunk.figures as unknown[]).length : 0
+  const toc = buildToc(Array.from(chunkCache.values()))
+  const sourceFigureCount = Array.isArray(currentChunk?.figures) ? (currentChunk.figures as unknown[]).length : 0
+  const htmlVisualCount = currentChunk?.htmlContent?.match(/<(?:figure|svg|table)\b/gi)?.length ?? 0
 
   return (
     <div className="grid gap-6" style={{ gridTemplateColumns: '180px 1fr 200px' }}>
-      {/* TOC */}
       <aside>
         <TocSidebar
           entries={toc}
@@ -151,7 +138,6 @@ export function TextbookViewerClient({
         />
       </aside>
 
-      {/* Content */}
       <main>
         <Card>
           {loading ? (
@@ -160,27 +146,34 @@ export function TextbookViewerClient({
               aria-live="polite"
               className="py-8 text-center text-sm text-[color:var(--ink-faint)]"
             >
-              Loading…
+              Loading...
             </div>
           ) : currentChunk ? (
-            <div
-              ref={contentRef}
-              className="max-h-[70vh] overflow-y-auto pr-1"
-            >
-              {currentChunk.chapterRef && (
-                <p className="eyebrow mb-1">{currentChunk.chapterRef}</p>
+            <div ref={contentRef} className="max-h-[74vh] overflow-y-auto pr-1">
+              {currentChunk.htmlContent ? (
+                <article
+                  className="textbook-html-render"
+                  aria-label={`Rendered textbook chunk ${currentChunk.order + 1}`}
+                  dangerouslySetInnerHTML={{ __html: currentChunk.htmlContent }}
+                />
+              ) : (
+                <>
+                  {currentChunk.chapterRef && (
+                    <p className="eyebrow mb-1">{currentChunk.chapterRef}</p>
+                  )}
+                  {currentChunk.title && (
+                    <h2 className="mb-4 text-lg font-semibold text-[color:var(--ink)]">
+                      {currentChunk.title}
+                    </h2>
+                  )}
+                  <div
+                    className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--ink-dim)]"
+                    style={{ fontFamily: 'var(--font-serif)' }}
+                  >
+                    {currentChunk.content}
+                  </div>
+                </>
               )}
-              {currentChunk.title && (
-                <h2 className="text-lg font-semibold text-[color:var(--ink)] mb-4">
-                  {currentChunk.title}
-                </h2>
-              )}
-              <div
-                className="text-sm leading-relaxed text-[color:var(--ink-dim)] whitespace-pre-wrap"
-                style={{ fontFamily: 'var(--font-serif)' }}
-              >
-                {currentChunk.content}
-              </div>
             </div>
           ) : (
             <p className="text-sm text-[color:var(--ink-faint)]">No content available.</p>
@@ -194,9 +187,9 @@ export function TextbookViewerClient({
               onClick={() => void navigateTo(currentOrder - 1)}
               aria-label="Previous chunk"
             >
-              ← Prev
+              Prev
             </Btn>
-            <span className="text-xs text-[color:var(--ink-faint)] tabular-nums">
+            <span className="text-xs tabular-nums text-[color:var(--ink-faint)]">
               {currentOrder + 1} / {total}
             </span>
             <Btn
@@ -206,37 +199,40 @@ export function TextbookViewerClient({
               onClick={() => void navigateTo(currentOrder + 1)}
               aria-label="Next chunk"
             >
-              Next →
+              Next
             </Btn>
           </div>
         </Card>
       </main>
 
-      {/* Chunk metadata */}
       <aside>
         <Card>
           <p className="eyebrow mb-3">Chunk info</p>
           <dl className="space-y-2 text-xs">
             <div>
               <dt className="text-[color:var(--ink-faint)]">Topic ID</dt>
-              <dd className="mt-0.5 font-mono text-[color:var(--ink-dim)] truncate">
-                {currentChunk?.topicId ?? '—'}
+              <dd className="mt-0.5 truncate font-mono text-[color:var(--ink-dim)]">
+                {currentChunk?.topicId ?? '-'}
               </dd>
             </div>
             <div>
               <dt className="text-[color:var(--ink-faint)]">FASB Citation</dt>
               <dd className="mt-0.5 text-[color:var(--ink-dim)]">
-                {currentChunk?.fasbCitation ?? '—'}
+                {currentChunk?.fasbCitation ?? '-'}
               </dd>
             </div>
             <div>
-              <dt className="text-[color:var(--ink-faint)]">Figures</dt>
-              <dd className="mt-0.5 text-[color:var(--ink-dim)]">{figureCount}</dd>
+              <dt className="text-[color:var(--ink-faint)]">HTML Visuals</dt>
+              <dd className="mt-0.5 text-[color:var(--ink-dim)]">{htmlVisualCount}</dd>
+            </div>
+            <div>
+              <dt className="text-[color:var(--ink-faint)]">Source Figures</dt>
+              <dd className="mt-0.5 text-[color:var(--ink-dim)]">{sourceFigureCount}</dd>
             </div>
             <div>
               <dt className="text-[color:var(--ink-faint)]">Order</dt>
               <dd className="mt-0.5 font-mono text-[color:var(--ink-dim)]">
-                {currentChunk?.order ?? '—'}
+                {currentChunk?.order ?? '-'}
               </dd>
             </div>
           </dl>

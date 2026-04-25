@@ -21,6 +21,7 @@ type Chunk = {
   title: string | null;
   chapterRef: string | null;
   content: string;
+  htmlContent: string | null;
   topicId: string | null;
   fasbCitation: string | null;
 };
@@ -162,26 +163,39 @@ export function StudyReaderClient({
         {/* Left: reading area */}
         <div className="space-y-6 min-w-0">
           <Card>
-            <article
-              className="prose max-w-none"
-              style={{
-                fontFamily: "var(--font-serif, Instrument Serif, serif)",
-                lineHeight: 1.7,
-                maxWidth: "65ch",
-              }}
-              aria-label={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
-            >
-              {chunk.content.split("\n").map((para, i) =>
-                para.trim() ? (
-                  <p
-                    key={i}
-                    className="mb-4 text-[color:var(--ink)] text-[1.0625rem] leading-[1.75]"
-                  >
-                    {para}
-                  </p>
-                ) : null,
-              )}
-            </article>
+            {chunk.htmlContent ? (
+              <article
+                className="textbook-html-render max-w-none"
+                style={{
+                  fontFamily: "var(--font-serif, Instrument Serif, serif)",
+                  lineHeight: 1.7,
+                  maxWidth: "65ch",
+                }}
+                aria-label={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
+                dangerouslySetInnerHTML={{ __html: chunk.htmlContent }}
+              />
+            ) : (
+              <article
+                className="prose max-w-none"
+                style={{
+                  fontFamily: "var(--font-serif, Instrument Serif, serif)",
+                  lineHeight: 1.7,
+                  maxWidth: "65ch",
+                }}
+                aria-label={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
+              >
+                {chunk.content.split("\n").map((para, i) =>
+                  para.trim() ? (
+                    <p
+                      key={i}
+                      className="mb-4 text-[color:var(--ink)] text-[1.0625rem] leading-[1.75]"
+                    >
+                      {para}
+                    </p>
+                  ) : null,
+                )}
+              </article>
+            )}
 
             {chunk.fasbCitation && (
               <div className="mt-4 flex items-start gap-2 rounded bg-[color:var(--surface-2)] px-3 py-2 border border-[color:var(--border)]">

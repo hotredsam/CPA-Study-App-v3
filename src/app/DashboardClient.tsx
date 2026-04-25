@@ -39,12 +39,20 @@ interface RecentRecording {
   segmentsCount: number | null
 }
 
+interface TextbookFocus {
+  section: string | null
+  title: string
+  detail: string
+  href: string
+}
+
 export interface DashboardData {
   studyStats: StudyStats
   sections: SectionData[]
   weakestTopics: WeakTopic[]
   recentRecordings: RecentRecording[]
   cardsDue: number
+  currentTextbookFocus: TextbookFocus | null
   routine: ParsedRoutine | null
 }
 
@@ -175,12 +183,13 @@ function currentMinuteOfDay(): number {
   return now.getHours() * 60 + now.getMinutes()
 }
 
-function focusFromRoutine(routine: ParsedRoutine): {
+function focusFromRoutine(routine: ParsedRoutine, textbookFocus?: TextbookFocus | null): {
   active: boolean
   status: string
   section: string | null
   title: string
   detail: string
+  href: string
 } {
   const blocks = [
     ...routine.morning.map((block) => ({ block, period: 'morning' })),
@@ -195,12 +204,24 @@ function focusFromRoutine(routine: ParsedRoutine): {
     .sort((a, b) => (a.start ?? 10_000 + a.index) - (b.start ?? 10_000 + b.index))
 
   if (blocks.length === 0) {
+    if (textbookFocus) {
+      return {
+        active: false,
+        status: 'READY',
+        section: textbookFocus.section,
+        title: textbookFocus.title,
+        detail: textbookFocus.detail,
+        href: textbookFocus.href,
+      }
+    }
+
     return {
       active: false,
       status: 'NOT SCHEDULED',
       section: null,
       title: 'No current focus scheduled',
       detail: 'Create a study routine or upload a textbook to start building today\'s plan.',
+      href: '/study',
     }
   }
 
@@ -222,6 +243,7 @@ function focusFromRoutine(routine: ParsedRoutine): {
     detail: [current ? 'Current' : 'Next', type, 'block', time ? `at ${time}` : null, duration ? `for ${duration}` : null]
       .filter(Boolean)
       .join(' '),
+    href: '/study',
   }
 }
 
@@ -298,7 +320,7 @@ function RoutineSection() {
 }
 
 export function DashboardClient({ data }: { data: DashboardData }) {
-  const { studyStats, sections, weakestTopics, recentRecordings, cardsDue } = data
+  const { studyStats, sections, weakestTopics, recentRecordings, cardsDue, currentTextbookFocus } = data
   const { data: routineData, isLoading: routineLoading } = useQuery<ParsedRoutine>({
     queryKey: ['study-routine-today'],
     queryFn: async () => {
@@ -331,8 +353,9 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         section: null,
         title: 'Loading current focus',
         detail: 'Checking today\'s study routine.',
+        href: '/study',
       }
-    : focusFromRoutine(routineData ?? EMPTY_ROUTINE)
+    : focusFromRoutine(routineData ?? EMPTY_ROUTINE, currentTextbookFocus)
   const focusSection = currentFocus.section
     ? displaySectionRows.find((section) => section.section === currentFocus.section)
     : null
@@ -395,7 +418,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Link href="/study" tabIndex={-1}>
+            <Link href={currentFocus.href} tabIndex={-1}>
               <Btn variant="primary" size="lg" className="w-full">Continue reading</Btn>
             </Link>
             <Link href="/anki" tabIndex={-1}>

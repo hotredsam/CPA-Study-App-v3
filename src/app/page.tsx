@@ -22,6 +22,7 @@ async function getDashboardData(): Promise<DashboardData> {
       weakestTopics: [],
       recentRecordings: [],
       cardsDue: 0,
+      currentTextbookFocus: null,
       routine: null,
     }
   }

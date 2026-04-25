@@ -37,6 +37,7 @@ export async function GET(
           chapterRef: true,
           title: true,
           content: true,
+          htmlContent: true,
           topicId: true,
           fasbCitation: true,
           figures: true,

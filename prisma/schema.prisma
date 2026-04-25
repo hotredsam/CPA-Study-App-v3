@@ -245,6 +245,7 @@ model Chunk {
   chapterRef    String?
   title         String?
   content       String
+  htmlContent   String?
   topicId       String?
   topic         Topic?   @relation(fields: [topicId], references: [id])
   fasbCitation  String?

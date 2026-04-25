@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { respond } from '@/lib/api-error'
 import { getActiveExamSections } from '@/lib/exam-settings'
 import { normalizePercent } from '@/lib/percent'
+import { isActiveCpaSection } from '@/lib/cpa-sections'
 import { CpaSection, RecordingStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +36,7 @@ export async function GET(): Promise<NextResponse> {
     }
 
     // Recordings aggregation
-    const [allRecordings, recentRecordings, topics, ankiDueRaw] = await Promise.all([
+    const [allRecordings, recentRecordings, topics, ankiDueRaw, focusTextbook] = await Promise.all([
       prisma.recording.findMany({
         where: activeRecordingWhere,
         select: {
@@ -78,6 +79,31 @@ export async function GET(): Promise<NextResponse> {
             path: ['nextDue'],
             lte: new Date().toISOString(),
             not: null as unknown as string,
+          },
+        },
+      }),
+      prisma.textbook.findFirst({
+        where: {
+          indexStatus: 'READY',
+          OR: [
+            { sections: { isEmpty: true } },
+            { sections: { hasSome: activePrismaSections } },
+          ],
+        },
+        orderBy: { uploadedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          sections: true,
+          chunkCount: true,
+          chunks: {
+            orderBy: { order: 'asc' },
+            take: 1,
+            select: {
+              order: true,
+              title: true,
+              chapterRef: true,
+            },
           },
         },
       }),
@@ -143,6 +169,10 @@ export async function GET(): Promise<NextResponse> {
       errorRate: t.errorRate != null ? Math.round(t.errorRate * 100) : 0,
     }))
 
+    const focusSection = focusTextbook?.sections.find((section) => (
+      isActiveCpaSection(section) && activeSections.includes(section)
+    )) ?? null
+
     return NextResponse.json({
       studyStats: {
         totalHours: Number(totalHours.toFixed(1)),
@@ -161,6 +191,14 @@ export async function GET(): Promise<NextResponse> {
         segmentsCount: r.segmentsCount,
       })),
       cardsDue: ankiDueRaw,
+      currentTextbookFocus: focusTextbook
+        ? {
+            section: focusSection,
+            title: focusTextbook.chunks[0]?.title ?? focusTextbook.chunks[0]?.chapterRef ?? focusTextbook.title,
+            detail: `${focusTextbook.title} - chunk ${(focusTextbook.chunks[0]?.order ?? 0) + 1} of ${Math.max(focusTextbook.chunkCount, 1)}`,
+            href: `/study/${focusTextbook.id}/${focusTextbook.chunks[0]?.order ?? 0}`,
+          }
+        : null,
       routine: null,
     })
   } catch (err) {
