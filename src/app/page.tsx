@@ -1,14 +1,11 @@
-import { headers } from 'next/headers'
 import { DashboardClient, type DashboardData } from './DashboardClient'
+import { getServerBaseUrl } from '@/lib/server-base-url'
 
 export const metadata = { title: 'Dashboard - CPA Study Servant' }
 
 async function getDashboardData(): Promise<DashboardData> {
   try {
-    const requestHeaders = await headers()
-    const host = requestHeaders.get('host') ?? 'localhost:3000'
-    const protocol = process.env.VERCEL_URL ? 'https' : 'http'
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? `${protocol}://${host}`
+    const baseUrl = await getServerBaseUrl()
     const res = await fetch(`${baseUrl}/api/dashboard`, {
       cache: 'no-store',
     })

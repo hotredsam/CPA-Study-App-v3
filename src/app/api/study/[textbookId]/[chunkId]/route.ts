@@ -60,6 +60,19 @@ export async function GET(
         })
       : null;
 
+    const practiceCards = await prisma.ankiCard.findMany({
+      where: { chunkId: chunk.id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        front: true,
+        back: true,
+        explanation: true,
+        sourceCitation: true,
+        difficulty: true,
+      },
+    });
+
     const prevChunkIdx = order > 0 ? order - 1 : null;
     const nextChunkIdx = order < textbook.chunkCount - 1 ? order + 1 : null;
 
@@ -67,7 +80,7 @@ export async function GET(
       textbook,
       chunk,
       topic,
-      checkpoint: null,
+      practiceCards,
       prevChunkIdx,
       nextChunkIdx,
     });

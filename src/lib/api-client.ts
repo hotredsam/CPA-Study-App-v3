@@ -313,6 +313,8 @@ const CheckpointQuizResponse = z.object({
 /**
  * Get checkpoint quiz questions for a textbook chunk.
  *
+ * @deprecated Study uses indexed Anki cards created during textbook indexing.
+ *
  * @example
  * const { questions } = await getCheckpointQuiz(chunkId);
  */

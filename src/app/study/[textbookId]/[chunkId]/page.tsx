@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getServerBaseUrl } from "@/lib/server-base-url";
 import { StudyReaderClient } from "./StudyReaderClient";
 
 interface Props {
@@ -30,10 +31,20 @@ type Topic = {
   mastery: number;
 } | null;
 
+type PracticeCard = {
+  id: string;
+  front: string;
+  back: string;
+  explanation: string | null;
+  sourceCitation: string | null;
+  difficulty: number | null;
+};
+
 type ChunkData = {
   textbook: Textbook;
   chunk: Chunk;
   topic: Topic;
+  practiceCards: PracticeCard[];
   prevChunkIdx: number | null;
   nextChunkIdx: number | null;
 };
@@ -43,9 +54,7 @@ async function fetchChunkData(
   chunkId: string,
 ): Promise<ChunkData | null> {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ??
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const baseUrl = await getServerBaseUrl();
 
     const res = await fetch(
       `${baseUrl}/api/study/${encodeURIComponent(textbookId)}/${encodeURIComponent(chunkId)}`,
@@ -82,6 +91,7 @@ export default async function StudyChunkPage({ params }: Props) {
       textbook={data.textbook}
       chunk={data.chunk}
       topic={data.topic}
+      practiceCards={data.practiceCards}
       prevChunkIdx={data.prevChunkIdx}
       nextChunkIdx={data.nextChunkIdx}
     />

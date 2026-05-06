@@ -1,4 +1,5 @@
 import { EyebrowHeading } from "@/components/ui/EyebrowHeading";
+import { getServerBaseUrl } from "@/lib/server-base-url";
 import { StudyHomeClient } from "./StudyHomeClient";
 
 export const metadata = { title: "Study — CPA Study Servant" };
@@ -26,9 +27,7 @@ type StudyData = {
 
 async function fetchStudyData(): Promise<StudyData> {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ??
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const baseUrl = await getServerBaseUrl();
 
     const res = await fetch(`${baseUrl}/api/study`, {
       cache: "no-store",

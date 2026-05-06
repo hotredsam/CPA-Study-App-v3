@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bar } from "@/components/ui/Bar";
 import { Btn } from "@/components/ui/Btn";
@@ -34,32 +34,36 @@ type Topic = {
   mastery: number;
 } | null;
 
-type QuizQuestion = {
-  stem: string;
-  choices: [string, string, string, string];
-  correctIndex: 0 | 1 | 2 | 3;
-  rationale: string;
-  distractorQualityNote: string;
-};
-
-type CheckpointQuizOutput = {
-  questions: QuizQuestion[];
+type PracticeCard = {
+  id: string;
+  front: string;
+  back: string;
+  explanation: string | null;
+  sourceCitation: string | null;
+  difficulty: number | null;
 };
 
 interface Props {
   textbook: Textbook;
   chunk: Chunk;
   topic: Topic;
+  practiceCards: PracticeCard[];
   prevChunkIdx: number | null;
   nextChunkIdx: number | null;
 }
 
-type QuizState = "idle" | "loading" | "ready" | "submitted" | "error";
+function cardDifficultyLabel(difficulty: number | null) {
+  if (difficulty === null) return null;
+  if (difficulty < 0.34) return "Foundational";
+  if (difficulty < 0.67) return "Applied";
+  return "Advanced";
+}
 
 export function StudyReaderClient({
   textbook,
   chunk,
   topic,
+  practiceCards,
   prevChunkIdx,
   nextChunkIdx,
 }: Props) {
@@ -72,49 +76,6 @@ export function StudyReaderClient({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
-
-  // Checkpoint quiz
-  const [quizState, setQuizState] = useState<QuizState>("idle");
-  const [quizData, setQuizData] = useState<CheckpointQuizOutput | null>(null);
-  const [quizError, setQuizError] = useState<string | null>(null);
-  const [selectedAnswers, setSelectedAnswers] = useState<(number | null)[]>([]);
-  const [submitted, setSubmitted] = useState(false);
-
-  const generateQuiz = useCallback(async () => {
-    setQuizState("loading");
-    setQuizError(null);
-    setSubmitted(false);
-    setSelectedAnswers([]);
-    try {
-      const res = await fetch(`/api/study/checkpoint?chunkId=${encodeURIComponent(chunk.id)}`);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
-        throw new Error(err.error ?? `HTTP ${res.status}`);
-      }
-      const data = await res.json() as CheckpointQuizOutput;
-      setQuizData(data);
-      setSelectedAnswers(new Array(data.questions.length).fill(null) as null[]);
-      setQuizState("ready");
-    } catch (err) {
-      setQuizError(err instanceof Error ? err.message : String(err));
-      setQuizState("error");
-    }
-  }, [chunk.id]);
-
-  const handleSelectAnswer = (qIdx: number, aIdx: number) => {
-    if (submitted) return;
-    setSelectedAnswers((prev) => {
-      const next = [...prev];
-      next[qIdx] = aIdx;
-      return next;
-    });
-  };
-
-  const handleSubmit = () => {
-    if (!quizData) return;
-    setSubmitted(true);
-    setQuizState("submitted");
-  };
 
   const progressPct =
     textbook.chunkCount > 0 ? ((chunk.order + 1) / textbook.chunkCount) * 100 : 0;
@@ -209,147 +170,75 @@ export function StudyReaderClient({
             )}
           </Card>
 
-          {/* Checkpoint quiz */}
-          <section aria-label="Practice questions">
-            {quizState === "idle" && (
-              <Btn variant="primary" onClick={generateQuiz}>
-                Generate Practice Questions
-              </Btn>
-            )}
-
-            {quizState === "loading" && (
-              <div
-                role="status"
-                aria-live="polite"
-                className="flex items-center gap-2 text-sm text-[color:var(--ink-dim)]"
-              >
-                <span
-                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[color:var(--accent)] border-t-transparent"
-                  aria-hidden="true"
-                />
-                Generating questions...
-              </div>
-            )}
-
-            {quizState === "error" && (
-              <div className="space-y-2">
-                <p className="text-sm text-[color:var(--bad)]">
-                  Failed to generate questions: {quizError}
-                </p>
-                <Btn variant="ghost" size="sm" onClick={generateQuiz}>
-                  Try again
-                </Btn>
-              </div>
-            )}
-
-            {(quizState === "ready" || quizState === "submitted") && quizData && (
-              <Card>
-                <h2 className="mb-4 text-sm font-semibold text-[color:var(--ink)]">
-                  Practice Questions
+          <section aria-labelledby="practice-cards-heading" className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2
+                  id="practice-cards-heading"
+                  className="text-sm font-semibold text-[color:var(--ink)]"
+                >
+                  Generated Practice Cards
                 </h2>
-                <div className="space-y-6">
-                  {quizData.questions.map((q, qIdx) => {
-                    const selected = selectedAnswers[qIdx] ?? null;
-                    const isCorrect = submitted && selected === q.correctIndex;
-                    const isWrong = submitted && selected !== null && selected !== q.correctIndex;
+                <p className="mt-1 text-xs text-[color:var(--ink-faint)]">
+                  Generated during indexing
+                </p>
+              </div>
+              <span className="rounded border border-[color:var(--border)] px-2 py-0.5 text-xs font-mono text-[color:var(--ink-faint)]">
+                {practiceCards.length} card{practiceCards.length === 1 ? "" : "s"}
+              </span>
+            </div>
 
-                    return (
-                      <fieldset key={qIdx} className="space-y-2">
-                        <legend className="text-sm font-medium text-[color:var(--ink)] mb-2">
-                          <span className="text-[color:var(--ink-faint)] mr-1">{qIdx + 1}.</span>
-                          {q.stem}
-                        </legend>
-                        <div className="space-y-1" role="radiogroup" aria-label={`Question ${qIdx + 1} choices`}>
-                          {q.choices.map((choice, cIdx) => {
-                            const isSelected = selected === cIdx;
-                            const isThisCorrect = cIdx === q.correctIndex;
-                            let ringClass = "border-[color:var(--border)]";
-                            if (submitted && isThisCorrect) {
-                              ringClass = "border-[color:var(--good)] bg-[color:var(--good)]/10";
-                            } else if (submitted && isSelected && !isThisCorrect) {
-                              ringClass = "border-[color:var(--bad)] bg-[color:var(--bad)]/10";
-                            } else if (!submitted && isSelected) {
-                              ringClass = "border-[color:var(--accent)]";
-                            }
+            {practiceCards.length > 0 ? (
+              <div className="grid gap-3">
+                {practiceCards.map((card, index) => {
+                  const difficultyLabel = cardDifficultyLabel(card.difficulty);
 
-                            return (
-                              <label
-                                key={cIdx}
-                                className={`flex cursor-pointer items-start gap-3 rounded border px-3 py-2 text-sm transition-colors ${ringClass} ${
-                                  submitted ? "cursor-default" : "hover:border-[color:var(--accent)]"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`q${qIdx}`}
-                                  value={cIdx}
-                                  checked={isSelected}
-                                  onChange={() => handleSelectAnswer(qIdx, cIdx)}
-                                  disabled={submitted}
-                                  className="mt-0.5 shrink-0 accent-[color:var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
-                                  aria-label={`Choice ${String.fromCharCode(65 + cIdx)}: ${choice}`}
-                                />
-                                <span className="text-[color:var(--ink)]">
-                                  <span className="font-mono text-xs text-[color:var(--ink-faint)] mr-1">
-                                    {String.fromCharCode(65 + cIdx)}.
-                                  </span>
-                                  {choice}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-
-                        {submitted && (
-                          <div
-                            className={`mt-2 rounded px-3 py-2 text-sm ${
-                              isCorrect
-                                ? "bg-[color:var(--good)]/10 text-[color:var(--good)]"
-                                : isWrong
-                                ? "bg-[color:var(--bad)]/10 text-[color:var(--bad)]"
-                                : "bg-[color:var(--surface-2)] text-[color:var(--ink-dim)]"
-                            }`}
-                            role="alert"
-                          >
-                            <p className="font-medium mb-1">
-                              {selected === null
-                                ? "Not answered"
-                                : isCorrect
-                                ? "Correct!"
-                                : "Incorrect"}
-                            </p>
-                            <p className="text-[color:var(--ink-dim)]">{q.rationale}</p>
-                          </div>
+                  return (
+                    <Card key={card.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="eyebrow">Card {index + 1}</p>
+                        {difficultyLabel && (
+                          <span className="rounded bg-[color:var(--accent-faint)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--accent)]">
+                            {difficultyLabel}
+                          </span>
                         )}
-                      </fieldset>
-                    );
-                  })}
-                </div>
+                      </div>
 
-                {quizState === "ready" && (
-                  <div className="mt-6 flex gap-3">
-                    <Btn
-                      variant="primary"
-                      onClick={handleSubmit}
-                      disabled={selectedAnswers.some((a) => a === null)}
-                      aria-label="Submit answers"
-                    >
-                      Submit
-                    </Btn>
-                  </div>
-                )}
+                      <p className="mt-3 text-sm font-medium leading-relaxed text-[color:var(--ink)]">
+                        {card.front}
+                      </p>
 
-                {quizState === "submitted" && nextChunkIdx !== null && (
-                  <div className="mt-6">
-                    <Link
-                      href={`/study/${textbook.id}/${nextChunkIdx}`}
-                      className="inline-flex items-center justify-center font-medium rounded-[3px] text-sm px-3.5 py-2 bg-[color:var(--accent)] text-white hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
-                    >
-                      Continue
-                    </Link>
-                  </div>
-                )}
-              </Card>
+                      <div className="mt-3 border-l-2 border-[color:var(--accent)] pl-3">
+                        <p className="eyebrow mb-1">Answer</p>
+                        <p className="text-sm leading-relaxed text-[color:var(--ink-dim)]">
+                          {card.back}
+                        </p>
+                      </div>
+
+                      {card.explanation && (
+                        <p className="mt-3 text-sm leading-relaxed text-[color:var(--ink-dim)]">
+                          {card.explanation}
+                        </p>
+                      )}
+
+                      {card.sourceCitation && (
+                        <p className="mt-3 text-xs font-mono text-[color:var(--ink-faint)]">
+                          {card.sourceCitation}
+                        </p>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded border border-dashed border-[color:var(--border)] bg-[color:var(--surface-2)] px-4 py-5">
+                <p className="text-sm font-medium text-[color:var(--ink)]">
+                  No generated cards found for this chunk.
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--ink-dim)]">
+                  Re-index this textbook from Library with Anki card generation enabled.
+                </p>
+              </div>
             )}
           </section>
         </div>
@@ -375,7 +264,7 @@ export function StudyReaderClient({
                   Prev
                 </span>
               )}
-              {nextChunkIdx !== null && submitted ? (
+              {nextChunkIdx !== null ? (
                 <Link
                   href={`/study/${textbook.id}/${nextChunkIdx}`}
                   className="flex-1 inline-flex items-center justify-center text-xs font-medium rounded-[3px] px-2.5 py-1.5 border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
@@ -385,7 +274,7 @@ export function StudyReaderClient({
                 </Link>
               ) : (
                 <span className="flex-1 inline-flex items-center justify-center text-xs rounded-[3px] px-2.5 py-1.5 text-[color:var(--ink-faint)] opacity-40 border border-[color:var(--border)]">
-                  {nextChunkIdx === null ? "Next" : "Complete checkpoint"}
+                  Next
                 </span>
               )}
             </div>
