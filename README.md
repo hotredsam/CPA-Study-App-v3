@@ -60,6 +60,36 @@ pnpm dev               # Next.js
 npx trigger.dev@latest dev   # Trigger.dev
 ```
 
+Local Postgres is expected at `postgresql://postgres:postgres@localhost:5432/cpa_study`.
+Use the existing Docker volume by default; do not wipe or reseed unless you intend
+to remove uploaded textbooks, topics, and generated cards.
+
+Quick non-destructive health check:
+
+``` bash
+docker compose ps postgres
+pnpm prisma migrate status
+curl http://localhost:3000/api/health
+```
+
+If the app says the database is unavailable, start Docker Desktop, run
+`docker compose up -d postgres`, wait for port `5432`, and refresh the page.
+
+Runtime verification:
+
+``` bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm e2e -- --project=chromium
+pnpm runtime:probe
+```
+
+`pnpm dev` and `pnpm build` clean only disposable Next.js build artifacts after
+reclaiming ports 3000/3001. Playwright uses a separate `.next-e2e` dist folder
+so E2E runs cannot corrupt the user-facing dev server on port 3000.
+
 ## Sam's input folder
 
 Drop voice memos into `sam-input/audio/` or edit `sam-input/TODO.xml` and save. A hook transcribes the audio with local Whisper and calls Claude Code to act on whatever you dictated — overnight or while you're at work. See `sam-input/README.md` for the schema.

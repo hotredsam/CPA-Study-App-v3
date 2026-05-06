@@ -20,6 +20,8 @@ type Phase = "setup" | "recording" | "uploading" | "uploaded";
 
 type DeviceInfo = { deviceId: string; label: string };
 
+type MicStatus = "checking" | "permission-needed" | "ready" | "denied" | "unsupported";
+
 type HealthStatus = "ok" | "fail" | "unconfigured" | "loading";
 
 type HealthData = {
@@ -95,6 +97,8 @@ function SetupPhase({
   const [selectedMic, setSelectedMic] = useState<string>("");
   const [screenSource, setScreenSource] = useState<ScreenSource>("full-screen");
   const [micPermDenied, setMicPermDenied] = useState(false);
+  const [micStatus, setMicStatus] = useState<MicStatus>("checking");
+  const [micMessage, setMicMessage] = useState("Checking microphone devices...");
   const [selectedSections, setSelectedSections] = useState<CpaSection[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("anthropic/claude-sonnet-4.6");
   const [health, setHealth] = useState<HealthData | null>(null);
@@ -109,29 +113,74 @@ function SetupPhase({
   const micStreamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Enumerate microphones
+  const refreshMicrophones = useCallback(async (requestPermission = false) => {
+    if (typeof window === "undefined") return;
+    if (!navigator.mediaDevices?.enumerateDevices || !navigator.mediaDevices?.getUserMedia) {
+      setMicStatus("unsupported");
+      setMicPermDenied(true);
+      setMicMessage("This browser cannot enumerate microphones.");
+      setMics([]);
+      return;
+    }
+
+    setMicStatus("checking");
+    setMicMessage(requestPermission ? "Requesting microphone access..." : "Checking microphone devices...");
+
+    try {
+      if (requestPermission) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter((device) => device.kind === "audioinput");
+      const named = inputs.some((device) => device.label.trim().length > 0);
+
+      setMics(
+        inputs
+          .filter((device) => device.deviceId !== "default")
+          .map((device, index) => ({
+            deviceId: device.deviceId,
+            label: device.label || `Microphone ${index + 1}`,
+          })),
+      );
+      setMicPermDenied(false);
+
+      if (inputs.length === 0) {
+        setMicStatus("permission-needed");
+        setMicMessage("No microphones are visible yet. Connect a mic or allow browser access.");
+      } else if (named) {
+        setMicStatus("ready");
+        setMicMessage("Microphones are available.");
+      } else {
+        setMicStatus("permission-needed");
+        setMicMessage("Allow microphone access to show device names and levels.");
+      }
+    } catch {
+      setMicStatus("denied");
+      setMicPermDenied(true);
+      setMicMessage("Microphone permission was denied. Allow access in your browser settings, then refresh devices.");
+      setMics([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        // Release immediately — we just needed permission
-        stream.getTracks().forEach((t) => t.stop());
-        return navigator.mediaDevices.enumerateDevices();
-      })
-      .then((devs) => {
-        setMics(
-          devs
-            .filter((d) => d.kind === "audioinput")
-            .map((d) => ({ deviceId: d.deviceId, label: d.label || "Microphone" })),
-        );
-      })
-      .catch(() => setMicPermDenied(true));
-  }, []);
+    void refreshMicrophones(false);
+
+    const handleDeviceChange = () => {
+      void refreshMicrophones(false);
+    };
+    navigator.mediaDevices?.addEventListener?.("devicechange", handleDeviceChange);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.("devicechange", handleDeviceChange);
+    };
+  }, [refreshMicrophones]);
 
   // Start mic preview for level meter
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (micStatus !== "ready" && !selectedMic) return;
     let ctx: AudioContext | null = null;
 
     const startMicPreview = async () => {
@@ -191,7 +240,7 @@ function SetupPhase({
       analyserRef.current = null;
       ctx?.close().catch(() => undefined);
     };
-  }, [selectedMic]);
+  }, [micStatus, selectedMic]);
 
   // Fetch health + openrouter key
   useEffect(() => {
@@ -228,7 +277,13 @@ function SetupPhase({
     },
     {
       label: "Mic signal",
-      status: micPermDenied ? "fail" : selectedMic || mics.length > 0 ? "ok" : "warn",
+      status: micStatus === "checking"
+        ? "loading"
+        : micStatus === "denied" || micStatus === "unsupported"
+        ? "fail"
+        : micStatus === "ready" || selectedMic || mics.length > 0
+        ? "ok"
+        : "warn",
     },
     {
       label: "OpenRouter API",
@@ -329,24 +384,49 @@ function SetupPhase({
               Microphone
             </label>
             {micPermDenied ? (
-              <p className="text-sm text-[color:var(--bad)]">
-                Microphone permission denied. Allow access in your browser settings.
-              </p>
+              <div className="rounded border border-[color:var(--bad-border)] bg-[color:var(--bad-soft)] px-3 py-2">
+                <p className="text-sm text-[color:var(--bad)]">
+                  {micMessage}
+                </p>
+                <Btn
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2"
+                  onClick={() => void refreshMicrophones(true)}
+                >
+                  Refresh devices
+                </Btn>
+              </div>
             ) : (
-              <select
-                id="mic-select"
-                value={selectedMic}
-                onChange={(e) => setSelectedMic(e.target.value)}
-                className="w-full rounded border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--ink)] focus:outline focus:outline-2 focus:outline-[color:var(--accent)]"
-                aria-label="Select microphone"
-              >
-                <option value="">Default microphone</option>
-                {mics.map((m) => (
-                  <option key={m.deviceId} value={m.deviceId}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <select
+                  id="mic-select"
+                  value={selectedMic}
+                  onChange={(e) => setSelectedMic(e.target.value)}
+                  className="w-full rounded border border-[color:var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--ink)] focus:outline focus:outline-2 focus:outline-[color:var(--accent)]"
+                  aria-label="Select microphone"
+                >
+                  <option value="">Default microphone</option>
+                  {mics.map((m) => (
+                    <option key={m.deviceId} value={m.deviceId}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs text-[color:var(--ink-faint)]" role="status" aria-live="polite">
+                    {micMessage}
+                  </p>
+                  <Btn
+                    size="sm"
+                    variant={micStatus === "permission-needed" ? "primary" : "ghost"}
+                    onClick={() => void refreshMicrophones(true)}
+                    disabled={micStatus === "checking"}
+                  >
+                    {micStatus === "permission-needed" ? "Allow access" : "Refresh devices"}
+                  </Btn>
+                </div>
+              </div>
             )}
 
             {/* Level visualizer */}

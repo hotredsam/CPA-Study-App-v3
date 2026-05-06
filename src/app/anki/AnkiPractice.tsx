@@ -4,6 +4,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bar, Btn, Card, SectionBadge } from '@/components/ui'
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 import type { CpaSectionCode } from '@/lib/cpa-sections'
 import { AutoBadge } from './AutoBadge'
 import type { AnkiCard, AnkiRating } from './types'
@@ -66,11 +71,11 @@ export function AnkiPractice({ topicId }: Props) {
   if (!topicId && sectionFilter !== 'all') params.set('section', sectionFilter)
   params.set('limit', '50')
 
-  const { data, isLoading, isError } = useQuery<CardsResponse>({
+  const { data, isLoading, isError, error, refetch } = useQuery<CardsResponse>({
     queryKey: ['anki-cards', topicId, sectionFilter],
     queryFn: async () => {
       const res = await fetch(`/api/anki/cards?${params}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<CardsResponse>
     },
   })
@@ -135,7 +140,7 @@ export function AnkiPractice({ topicId }: Props) {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ rating }),
         })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        if (!res.ok) throw await errorFromResponse(res)
         setReviewedIds((prev) => new Set([...prev, currentCard.id]))
         setCardIndex((i) => i + 1)
         setFlipped(false)
@@ -144,8 +149,8 @@ export function AnkiPractice({ topicId }: Props) {
         void queryClient.invalidateQueries({ queryKey: ['anki-due'] })
         void queryClient.invalidateQueries({ queryKey: ['anki-badge'] })
         void queryClient.invalidateQueries({ queryKey: ['anki-stats'] })
-      } catch {
-        dispatchToast('Failed to submit rating')
+      } catch (err) {
+        dispatchToast(friendlyErrorMessage(err, 'Failed to submit rating'))
       } finally {
         setSubmittingRating(false)
       }
@@ -167,12 +172,12 @@ export function AnkiPractice({ topicId }: Props) {
             context: { topicId: currentCard.topicId },
           }),
         })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        if (!res.ok) throw await errorFromResponse(res)
         const data = (await res.json()) as { reply?: string; message?: string }
         setAskReply(data.reply ?? data.message ?? '(no reply)')
         setAskInput('')
-      } catch {
-        dispatchToast('Failed to send message')
+      } catch (err) {
+        dispatchToast(friendlyErrorMessage(err, 'Failed to send message'))
       }
     },
     [askInput, currentCard],
@@ -187,11 +192,11 @@ export function AnkiPractice({ topicId }: Props) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ content: noteInput.trim() }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       dispatchToast('Card note saved')
       setNoteInput('')
-    } catch {
-      dispatchToast('Failed to save card note')
+    } catch (err) {
+      dispatchToast(friendlyErrorMessage(err, 'Failed to save card note'))
     } finally {
       setSavingNote(false)
     }
@@ -224,12 +229,12 @@ export function AnkiPractice({ topicId }: Props) {
             method: 'POST',
             body: form,
           })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          if (!res.ok) throw await errorFromResponse(res)
           const data = (await res.json()) as { transcript?: string }
           setVoiceTranscript(data.transcript ?? '')
           dispatchToast('Voice note saved')
-        } catch {
-          dispatchToast('Failed to save voice note')
+        } catch (err) {
+          dispatchToast(friendlyErrorMessage(err, 'Failed to save voice note'))
         }
       }
       recorder.start()
@@ -253,8 +258,16 @@ export function AnkiPractice({ topicId }: Props) {
 
   if (isError) {
     return (
-      <div className="text-center py-16 text-[color:var(--bad)] text-sm" role="alert">
-        Failed to load cards.
+      <div className="text-center py-16" role="alert">
+        <p className="text-sm font-medium text-[color:var(--bad)]">
+          {isDatabaseUnavailableError(error) ? 'Database offline' : 'Cards could not be loaded'}
+        </p>
+        <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[color:var(--ink-faint)]">
+          {friendlyErrorMessage(error, 'Cards could not be loaded.')}
+        </p>
+        <Btn size="sm" variant="ghost" className="mt-4" onClick={() => void refetch()}>
+          Retry
+        </Btn>
       </div>
     )
   }

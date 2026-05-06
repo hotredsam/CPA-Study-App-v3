@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Btn } from '@/components/ui/Btn'
 import { SectionBadge } from '@/components/ui/SectionBadge'
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
+import { errorFromResponse, friendlyErrorMessage } from '@/lib/api-error-message'
 import type { CpaSectionCode } from '@/lib/cpa-sections'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -127,15 +128,14 @@ function UploadModal({
           body: form,
         })
         if (!res.ok) {
-          const data = (await res.json()) as { error?: { message?: string } }
-          throw new Error(data.error?.message ?? `HTTP ${res.status}`)
+          throw await errorFromResponse(res)
         }
         const data = (await res.json()) as { textbook: TextbookRow }
         onSuccess(data.textbook)
       }
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed')
+      setError(friendlyErrorMessage(e, 'Upload failed'))
     } finally {
       setLoading(false)
     }
@@ -335,7 +335,7 @@ function TextbookTableRow({
     setReindexing(true)
     try {
       const res = await fetch(`/api/textbooks/${textbook.id}/reindex`, { method: 'POST' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       const data = (await res.json()) as { textbook: TextbookRow }
       onReindex(data.textbook)
     } catch {
@@ -407,7 +407,13 @@ function TextbookTableRow({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function LibraryClient({ initialTextbooks }: { initialTextbooks: TextbookRow[] }) {
+export function LibraryClient({
+  initialTextbooks,
+  initialLoadError,
+}: {
+  initialTextbooks: TextbookRow[]
+  initialLoadError: string | null
+}) {
   const [textbooks, setTextbooks] = useState<TextbookRow[]>(initialTextbooks)
   const [modalOpen, setModalOpen] = useState(false)
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
@@ -491,7 +497,23 @@ export function LibraryClient({ initialTextbooks }: { initialTextbooks: Textbook
         }
       />
 
-      {textbooks.length === 0 ? (
+      {initialLoadError ? (
+        <div
+          className="flex flex-col items-center justify-center rounded border border-[color:var(--bad-border)] bg-[color:var(--bad-soft)] px-6 py-14 text-center"
+          role="alert"
+          aria-label="Textbook library unavailable"
+        >
+          <p className="text-sm font-medium text-[color:var(--bad)]">Textbooks could not be loaded</p>
+          <p className="mt-2 max-w-xl text-xs leading-relaxed text-[color:var(--ink-dim)]">
+            {initialLoadError}
+          </p>
+          <div className="mt-4">
+            <Btn variant="ghost" size="sm" onClick={() => window.location.reload()}>
+              Retry
+            </Btn>
+          </div>
+        </div>
+      ) : textbooks.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center rounded border-2 border-dashed border-[color:var(--border)] py-16 text-center"
           role="region"

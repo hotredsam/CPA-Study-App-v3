@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
 import { EyebrowHeading, Btn, Card, SectionBadge, Bar } from '@/components/ui'
 import { ACTIVE_CPA_SECTIONS, CPA_SECTION_META } from '@/lib/cpa-sections'
 import { clampPercent } from '@/lib/percent'
@@ -282,18 +281,7 @@ function RoutineBlock({ label, blocks }: { label: string; blocks: ParsedBlock[] 
   )
 }
 
-function RoutineSection() {
-  const { data, isLoading } = useQuery<ParsedRoutine>({
-    queryKey: ['study-routine-today'],
-    queryFn: async () => {
-      const res = await fetch('/api/study-routine/today')
-      if (!res.ok) return { morning: [], midday: [], evening: [] }
-      return res.json() as Promise<ParsedRoutine>
-    },
-  })
-
-  if (isLoading) return null
-  const routine = data ?? { morning: [], midday: [], evening: [] }
+function RoutineSection({ routine }: { routine: ParsedRoutine }) {
   const totalTasks = routine.morning.length + routine.midday.length + routine.evening.length
   const totalMinutes = [...routine.morning, ...routine.midday, ...routine.evening].reduce((sum, block) => sum + (block.duration ?? 0), 0)
 
@@ -321,16 +309,7 @@ function RoutineSection() {
 
 export function DashboardClient({ data }: { data: DashboardData }) {
   const { studyStats, sections, weakestTopics, recentRecordings, cardsDue, currentTextbookFocus } = data
-  const { data: routineData, isLoading: routineLoading } = useQuery<ParsedRoutine>({
-    queryKey: ['study-routine-today'],
-    queryFn: async () => {
-      const res = await fetch('/api/study-routine/today')
-      if (!res.ok) return EMPTY_ROUTINE
-      return res.json() as Promise<ParsedRoutine>
-    },
-    initialData: data.routine ?? EMPTY_ROUTINE,
-    refetchInterval: 60_000,
-  })
+  const routineData = data.routine ?? EMPTY_ROUTINE
   const displayTotalHours = studyStats.totalHours
   const displayWeekHours = studyStats.weekHours
   const displayStreak = studyStats.streak
@@ -346,16 +325,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
     topicCount: 0,
   })
   const displaySectionRows = sectionRows
-  const currentFocus = routineLoading
-    ? {
-        active: false,
-        status: 'LOADING',
-        section: null,
-        title: 'Loading current focus',
-        detail: 'Checking today\'s study routine.',
-        href: '/study',
-      }
-    : focusFromRoutine(routineData ?? EMPTY_ROUTINE, currentTextbookFocus)
+  const currentFocus = focusFromRoutine(routineData, currentTextbookFocus)
   const focusSection = currentFocus.section
     ? displaySectionRows.find((section) => section.section === currentFocus.section)
     : null
@@ -447,7 +417,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </div>
       </section>
 
-      <RoutineSection />
+      <RoutineSection routine={routineData} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card pad={false}>

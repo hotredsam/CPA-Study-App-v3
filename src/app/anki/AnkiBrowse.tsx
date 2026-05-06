@@ -4,6 +4,11 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, SectionBadge, Btn } from '@/components/ui'
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 import type { CpaSectionCode } from '@/lib/cpa-sections'
 import { AutoBadge } from './AutoBadge'
 import type { AnkiCard } from './types'
@@ -33,11 +38,11 @@ export function AnkiBrowse() {
     return p
   }, [query, section])
 
-  const { data, isLoading, isError } = useQuery<CardsResponse>({
+  const { data, isLoading, isError, error, refetch } = useQuery<CardsResponse>({
     queryKey: ['anki-browse', query, section],
     queryFn: async () => {
       const res = await fetch(`/api/anki/cards?${params}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<CardsResponse>
     },
   })
@@ -83,8 +88,16 @@ export function AnkiBrowse() {
           </div>
         )}
         {isError && (
-          <div className="p-8 text-center text-sm text-[color:var(--bad)]" role="alert">
-            Failed to load cards.
+          <div className="p-8 text-center" role="alert">
+            <p className="text-sm font-medium text-[color:var(--bad)]">
+              {isDatabaseUnavailableError(error) ? 'Database offline' : 'Cards could not be loaded'}
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[color:var(--ink-faint)]">
+              {friendlyErrorMessage(error, 'Cards could not be loaded.')}
+            </p>
+            <Btn size="sm" variant="ghost" className="mt-4" onClick={() => void refetch()}>
+              Retry
+            </Btn>
           </div>
         )}
         {!isLoading && !isError && cards.length === 0 && (

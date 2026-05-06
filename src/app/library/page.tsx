@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { isActiveCpaSection, type CpaSectionCode } from '@/lib/cpa-sections'
 import { getActiveExamSections } from '@/lib/exam-settings'
+import { isDatabaseUnavailableError } from '@/lib/api-error'
 import { LibraryClient } from './LibraryClient'
 
 export const dynamic = 'force-dynamic'
@@ -22,6 +23,7 @@ export default async function LibraryPage() {
   }
 
   let textbooks: TextbookRow[] = []
+  let loadError: string | null = null
 
   try {
     const activeSections = await getActiveExamSections()
@@ -51,9 +53,12 @@ export default async function LibraryPage() {
         }
       })
       .filter((t) => t.sections.length > 0 || raw.find((book) => book.id === t.id)?.sections.length === 0)
-  } catch {
+  } catch (err) {
     textbooks = []
+    loadError = isDatabaseUnavailableError(err)
+      ? 'Database is unavailable. Start Docker Desktop and run `docker compose up -d postgres`, then retry.'
+      : 'Textbooks could not be loaded. Please refresh the page.'
   }
 
-  return <LibraryClient initialTextbooks={textbooks} />
+  return <LibraryClient initialTextbooks={textbooks} initialLoadError={loadError} />
 }

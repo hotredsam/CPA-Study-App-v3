@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV !== "production";
+const distDir = process.env.NEXT_DIST_DIR?.trim();
 
 const securityHeaders = [
   {
@@ -51,6 +52,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   devIndicators: false,
+  ...(distDir ? { distDir } : {}),
 
   async headers() {
     return [

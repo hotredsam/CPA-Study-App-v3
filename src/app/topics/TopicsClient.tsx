@@ -4,6 +4,11 @@ import { useCallback, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { EyebrowHeading, Btn, Card } from '@/components/ui'
 import { bulkRefreshTopicNotes } from '@/lib/api-client'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from '@/hooks/useExamSections'
 import { TopicRow } from './TopicRow'
 import type { Topic, SortField, SectionFilter } from './types'
@@ -48,11 +53,11 @@ export function TopicsClient() {
   const activeFilterCount =
     (sectionFilter !== 'all' ? 1 : 0) + (search.trim() ? 1 : 0) + (sort !== 'error' ? 1 : 0)
 
-  const { data: topics = [], isLoading, isError } = useQuery<Topic[]>({
+  const { data: topics = [], isLoading, isError, error, refetch } = useQuery<Topic[]>({
     queryKey,
     queryFn: async () => {
       const res = await fetch(`/api/topics?${queryString}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<Topic[]>
     },
   })
@@ -78,8 +83,8 @@ export function TopicsClient() {
         `Refreshed AI notes for ${result.processed} topics (${scopeLabel}). Estimated cost: ~$${(result.processed * 0.002).toFixed(3)}`,
       )
       await queryClient.invalidateQueries({ queryKey })
-    } catch {
-      dispatchToast('Failed to bulk refresh AI notes')
+    } catch (err) {
+      dispatchToast(friendlyErrorMessage(err, 'Failed to bulk refresh AI notes'))
     } finally {
       setBulkRefreshing(false)
     }
@@ -174,8 +179,16 @@ export function TopicsClient() {
           </div>
         )}
         {isError && (
-          <div className="p-8 text-center text-sm text-[color:var(--bad)]" role="alert">
-            Failed to load topics. Please try again.
+          <div className="p-8 text-center" role="alert">
+            <p className="text-sm font-medium text-[color:var(--bad)]">
+              {isDatabaseUnavailableError(error) ? 'Database offline' : 'Topics could not be loaded'}
+            </p>
+            <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-[color:var(--ink-faint)]">
+              {friendlyErrorMessage(error, 'Topics could not be loaded. Please try again.')}
+            </p>
+            <Btn size="sm" variant="ghost" className="mt-4" onClick={() => void refetch()}>
+              Retry
+            </Btn>
           </div>
         )}
         {!isLoading && !isError && (

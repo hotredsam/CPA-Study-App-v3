@@ -1,7 +1,12 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Card, SectionBadge } from '@/components/ui'
+import { Card, SectionBadge, Btn } from '@/components/ui'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 import { normalizePercent } from '@/lib/percent'
 import type { AnkiMode, DueSectionBreakdown } from './types'
 
@@ -22,11 +27,17 @@ interface ReviewStatsResponse {
 }
 
 export function AnkiDaily({ setMode }: Props) {
-  const { data: dueData, isLoading: dueLoading } = useQuery<DueResponse>({
+  const {
+    data: dueData,
+    isLoading: dueLoading,
+    isError: dueIsError,
+    error: dueError,
+    refetch: refetchDue,
+  } = useQuery<DueResponse>({
     queryKey: ['anki-due-breakdown'],
     queryFn: async () => {
       const res = await fetch('/api/anki/due?breakdown=true')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<DueResponse>
     },
     refetchInterval: 60_000,
@@ -59,6 +70,18 @@ export function AnkiDaily({ setMode }: Props) {
             aria-live="polite"
           >
             Loading…
+          </div>
+        ) : dueIsError ? (
+          <div role="alert">
+            <p className="text-sm font-medium text-[color:var(--bad)]">
+              {isDatabaseUnavailableError(dueError) ? 'Database offline' : 'Reviews could not be loaded'}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-[color:var(--ink-faint)]">
+              {friendlyErrorMessage(dueError, 'Failed to load review cards.')}
+            </p>
+            <Btn size="sm" variant="ghost" className="mt-4" onClick={() => void refetchDue()}>
+              Retry
+            </Btn>
           </div>
         ) : (
           <>

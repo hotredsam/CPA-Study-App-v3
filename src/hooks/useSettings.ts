@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { errorFromResponse } from '@/lib/api-error-message'
 
 interface UserSettings {
   id: string
@@ -14,7 +15,7 @@ export function useSettings() {
     queryKey: ['settings'],
     queryFn: async () => {
       const res = await fetch('/api/settings')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<UserSettings | null>
     },
   })

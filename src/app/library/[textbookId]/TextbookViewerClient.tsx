@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Btn } from '@/components/ui/Btn'
 import { Card } from '@/components/ui/Card'
+import { HydratedTextbookHtml } from '@/components/textbooks/HydratedTextbookHtml'
 
 type ChunkItem = {
   id: string
@@ -151,10 +152,11 @@ export function TextbookViewerClient({
           ) : currentChunk ? (
             <div ref={contentRef} className="max-h-[74vh] overflow-y-auto pr-1">
               {currentChunk.htmlContent ? (
-                <article
+                <HydratedTextbookHtml
+                  html={currentChunk.htmlContent}
+                  fallbackText={currentChunk.content}
                   className="textbook-html-render"
-                  aria-label={`Rendered textbook chunk ${currentChunk.order + 1}`}
-                  dangerouslySetInnerHTML={{ __html: currentChunk.htmlContent }}
+                  ariaLabel={`Rendered textbook chunk ${currentChunk.order + 1}`}
                 />
               ) : (
                 <>

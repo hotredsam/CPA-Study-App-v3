@@ -1,7 +1,12 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Card, SectionBadge, Bar } from '@/components/ui'
+import { Card, SectionBadge, Bar, Btn } from '@/components/ui'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 import { normalizePercent } from '@/lib/percent'
 
 interface Topic {
@@ -14,11 +19,11 @@ interface Topic {
 }
 
 export function AnkiPath() {
-  const { data: topics, isLoading, isError } = useQuery<Topic[]>({
+  const { data: topics, isLoading, isError, error, refetch } = useQuery<Topic[]>({
     queryKey: ['topics', undefined, undefined, undefined],
     queryFn: async () => {
       const res = await fetch('/api/topics?sort=mastery')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<Topic[]>
     },
   })
@@ -40,8 +45,16 @@ export function AnkiPath() {
       )}
 
       {isError && (
-        <div className="text-sm text-[color:var(--bad)] py-4" role="alert">
-          Failed to load topics.
+        <div className="py-4" role="alert">
+          <p className="text-sm font-medium text-[color:var(--bad)]">
+            {isDatabaseUnavailableError(error) ? 'Database offline' : 'Learning path could not be loaded'}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-[color:var(--ink-faint)]">
+            {friendlyErrorMessage(error, 'Learning path could not be loaded.')}
+          </p>
+          <Btn size="sm" variant="ghost" className="mt-3" onClick={() => void refetch()}>
+            Retry
+          </Btn>
         </div>
       )}
 

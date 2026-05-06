@@ -146,6 +146,7 @@ function useTotalHours() {
     },
     staleTime: 2 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
+    retry: false,
   })
 }
 
@@ -158,7 +159,9 @@ function usePipelineBadge() {
       const data = (await res.json()) as { items?: unknown[] }
       return data.items?.length ?? 0
     },
+    staleTime: 15_000,
     refetchInterval: 15_000,
+    retry: false,
   })
 }
 
@@ -171,7 +174,9 @@ function useAnkiBadge() {
       const data = (await res.json()) as { count?: number }
       return data.count ?? 0
     },
+    staleTime: 60_000,
     refetchInterval: 60_000,
+    retry: false,
   })
 }
 

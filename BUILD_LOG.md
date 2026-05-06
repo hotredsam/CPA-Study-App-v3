@@ -4,6 +4,27 @@ Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
 ---
 
+## 2026-05-05 runtime hardening and interaction probe
+
+- Reproduced the reported Next runtime failure as a stale shared `.next` artifact: the local dev server on 3000 and Playwright's dev server on 3001 were writing to the same dist directory.
+- Added clean Next runtime startup, fixed Windows port reclamation, and isolated Playwright builds into `.next-e2e` so E2E cannot corrupt the visible dev server.
+- Removed dashboard first-paint dependence on React Query for server-loaded routine data, fixing a cold-render `No QueryClient set` 500 caught by the broader browser run.
+- Added `pnpm runtime:probe`, a real-browser depth-5 interaction crawler for non-destructive visible clicks and representative keys. It fails on HTTP 500s, page errors, raw Prisma text, `_document.js`, `ENOENT`, and framework crash overlays.
+- Fixed textbook/study reader hydration by deferring stored rich HTML until after client hydration and rendering stable text on the server. This protects the app from malformed stored textbook HTML.
+- Final verification: `pnpm prisma validate`, `pnpm prisma migrate status`, `pnpm typecheck`, `pnpm lint`, `pnpm test` (178/178), `pnpm build`, `pnpm e2e -- --project=chromium` (216/216), `pnpm runtime:probe` (825 depth-5 sequences), and live 3000 smoke checks all passed.
+
+---
+
+## 2026-05-05 production-readiness recovery
+
+- Restored local Postgres through Docker Compose without wiping the existing `pgdata` volume. `pnpm prisma migrate deploy` reported no pending migrations.
+- Verified preserved local data counts: 1 textbook, 23 topics, 150 Anki cards, 1 settings row, 0 routines, 0 recordings.
+- Added a typed `DATABASE_UNAVAILABLE` API envelope so Prisma connection failures return HTTP 503 with setup guidance instead of raw invocation text.
+- Polished offline/loading states in Settings, Topics, Library, Anki, sidebar badge queries, and Record microphone setup.
+- Updated README/RUNBOOK startup notes to use the actual local database name, `cpa_study`.
+
+---
+
 ## Morning summary — Night 6 (2026-04-20, top of file — 60-second skim)
 
 **Status: NIGHT-6-COMPLETE.** Validation + refactor night. All systems green.

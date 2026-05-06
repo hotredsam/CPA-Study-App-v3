@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { errorFromResponse } from '@/lib/api-error-message'
 
 interface PipelineRecording {
   id: string
@@ -35,12 +36,13 @@ export function usePipelineStatus() {
     queryKey: ['pipeline-status'],
     queryFn: async () => {
       const res = await fetch('/api/recordings?status=uploaded,segmenting,processing_questions&liveOnly=true&limit=50')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<PipelineStatusResponse>
     },
     staleTime: 5_000,
     refetchInterval: (query) =>
       (query.state.data?.items.length ?? 0) > 0 ? 10_000 : 30_000,
     refetchIntervalInBackground: false,
+    retry: false,
   })
 }

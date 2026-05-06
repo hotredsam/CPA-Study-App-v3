@@ -6,6 +6,11 @@ import { Card } from '@/components/ui/Card'
 import { Btn } from '@/components/ui/Btn'
 import { Bar } from '@/components/ui/Bar'
 import { Toggle } from '@/components/ui/Toggle'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -106,6 +111,30 @@ function emitToast(message: string, type: 'success' | 'error' | 'info' = 'info')
   window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message, variant } }))
 }
 
+function InlineLoadError({
+  error,
+  fallback,
+  onRetry,
+}: {
+  error: unknown
+  fallback: string
+  onRetry: () => void
+}) {
+  return (
+    <div className="rounded border border-[color:var(--bad-border)] bg-[color:var(--bad-soft)] px-3 py-3" role="alert">
+      <p className="text-sm font-medium text-[color:var(--bad)]">
+        {isDatabaseUnavailableError(error) ? 'Database offline' : fallback}
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-[color:var(--ink-dim)]">
+        {friendlyErrorMessage(error, fallback)}
+      </p>
+      <Btn size="sm" variant="ghost" className="mt-3" onClick={onRetry}>
+        Retry
+      </Btn>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // OpenRouter Key Card
 // ---------------------------------------------------------------------------
@@ -117,7 +146,7 @@ function OpenRouterKeyCard() {
     queryKey: ['openrouter-key'],
     queryFn: async () => {
       const res = await fetch('/api/settings/openrouter-key')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<{ hasKey: boolean }>
     },
   })
@@ -129,7 +158,7 @@ function OpenRouterKeyCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<{ success: boolean }>
     },
     onSuccess: () => {
@@ -138,7 +167,7 @@ function OpenRouterKeyCard() {
       emitToast('API key updated.', 'success')
     },
     onError: (err: Error) => {
-      emitToast(`Failed: ${err.message}`, 'error')
+      emitToast(`Failed: ${friendlyErrorMessage(err, err.message)}`, 'error')
     },
   })
 
@@ -188,11 +217,11 @@ function OpenRouterKeyCard() {
 function BudgetCard() {
   const qc = useQueryClient()
 
-  const { data } = useQuery<{ budget: Budget | null }>({
+  const { data, isLoading, isError, error, refetch } = useQuery<{ budget: Budget | null }>({
     queryKey: ['budget'],
     queryFn: async () => {
       const res = await fetch('/api/settings/budget')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<{ budget: Budget | null }>
     },
   })
@@ -209,7 +238,7 @@ function BudgetCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<{ budget: Budget }>
     },
     onSuccess: () => {
@@ -219,7 +248,7 @@ function BudgetCard() {
       emitToast('Budget saved.', 'success')
     },
     onError: (err: Error) => {
-      emitToast(`Failed: ${err.message}`, 'error')
+      emitToast(`Failed: ${friendlyErrorMessage(err, err.message)}`, 'error')
     },
   })
 
@@ -242,7 +271,21 @@ function BudgetCard() {
         Monthly Budget
       </h2>
 
-      {budget && (
+      {isLoading && (
+        <p className="text-sm text-[color:var(--ink-faint)]" role="status" aria-live="polite">
+          Loading budget...
+        </p>
+      )}
+
+      {isError && (
+        <InlineLoadError
+          error={error}
+          fallback="Budget settings could not be loaded"
+          onRetry={() => void refetch()}
+        />
+      )}
+
+      {!isLoading && !isError && budget && (
         <>
           <Bar
             pct={usagePct}
@@ -363,7 +406,7 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
           useOAuthFallback: oauth,
         }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json()
     },
     onSuccess: () => {
@@ -371,7 +414,7 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
       emitToast(`${FUNCTION_LABELS[config.functionKey] ?? config.functionKey} saved.`, 'success')
     },
     onError: (err: Error) => {
-      emitToast(`Failed: ${err.message}`, 'error')
+      emitToast(`Failed: ${friendlyErrorMessage(err, err.message)}`, 'error')
     },
   })
 
@@ -489,20 +532,32 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
 // ---------------------------------------------------------------------------
 
 function CacheStatsCard() {
-  const { data: cacheStats } = useQuery<CacheStats>({
+  const {
+    data: cacheStats,
+    isLoading: cacheLoading,
+    isError: cacheIsError,
+    error: cacheError,
+    refetch: refetchCache,
+  } = useQuery<CacheStats>({
     queryKey: ['cache-stats'],
     queryFn: async () => {
       const res = await fetch('/api/settings/cache-stats')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<CacheStats>
     },
   })
 
-  const { data: queueData } = useQuery<{ summary: QueueSummaryItem[] }>({
+  const {
+    data: queueData,
+    isLoading: queueLoading,
+    isError: queueIsError,
+    error: queueError,
+    refetch: refetchQueue,
+  } = useQuery<{ summary: QueueSummaryItem[] }>({
     queryKey: ['queue-summary'],
     queryFn: async () => {
       const res = await fetch('/api/batch/queue-summary')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<{ summary: QueueSummaryItem[] }>
     },
   })
@@ -557,8 +612,27 @@ function CacheStatsCard() {
         </>
       )}
 
-      {(!cacheStats && !queueData) && (
-        <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Loading stats…</p>
+      {(cacheLoading || queueLoading) && !cacheStats && !queueData && (
+        <p className="text-sm text-[color:var(--ink-faint)]" role="status" aria-live="polite">
+          Loading stats...
+        </p>
+      )}
+
+      {(cacheIsError || queueIsError) && (
+        <InlineLoadError
+          error={cacheError ?? queueError}
+          fallback="Cache and batch stats could not be loaded"
+          onRetry={() => {
+            void refetchCache()
+            void refetchQueue()
+          }}
+        />
+      )}
+
+      {cacheStats && queueData?.summary.length === 0 && (
+        <p className="text-xs text-[color:var(--ink-faint)]">
+          No batch work is queued.
+        </p>
       )}
     </Card>
   )
@@ -569,11 +643,11 @@ function CacheStatsCard() {
 // ---------------------------------------------------------------------------
 
 export function ModelsTab() {
-  const { data: configsData } = useQuery<{ configs: ModelConfig[] }>({
+  const { data: configsData, isLoading, isError, error, refetch } = useQuery<{ configs: ModelConfig[] }>({
     queryKey: ['model-configs'],
     queryFn: async () => {
       const res = await fetch('/api/settings/model-config')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<{ configs: ModelConfig[] }>
     },
   })
@@ -596,8 +670,22 @@ export function ModelsTab() {
           {configsData?.configs.map((cfg) => (
             <ModelConfigRow key={cfg.functionKey} config={cfg} />
           ))}
-          {!configsData && (
-            <p className="text-sm" style={{ color: 'var(--ink-faint)' }}>Loading configs…</p>
+          {isLoading && (
+            <p className="text-sm text-[color:var(--ink-faint)]" role="status" aria-live="polite">
+              Loading configs...
+            </p>
+          )}
+          {isError && (
+            <InlineLoadError
+              error={error}
+              fallback="Model configs could not be loaded"
+              onRetry={() => void refetch()}
+            />
+          )}
+          {configsData?.configs.length === 0 && (
+            <p className="text-sm text-[color:var(--ink-faint)]">
+              No model configs have been created yet.
+            </p>
           )}
         </div>
       </Card>

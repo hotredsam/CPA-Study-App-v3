@@ -5,6 +5,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { Btn } from '@/components/ui/Btn'
 import { Toggle } from '@/components/ui/Toggle'
+import {
+  errorFromResponse,
+  friendlyErrorMessage,
+  isDatabaseUnavailableError,
+} from '@/lib/api-error-message'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,11 +85,11 @@ function estimateCost(chunkSize: number): string {
 export function IndexingTab() {
   const qc = useQueryClient()
 
-  const { data: remote } = useQuery<IndexingConfig | null>({
+  const { data: remote, isLoading, isError, error, refetch } = useQuery<IndexingConfig | null>({
     queryKey: ['indexing-config'],
     queryFn: async () => {
       const res = await fetch('/api/settings/indexing')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<IndexingConfig | null>
     },
   })
@@ -130,7 +135,7 @@ export function IndexingTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(draft),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<IndexingConfig>
     },
     onSuccess: () => {
@@ -138,7 +143,7 @@ export function IndexingTab() {
       emitToast('Indexing settings saved.', 'success')
     },
     onError: (err: Error) => {
-      emitToast(`Failed: ${err.message}`, 'error')
+      emitToast(`Failed: ${friendlyErrorMessage(err, err.message)}`, 'error')
     },
   })
 
@@ -151,6 +156,30 @@ export function IndexingTab() {
       id="tabpanel-indexing"
       aria-labelledby="tab-indexing"
     >
+      {isLoading && (
+        <Card>
+          <p className="text-sm text-[color:var(--ink-faint)]" role="status" aria-live="polite">
+            Loading indexing settings...
+          </p>
+        </Card>
+      )}
+
+      {isError && (
+        <Card>
+          <div role="alert">
+            <p className="text-sm font-medium text-[color:var(--bad)]">
+              {isDatabaseUnavailableError(error) ? 'Database offline' : 'Indexing settings could not be loaded'}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-[color:var(--ink-faint)]">
+              {friendlyErrorMessage(error, 'Failed to load indexing settings.')}
+            </p>
+            <Btn size="sm" variant="ghost" className="mt-4" onClick={() => void refetch()}>
+              Retry
+            </Btn>
+          </div>
+        </Card>
+      )}
+
       {/* Indexing Options */}
       <Card>
         <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--ink)' }}>

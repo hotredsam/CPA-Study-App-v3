@@ -6,6 +6,7 @@ import { Bar } from "@/components/ui/Bar";
 import { Btn } from "@/components/ui/Btn";
 import { Card } from "@/components/ui/Card";
 import { SectionBadge } from "@/components/ui/SectionBadge";
+import { HydratedTextbookHtml } from "@/components/textbooks/HydratedTextbookHtml";
 import { normalizePercent } from "@/lib/percent";
 
 type Textbook = {
@@ -164,15 +165,16 @@ export function StudyReaderClient({
         <div className="space-y-6 min-w-0">
           <Card>
             {chunk.htmlContent ? (
-              <article
+              <HydratedTextbookHtml
+                html={chunk.htmlContent}
+                fallbackText={chunk.content}
                 className="textbook-html-render max-w-none"
                 style={{
                   fontFamily: "var(--font-serif, Instrument Serif, serif)",
                   lineHeight: 1.7,
                   maxWidth: "65ch",
                 }}
-                aria-label={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
-                dangerouslySetInnerHTML={{ __html: chunk.htmlContent }}
+                ariaLabel={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
               />
             ) : (
               <article

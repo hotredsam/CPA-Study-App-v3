@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 export type ErrorCode =
   | "BAD_REQUEST"
+  | "DATABASE_UNAVAILABLE"
   | "NOT_FOUND"
   | "UNPROCESSABLE"
   | "INTERNAL_ERROR"
@@ -23,11 +24,31 @@ export class ApiError extends Error {
 function codeToStatus(code: ErrorCode): number {
   switch (code) {
     case "BAD_REQUEST": return 400;
+    case "DATABASE_UNAVAILABLE": return 503;
     case "NOT_FOUND": return 404;
     case "UNPROCESSABLE": return 422;
     case "METHOD_NOT_ALLOWED": return 405;
     case "INTERNAL_ERROR": return 500;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function isDatabaseUnavailableError(err: unknown): boolean {
+  if (!isRecord(err)) return false;
+
+  const name = typeof err["name"] === "string" ? err["name"] : "";
+  const message = err instanceof Error ? err.message : "";
+  const code = typeof err["code"] === "string" ? err["code"] : "";
+
+  return (
+    name === "PrismaClientInitializationError" ||
+    code === "P1001" ||
+    message.includes("Can't reach database server") ||
+    message.includes("Can't reach database")
+  );
 }
 
 /**
@@ -52,6 +73,20 @@ export function respond(err: unknown): NextResponse {
         },
       },
       { status: 400 },
+    );
+  }
+
+  if (isDatabaseUnavailableError(err)) {
+    console.error("[api-error] database unavailable:", err);
+    return NextResponse.json(
+      {
+        error: {
+          code: "DATABASE_UNAVAILABLE",
+          message:
+            "Database is unavailable. Start Docker Desktop and run `docker compose up -d postgres`, then retry.",
+        },
+      },
+      { status: 503 },
     );
   }
 

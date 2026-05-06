@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm exec next dev -p 3001",
+    command: "node scripts/e2e-webserver.mjs",
     url: "http://localhost:3001",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

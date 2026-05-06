@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { Btn } from '@/components/ui/Btn'
+import { errorFromResponse, friendlyErrorMessage } from '@/lib/api-error-message'
 import {
   ACTIVE_CPA_SECTIONS,
   CPA_SECTION_META,
@@ -138,8 +139,7 @@ export function StudyTab() {
         body: JSON.stringify({ discipline }),
       })
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
-        throw new Error(body.error?.message ?? `HTTP ${res.status}`)
+        throw await errorFromResponse(res)
       }
       return res.json() as Promise<ExamSectionsSettings>
     },
@@ -152,7 +152,7 @@ export function StudyTab() {
       emitToast('Exam sections saved.', 'success')
     },
     onError: (err: Error) => {
-      emitToast(`Exam section save failed: ${err.message}`, 'error')
+      emitToast(`Exam section save failed: ${friendlyErrorMessage(err, err.message)}`, 'error')
     },
   })
 
@@ -168,8 +168,7 @@ export function StudyTab() {
         }),
       })
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
-        throw new Error(body.error?.message ?? `HTTP ${res.status}`)
+        throw await errorFromResponse(res)
       }
       return res.json() as Promise<StudyRoutine>
     },
@@ -179,7 +178,7 @@ export function StudyTab() {
       emitToast('Study routine saved.', 'success')
     },
     onError: (err: Error) => {
-      emitToast(`Save failed: ${err.message}`, 'error')
+      emitToast(`Save failed: ${friendlyErrorMessage(err, err.message)}`, 'error')
     },
   })
 

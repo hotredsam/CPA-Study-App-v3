@@ -14,7 +14,7 @@ pnpm trigger:dev              # Trigger.dev dev runner (separate terminal)
 
 Required env vars (see `.env.example`):
 
-- `DATABASE_URL` — local: `postgresql://postgres:postgres@localhost:5432/cpa`
+- `DATABASE_URL` — local: `postgresql://postgres:postgres@localhost:5432/cpa_study`
 - `R2_*` — Cloudflare R2 credentials (endpoint, access key, secret, bucket)
 - `TRIGGER_SECRET_KEY` — Trigger.dev secret (dev scope)
 - `ANTHROPIC_API_KEY` — for Tasks 5 + 7 once wired
@@ -75,6 +75,7 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 | `segmentRecording` emits the stub marker | Task 4 not yet live | Expected until fixture boundaries are locked — see `sam-input/TODO.xml` |
 | `gradeQuestion` writes empty items | Task 7 not yet live | Same — blocked on 10-item key lock |
 | Word-timestamps missing | `ggml-small.en` w/o `token_timestamps` | Enabled by default in `src/lib/whisper.ts`; verify `smart-whisper` version |
+| Runtime error mentions `.next\server\pages\_document.js` or missing route files | Two Next dev/build processes shared a stale `.next` directory | Stop dev servers with `pnpm kill-ports`, then run `pnpm dev`. E2E uses isolated `.next-e2e`; do not manually run two `next dev` processes against the same dist dir. |
 
 ## Tests
 
@@ -82,6 +83,33 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 - `pnpm e2e` — playwright (boots `pnpm dev`, runs chromium)
 - `pnpm typecheck` — tsc --noEmit
 - `pnpm lint` — next lint
+- `pnpm build` - clean production build
+- `pnpm runtime:probe` - real-browser interaction crawler. It explores
+  non-destructive visible click targets and representative keyboard actions to
+  depth 5, and fails on HTTP 500s, page errors, raw Prisma text, `_document.js`,
+  `ENOENT`, or framework crash overlays.
+
+## Local database recovery
+
+The local Docker volume is the source of truth for uploaded textbooks, topics,
+cards, settings, and routines. Do not run wipe or seed commands unless data loss
+is intended.
+
+```bash
+docker compose up -d postgres
+pnpm prisma migrate deploy
+pnpm prisma migrate status
+```
+
+Confirm the app can see preserved data without mutating it:
+
+```bash
+pnpm exec tsx -e "import { PrismaClient } from '@prisma/client'; const p = new PrismaClient(); console.log(await p.textbook.count(), await p.topic.count(), await p.ankiCard.count()); await p.$disconnect();"
+```
+
+If the UI shows "Database offline" or an API returns `DATABASE_UNAVAILABLE`,
+Docker Desktop is usually closed or Postgres is not listening on `localhost:5432`.
+Start Docker Desktop, run the compose command above, then refresh the page.
 
 ## Where to look when something is weird
 

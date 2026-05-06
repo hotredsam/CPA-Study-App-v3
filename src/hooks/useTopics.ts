@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { errorFromResponse } from '@/lib/api-error-message'
 
 interface Topic {
   id: string
@@ -22,7 +23,7 @@ export function useTopics(section?: string) {
     queryKey: ['topics', section],
     queryFn: async () => {
       const res = await fetch(`/api/topics${params}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<Topic[]>
     },
   })

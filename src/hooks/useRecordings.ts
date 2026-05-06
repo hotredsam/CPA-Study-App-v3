@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { errorFromResponse } from '@/lib/api-error-message'
 
 interface RecordingListItem {
   id: string
@@ -40,8 +41,9 @@ export function useRecordings(opts: { cursor?: string; limit?: number } = {}) {
     queryKey: ['recordings', opts.cursor, opts.limit],
     queryFn: async () => {
       const res = await fetch(`/api/recordings?${params}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<RecordingListResponse>
     },
+    retry: false,
   })
 }

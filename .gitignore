@@ -4,6 +4,7 @@ node_modules/
 
 # next
 .next/
+.next-e2e/
 *.tsbuildinfo
 out/
 build/
@@ -46,6 +47,7 @@ cpa-study-servant.zip
 
 # tmp dev logs
 /tmp/
+.codex-run/
 
 # sam-input transient
 /sam-input/audio/*.wav
