@@ -14,6 +14,44 @@ export function ThemeInitScript() {
             }
             if (s.accentHue !== undefined) document.documentElement.style.setProperty('--accent-hue', s.accentHue);
           } catch(_) {}
+          (function() {
+            var map = { h: '/', r: '/record', s: '/pipeline', v: '/review', y: '/topics', u: '/study', a: '/anki', l: '/library', t: '/settings' };
+            var waitingForSecond = false;
+            var timeout = null;
+            function isTypingTarget(target) {
+              if (!target || !target.tagName) return false;
+              var tag = String(target.tagName).toLowerCase();
+              return tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable || target.getAttribute('role') === 'textbox';
+            }
+            function clearSecond() {
+              waitingForSecond = false;
+              if (timeout) window.clearTimeout(timeout);
+              timeout = null;
+            }
+            window.__cpaKeyboardNavReady = false;
+            window.addEventListener('keydown', function(event) {
+              if (window.__cpaKeyboardNavReady || isTypingTarget(event.target) || event.altKey || event.ctrlKey || event.metaKey) return;
+              var key = String(event.key || '').toLowerCase();
+              if (waitingForSecond) {
+                if (map[key]) {
+                  event.preventDefault();
+                  window.location.assign(map[key]);
+                }
+                clearSecond();
+                return;
+              }
+              if (key === 'g') {
+                event.preventDefault();
+                waitingForSecond = true;
+                timeout = window.setTimeout(clearSecond, 1000);
+                return;
+              }
+              if (map[key]) {
+                event.preventDefault();
+                window.location.assign(map[key]);
+              }
+            });
+          })();
         `,
       }}
     />

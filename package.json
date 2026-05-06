@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "runtime:probe": "node scripts/runtime-interaction-probe.mjs",
+    "runtime:probe:mobile": "node scripts/runtime-interaction-probe.mjs --mobile",
+    "auth:hash": "node scripts/hash-password.mjs",
     "trigger:dev": "trigger dev",
     "db:seed": "tsx prisma/seed-night5.ts",
     "verify-seed": "tsx scripts/verify-seed.ts"

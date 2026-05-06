@@ -64,12 +64,13 @@ const GRADING_MODELS = [
 function uploadWithProgress(
   url: string,
   blob: Blob,
+  contentType: string,
   onProgress: (loaded: number, total: number) => void,
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", blob.type || "video/webm");
+    xhr.setRequestHeader("Content-Type", contentType || blob.type || "video/webm");
     xhr.upload.onprogress = (ev) => {
       if (ev.lengthComputable) onProgress(ev.loaded, ev.total);
     };
@@ -90,11 +91,14 @@ function uploadWithProgress(
 
 function SetupPhase({
   onStart,
+  onUploadFile,
 }: {
   onStart: (opts: RecordingOptions) => void;
+  onUploadFile: (file: File, opts: RecordingOptions) => void;
 }) {
   const [mics, setMics] = useState<DeviceInfo[]>([]);
   const [selectedMic, setSelectedMic] = useState<string>("");
+  const [screenRecordingFile, setScreenRecordingFile] = useState<File | null>(null);
   const [screenSource, setScreenSource] = useState<ScreenSource>("full-screen");
   const [micPermDenied, setMicPermDenied] = useState(false);
   const [micStatus, setMicStatus] = useState<MicStatus>("checking");
@@ -323,9 +327,17 @@ function SetupPhase({
 
   const canStart =
     !micPermDenied && Boolean(screenSource) && selectedSections.length > 0 && health !== null;
+  const canUpload =
+    screenRecordingFile !== null && selectedSections.length > 0 && health !== null;
 
   const selectedMicLabel =
     mics.find((m) => m.deviceId === selectedMic)?.label ?? "Default";
+  const recordingOptions: RecordingOptions = {
+    micId: selectedMic,
+    sections: selectedSections,
+    model: selectedModel,
+    screenSource,
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -540,18 +552,44 @@ function SetupPhase({
           </div>
 
           <div className="mt-4">
+            <div className="mb-4 rounded border border-[color:var(--border)] bg-[color:var(--surface-2)] p-3">
+              <label
+                htmlFor="screen-recording-upload"
+                className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink-faint)]"
+              >
+                iPhone Screen Recording
+              </label>
+              <input
+                id="screen-recording-upload"
+                type="file"
+                accept="video/*,.mov,.mp4,.webm"
+                onChange={(event) => setScreenRecordingFile(event.target.files?.[0] ?? null)}
+                className="mt-2 block w-full text-sm text-[color:var(--ink-dim)] file:mr-3 file:rounded file:border-0 file:bg-[color:var(--surface)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[color:var(--ink)] hover:file:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+              />
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Btn
+                  variant="subtle"
+                  size="sm"
+                  disabled={!canUpload}
+                  onClick={() => {
+                    if (screenRecordingFile) onUploadFile(screenRecordingFile, recordingOptions);
+                  }}
+                  aria-label="Upload screen recording file"
+                >
+                  Upload file
+                </Btn>
+                {screenRecordingFile && (
+                  <span className="text-xs text-[color:var(--ink-faint)]">
+                    {(screenRecordingFile.size / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                )}
+              </div>
+            </div>
             <Btn
               variant="primary"
               size="lg"
               disabled={!canStart}
-              onClick={() =>
-                onStart({
-                  micId: selectedMic,
-                  sections: selectedSections,
-                  model: selectedModel,
-                  screenSource,
-                })
-              }
+              onClick={() => onStart(recordingOptions)}
               aria-label="Start recording"
             >
               Start Screen Recording
@@ -981,31 +1019,36 @@ export function RecordClient() {
     stopAllTracks();
   }, [stopAllTracks]);
 
-  const finalizeUpload = useCallback(
-    async () => {
+  const uploadRecordingBlob = useCallback(
+    async ({
+      blob,
+      contentType,
+      durationSec,
+      title,
+    }: {
+      blob: Blob;
+      contentType: string;
+      durationSec?: number;
+      title: string;
+    }) => {
       stopAllTracks();
       setPhase("uploading");
       setUploadDone(false);
       setUploadedBytes(0);
 
       try {
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
         setTotalBytes(blob.size);
         uploadStartRef.current = Date.now();
 
-        // Create recording DB row + get presigned URL
         const startRes = await fetch("/api/recordings", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            durationSec: elapsedSecRef.current > 0 ? elapsedSecRef.current : undefined,
-            contentType: "video/webm",
+            durationSec,
+            contentType,
             sections: currentOptionsRef.current?.sections ?? [],
             modelUsed: currentOptionsRef.current?.model,
-            title:
-              currentOptionsRef.current?.sections.length
-                ? `${currentOptionsRef.current.sections.join("+")} screen recording`
-                : "Screen recording",
+            title,
           }),
         });
         if (!startRes.ok) throw new Error(`Failed to create recording: HTTP ${startRes.status}`);
@@ -1018,7 +1061,7 @@ export function RecordClient() {
         let lastLoaded = 0;
         let lastTime = Date.now();
 
-        await uploadWithProgress(uploadUrl, blob, (loaded, total) => {
+        await uploadWithProgress(uploadUrl, blob, contentType, (loaded, total) => {
           setUploadedBytes(loaded);
           setTotalBytes(total);
 
@@ -1060,6 +1103,35 @@ export function RecordClient() {
     [stopAllTracks, router],
   );
 
+  const finalizeUpload = useCallback(
+    async () => {
+      const blob = new Blob(chunksRef.current, { type: "video/webm" });
+      const sections = currentOptionsRef.current?.sections ?? [];
+      await uploadRecordingBlob({
+        blob,
+        contentType: "video/webm",
+        durationSec: elapsedSecRef.current > 0 ? elapsedSecRef.current : undefined,
+        title: sections.length ? `${sections.join("+")} screen recording` : "Screen recording",
+      });
+    },
+    [uploadRecordingBlob],
+  );
+
+  const handleFileUpload = useCallback(
+    async (file: File, opts: RecordingOptions) => {
+      setError(null);
+      currentOptionsRef.current = opts;
+      await uploadRecordingBlob({
+        blob: file,
+        contentType: file.type || "video/mp4",
+        title: opts.sections.length
+          ? `${opts.sections.join("+")} uploaded screen recording`
+          : file.name || "Uploaded screen recording",
+      });
+    },
+    [uploadRecordingBlob],
+  );
+
   // Keep finalizeRef pointing at the latest version
   useEffect(() => {
     finalizeRef.current = finalizeUpload;
@@ -1095,6 +1167,9 @@ export function RecordClient() {
         <SetupPhase
           onStart={(opts) => {
             void handleStart(opts);
+          }}
+          onUploadFile={(file, opts) => {
+            void handleFileUpload(file, opts);
           }}
         />
       )}

@@ -85,6 +85,36 @@ app blends graded accounting performance with reviewed Anki recall, applies
 recency weighting, counts currently due cards, and infers Becker units from
 chunk references such as `F1 M1`, `R1 M1`, and `S1 M1` for ISC.
 
+Indexed Anki cards are coverage-based, not quota-based. The generator may create
+zero cards for a chunk if it is introductory, repeated, or common-sense material,
+and otherwise creates only enough cards to cover non-obvious exam rules,
+exceptions, formulas, treatments, disclosures, and pitfalls.
+
+Production auth is controlled by environment variables. Generate a session
+secret and a password hash before deploying:
+
+``` bash
+openssl rand -base64 32
+pnpm auth:hash "your long password"
+```
+
+Set `AUTH_REQUIRED=true`, `AUTH_SECRET`, `APP_LOGIN_EMAIL`, and
+`APP_LOGIN_PASSWORD_HASH` in Vercel. Local dev can stay open unless
+`AUTH_REQUIRED=true` is present.
+
+Mobile support uses a bottom safe-area navigation layout and larger touch
+targets. Because mobile Safari does not expose browser screen capture for other
+apps, `/record` also accepts native iPhone screen-recording files (`.mov`,
+`.mp4`, `.webm`) and sends them through the same R2 upload and Trigger pipeline.
+The Anki Audio tab reads concept cards aloud with browser speech synthesis and
+posts the same review ratings as regular flashcards, so completed audio reviews
+count toward Anki progress.
+
+For video storage, Cloudflare R2 remains the default deployable store. A NAS can
+be used only if it is exposed to Vercel through a TLS-secured S3/MinIO or similar
+gateway; configure the `PROCESSED_ARCHIVE_S3_*` variables once that endpoint
+exists.
+
 Runtime verification:
 
 ``` bash

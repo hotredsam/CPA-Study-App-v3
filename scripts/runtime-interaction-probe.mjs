@@ -5,9 +5,11 @@ const baseUrl = process.env.RUNTIME_PROBE_BASE_URL ?? "http://localhost:3000";
 const maxDepth = Number(process.env.RUNTIME_PROBE_DEPTH ?? "5");
 const maxSequencesPerRoute = Number(process.env.RUNTIME_PROBE_MAX_SEQUENCES ?? "75");
 const maxActionsPerState = Number(process.env.RUNTIME_PROBE_MAX_ACTIONS ?? "12");
+const mobileProfile = process.argv.includes("--mobile") || process.env.RUNTIME_PROBE_PROFILE === "mobile";
 
 const defaultRoutes = [
   "/",
+  "/login",
   "/record",
   "/pipeline",
   "/review",
@@ -287,7 +289,12 @@ async function probeRoute(context, route) {
 async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({
-    viewport: { width: 1440, height: 1000 },
+    viewport: {
+      width: Number(process.env.RUNTIME_PROBE_VIEWPORT_WIDTH ?? (mobileProfile ? "440" : "1440")),
+      height: Number(process.env.RUNTIME_PROBE_VIEWPORT_HEIGHT ?? (mobileProfile ? "956" : "1000")),
+    },
+    isMobile: process.env.RUNTIME_PROBE_MOBILE === "true" || mobileProfile,
+    hasTouch: process.env.RUNTIME_PROBE_TOUCH === "true" || mobileProfile,
   });
 
   let total = 0;

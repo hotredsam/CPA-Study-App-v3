@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { EyebrowHeading, Tabs } from '@/components/ui'
 import { AnkiDaily } from './AnkiDaily'
 import { AnkiPractice } from './AnkiPractice'
+import { AnkiAudio } from './AnkiAudio'
 import { AnkiPath } from './AnkiPath'
 import { AnkiBrowse } from './AnkiBrowse'
 import type { AnkiMode } from './types'
@@ -12,6 +13,7 @@ import type { AnkiMode } from './types'
 const MODE_TABS = [
   { id: 'daily', label: 'Daily' },
   { id: 'practice', label: 'Practice' },
+  { id: 'audio', label: 'Audio' },
   { id: 'path', label: 'Path' },
   { id: 'browse', label: 'Browse' },
 ]
@@ -44,6 +46,7 @@ export function AnkiClient() {
       >
         {mode === 'daily' && <AnkiDaily setMode={setMode} />}
         {mode === 'practice' && <AnkiPractice topicId={topicId} />}
+        {mode === 'audio' && <AnkiAudio topicId={topicId} />}
         {mode === 'path' && <AnkiPath />}
         {mode === 'browse' && <AnkiBrowse />}
       </div>

@@ -31,14 +31,19 @@ export async function GET(request: NextRequest) {
       orderBy: { order: "asc" },
     });
 
+    await prisma.ankiCard.deleteMany({ where: { topicId } });
+
     let count = 0;
     for (const chunk of chunks) {
-      await runAnkiGen({
+      const result = await runAnkiGen({
         chunkId: chunk.id,
         content: chunk.content,
         topicId,
+        topicName: topic.name,
+        chapterRef: chunk.chapterRef ?? undefined,
+        section: topic.section,
       });
-      count++;
+      count += result.cards.length;
     }
 
     return NextResponse.json({ count, topicId });

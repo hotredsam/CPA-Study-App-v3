@@ -1,4 +1,4 @@
-export type AnkiMode = 'daily' | 'practice' | 'path' | 'browse'
+export type AnkiMode = 'daily' | 'practice' | 'audio' | 'path' | 'browse'
 
 export interface SrsState {
   ease: number

@@ -60,7 +60,7 @@ export function Tabs({ value, onChange, items, className = '', ...rest }: Props)
       role="tablist"
       aria-label={rest['aria-label'] ?? 'Tabs'}
       {...rest}
-      className={`flex gap-0 border-b border-[color:var(--border)] ${className}`}
+      className={`flex min-h-11 gap-0 overflow-x-auto border-b border-[color:var(--border)] ${className}`}
     >
       {items.map((item, index) => {
         const active = item.id === value
@@ -81,6 +81,7 @@ export function Tabs({ value, onChange, items, className = '', ...rest }: Props)
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={[
               'relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium hov',
+              'min-h-11 shrink-0',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1',
               'focus-visible:outline-[color:var(--accent)]',
               active

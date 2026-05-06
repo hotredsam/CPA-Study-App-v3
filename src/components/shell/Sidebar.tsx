@@ -188,6 +188,8 @@ export function Sidebar() {
   const { data: ankiCount = 0 } = useAnkiBadge()
   const { data: totalHours } = useTotalHours()
 
+  if (pathname === '/login') return null
+
   function getBadgeCount(badgeType?: 'pipeline' | 'anki'): number {
     if (badgeType === 'pipeline') return pipelineCount
     if (badgeType === 'anki') return ankiCount
@@ -197,6 +199,11 @@ export function Sidebar() {
   function isActive(route: string): boolean {
     if (route === '/') return pathname === '/'
     return pathname.startsWith(route)
+  }
+
+  async function handleSignOut() {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
+    window.location.assign('/login')
   }
 
   return (
@@ -265,13 +272,24 @@ export function Sidebar() {
       </ul>
 
       <div className="mt-auto border-t border-[color:var(--border)] px-3.5 py-3">
-        <div className="eyebrow">LIVE</div>
-        <div className="mt-1.5 text-[11px] text-[color:var(--ink-dim)]">
-          <span
-            className="pulse-dot mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]"
-            aria-hidden="true"
-          />
-          {pipelineCount} recording{pipelineCount === 1 ? '' : 's'} processing
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="eyebrow">LIVE</div>
+            <div className="mt-1.5 text-[11px] text-[color:var(--ink-dim)]">
+              <span
+                className="pulse-dot mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]"
+                aria-hidden="true"
+              />
+              {pipelineCount} recording{pipelineCount === 1 ? '' : 's'} processing
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded border border-[color:var(--border)] px-2 py-1 text-[10px] font-medium text-[color:var(--ink-faint)] hov focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </nav>

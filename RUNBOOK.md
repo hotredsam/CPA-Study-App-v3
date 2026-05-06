@@ -28,6 +28,10 @@ Required env vars (see `.env.example`):
 5. Click **Stop** or close the shared tab.
 6. Watch the upload progress bar fill; on completion you're routed to `/recordings/<id>/status`.
 
+On iPhone, use the native iOS screen recorder for Becker, then open `/record`
+and upload the saved video under **iPhone Screen Recording**. Mobile browsers do
+not currently expose `getDisplayMedia()` for recording another app's screen.
+
 ## Watch the pipeline
 
 - **Live**: `/recordings/<id>/status` — every stage, every pct, every sub-row.
@@ -44,6 +48,8 @@ Required env vars (see `.env.example`):
 
 - Sidebar shortcuts work outside text inputs: press the visible sidebar letter
   directly, or press `g` and then the letter.
+- On phone-sized screens, navigation moves to the bottom safe area for thumb
+  reach and keeps primary targets at touch-friendly sizes.
 - Tab controls use roving focus. Use `Tab` to enter the active tab, `ArrowLeft`
   / `ArrowRight` to switch tabs, and `Home` / `End` for first and last tabs.
 - Topics should show Becker unit labels from course structure, not AI section
@@ -54,6 +60,32 @@ Required env vars (see `.env.example`):
   weighted, reviewed Anki cards contribute recall strength, due cards stay
   visible, and low-evidence topics show low/no confidence instead of pretending
   to be mastered.
+- Indexed Anki generation has no fixed per-textbook or per-chunk quota. A chunk
+  can produce zero cards, and generated cards should cover only non-obvious,
+  exam-useful learning objectives while skipping common-sense business context
+  and duplicates already covered for the topic.
+- `/anki` has an Audio tab for concept review. It reads the prompt and answer
+  aloud when browser speech synthesis is available. Ratings post to the normal
+  Anki review endpoint, so audio reviews count toward due-card progress.
+
+## Production deploy notes
+
+Vercel requires these app variables at minimum:
+
+- `DATABASE_URL` - production Postgres, not local Docker
+- `AUTH_REQUIRED=true`
+- `AUTH_SECRET` - generate with `openssl rand -base64 32`
+- `APP_LOGIN_EMAIL`
+- `APP_LOGIN_PASSWORD_HASH` - generate with `pnpm auth:hash "your long password"`
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
+- `TRIGGER_PROJECT_ID`, `TRIGGER_SECRET_KEY`
+- `OPENROUTER_API_KEY`
+- `ENCRYPTION_KEY`
+
+NAS storage is optional. Vercel can archive processed media to a NAS only if the
+NAS exposes a public, TLS-secured S3/MinIO-compatible endpoint or a tunnel. Put
+that endpoint in `PROCESSED_ARCHIVE_S3_*`; do not point Vercel at a private LAN
+address.
 
 ## Reprocess a failed recording
 
@@ -103,6 +135,8 @@ Default: `ggml-small.en.bin`. If accuracy lags:
   non-destructive visible click targets and representative keyboard actions to
   depth 5, and fails on HTTP 500s, page errors, raw Prisma text, `_document.js`,
   `ENOENT`, or framework crash overlays.
+- `pnpm runtime:probe:mobile` - same crawler in a 440x956 touch viewport used
+  to approximate a Pro Max class phone.
 
 ## Local database recovery
 

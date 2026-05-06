@@ -77,6 +77,14 @@ export function KeyboardNav() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    const navWindow = window as Window & { __cpaKeyboardNavReady?: boolean }
+    navWindow.__cpaKeyboardNavReady = true
+    return () => {
+      navWindow.__cpaKeyboardNavReady = false
+    }
+  }, [])
+
+  useEffect(() => {
     Object.values(NAV_MAP).forEach(({ path }) => router.prefetch(path))
   }, [router])
 

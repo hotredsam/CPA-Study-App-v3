@@ -74,8 +74,7 @@ export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }:
   return (
     <div className={isLast && !isExpanded ? '' : 'border-b border-[color:var(--border)]'}>
       <div
-        className="grid cursor-pointer items-center gap-2 px-4 py-3 hov"
-        style={{ gridTemplateColumns: '60px minmax(220px,1fr) 130px 230px 150px 70px 80px 24px' }}
+        className="topic-grid grid cursor-pointer items-center gap-2 px-4 py-3 hov"
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
         tabIndex={0}
@@ -88,7 +87,7 @@ export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }:
         <div className="mono min-w-0 truncate text-[11px] text-[color:var(--ink-faint)]">
           {topic.unit ?? '-'}
         </div>
-        <div className="flex min-w-0 items-center gap-3 pr-10" title={masteryEvidence}>
+        <div className="topic-mastery-cell flex min-w-0 items-center gap-3 pr-10" title={masteryEvidence}>
           <div className="min-w-0 flex-1">
             <Bar
               pct={mastery}

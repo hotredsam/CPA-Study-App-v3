@@ -386,7 +386,10 @@ export async function indexTextbook(args: {
 
         const updatedChunk = await prisma.chunk.findUnique({
           where: { id: chunk.id },
-          select: { topicId: true },
+          select: {
+            topicId: true,
+            topic: { select: { name: true } },
+          },
         });
 
         if (config.ankiCardGen) {
@@ -396,6 +399,8 @@ export async function indexTextbook(args: {
               chunkId: chunk.id,
               content: chunk.content,
               topicId: updatedChunk?.topicId ?? undefined,
+              topicName: updatedChunk?.topic?.name,
+              chapterRef: chunk.chapterRef ?? undefined,
               section,
             });
             const after = await prisma.ankiCard.count({ where: { chunkId: chunk.id } });

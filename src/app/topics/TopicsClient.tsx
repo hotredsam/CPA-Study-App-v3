@@ -197,8 +197,7 @@ export function TopicsClient() {
         {!isLoading && !isError && (
           <>
             <div
-              className="grid gap-2 border-b border-[color:var(--border)] bg-[color:var(--surface-2)] px-4 py-2.5"
-              style={{ gridTemplateColumns: '60px minmax(220px,1fr) 130px 230px 150px 70px 80px 24px' }}
+              className="topic-grid grid gap-2 border-b border-[color:var(--border)] bg-[color:var(--surface-2)] px-4 py-2.5"
             >
               {['SECT', 'TOPIC', 'UNIT', 'MASTERY', 'ERROR RATE', 'DUE', 'SEEN', ''].map((h) => (
                 <div key={h} className="eyebrow whitespace-nowrap">
