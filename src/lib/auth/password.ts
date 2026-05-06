@@ -20,13 +20,20 @@ export async function verifyPasswordHash(password: string, encodedHash: string |
     return false;
   }
 
-  const salt = Buffer.from(saltRaw, "base64url");
-  const expected = Buffer.from(hashRaw, "base64url");
-  const derived = scryptSync(password, salt, expected.length, {
-    N: Number(nRaw),
-    r: Number(rRaw),
-    p: Number(pRaw),
-  });
+  const n = Number(nRaw);
+  const r = Number(rRaw);
+  const p = Number(pRaw);
+  if (!Number.isInteger(n) || !Number.isInteger(r) || !Number.isInteger(p) || n < 2 || r < 1 || p < 1) {
+    return false;
+  }
 
-  return expected.length === derived.length && timingSafeEqual(expected, derived);
+  try {
+    const salt = Buffer.from(saltRaw, "base64url");
+    const expected = Buffer.from(hashRaw, "base64url");
+    if (salt.length === 0 || expected.length === 0) return false;
+    const derived = scryptSync(password, salt, expected.length, { N: n, r, p });
+    return expected.length === derived.length && timingSafeEqual(expected, derived);
+  } catch {
+    return false;
+  }
 }

@@ -5,6 +5,7 @@ import { verifyPasswordHash } from "@/lib/auth/password";
 import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const LoginSchema = z.object({
   email: z.string().email(),

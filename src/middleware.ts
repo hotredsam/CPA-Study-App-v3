@@ -20,6 +20,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 function isStaticAsset(pathname: string): boolean {
+  if (pathname.startsWith("/api/")) return false;
   return /\.[a-z0-9]+$/i.test(pathname);
 }
 

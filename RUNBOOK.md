@@ -123,6 +123,7 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 | `gradeQuestion` writes empty items | Task 7 not yet live | Same — blocked on 10-item key lock |
 | Word-timestamps missing | `ggml-small.en` w/o `token_timestamps` | Enabled by default in `src/lib/whisper.ts`; verify `smart-whisper` version |
 | Runtime error mentions `.next\server\pages\_document.js` or missing route files | Two Next dev/build processes shared a stale `.next` directory | Stop dev servers with `pnpm kill-ports`, then run `pnpm dev`. E2E uses isolated `.next-e2e`; do not manually run two `next dev` processes against the same dist dir. |
+| Browser upload works locally but stalls in production | R2 bucket CORS or CSP is blocking the presigned PUT | Keep the production CSP R2 `connect-src` entries in `next.config.ts`, then configure Cloudflare R2 CORS to allow `PUT` from the Vercel domain with `content-type`. |
 
 ## Tests
 
