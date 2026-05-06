@@ -1,3 +1,5 @@
+import { inferBeckerModuleNumber, inferBeckerUnitLabel } from "@/lib/becker-units";
+
 export type PageText = {
   pageNumber: number;
   text: string;
@@ -17,48 +19,6 @@ type WordWithPage = {
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
-}
-
-function unitPrefixForSection(section: string | undefined): string {
-  switch (section) {
-    case "AUD":
-      return "A";
-    case "REG":
-      return "R";
-    case "TCP":
-      return "T";
-    case "BAR":
-      return "B";
-    case "ISC":
-      return "I";
-    case "FAR":
-    default:
-      return "F";
-  }
-}
-
-function inferUnitLabel(args: {
-  textbookTitle?: string;
-  section?: string;
-}): string | null {
-  const title = args.textbookTitle ?? "";
-  const sectionPrefix = unitPrefixForSection(args.section);
-  const direct = new RegExp(`\\b${sectionPrefix}\\s*0?(\\d{1,2})\\b`, "i").exec(title);
-  if (direct?.[1]) return `${sectionPrefix}${Number(direct[1])}`;
-
-  const farFile = /\bFAR[-_\s]*0?(\d{1,2})\b/i.exec(title);
-  if (farFile?.[1]) return `F${Number(farFile[1])}`;
-
-  const loose = /\b(?:unit|part)\s*0?(\d{1,2})\b/i.exec(title);
-  return loose?.[1] ? `${sectionPrefix}${Number(loose[1])}` : null;
-}
-
-function inferModuleNumber(content: string): number | null {
-  const moduleMatch = /\bMODULE\s+0?(\d{1,2})\b/i.exec(content);
-  if (moduleMatch?.[1]) return Number(moduleMatch[1]);
-
-  const compactMatch = /\bM\s*[-.]?\s*0?(\d{1,2})\b/i.exec(content);
-  return compactMatch?.[1] ? Number(compactMatch[1]) : null;
 }
 
 export function createTextbookChunkDrafts(args: {
@@ -84,7 +44,7 @@ export function createTextbookChunkDrafts(args: {
   }
 
   const drafts: TextChunkDraft[] = [];
-  const unitLabel = inferUnitLabel({
+  const unitLabel = inferBeckerUnitLabel({
     textbookTitle: args.textbookTitle,
     section: args.section,
   });
@@ -103,7 +63,7 @@ export function createTextbookChunkDrafts(args: {
         ? `Page ${first.pageNumber}`
         : `Pages ${first.pageNumber}-${last.pageNumber}`;
     const content = slice.map((word) => word.value).join(" ");
-    const moduleNumber = inferModuleNumber(content);
+    const moduleNumber = inferBeckerModuleNumber(content);
     if (moduleNumber !== null) {
       currentModule = moduleNumber;
     }

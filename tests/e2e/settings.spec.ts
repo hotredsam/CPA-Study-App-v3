@@ -29,3 +29,21 @@ test('settings: tab navigation works', async ({ page }) => {
   await page.getByRole('tab', { name: 'Danger Zone' }).click()
   await expect(page).toHaveURL(/tab=danger/)
 })
+
+test('settings: tabs support keyboard navigation', async ({ page }) => {
+  await page.goto('/settings')
+
+  const studyTab = page.getByRole('tab', { name: 'Study Schedule' })
+  await studyTab.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(page).toHaveURL(/tab=models/)
+  await expect(page.getByRole('tab', { name: 'Models & API' })).toBeFocused()
+
+  await page.keyboard.press('End')
+  await expect(page).toHaveURL(/tab=danger/)
+  await expect(page.getByRole('tab', { name: 'Danger Zone' })).toBeFocused()
+
+  await page.keyboard.press('Home')
+  await expect(page).toHaveURL(/tab=study/)
+  await expect(studyTab).toBeFocused()
+})

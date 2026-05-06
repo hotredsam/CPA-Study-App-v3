@@ -48,6 +48,8 @@ cpa-study-servant.zip
 # tmp dev logs
 /tmp/
 .codex-run/
+.codex-next-dev.log
+.codex-next-dev.err.log
 
 # sam-input transient
 /sam-input/audio/*.wav

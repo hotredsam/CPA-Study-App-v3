@@ -39,9 +39,23 @@ function errorColor(pct: number | null): string {
   return 'var(--good)'
 }
 
+function masteryEvidenceText(topic: Topic): string {
+  const evidence = topic.masteryEvidence
+  if (!evidence || evidence.confidence === 'none') {
+    return 'Mastery is waiting for reviewed cards or graded questions.'
+  }
+
+  return [
+    `${evidence.cardsReviewed}/${evidence.cardsTotal} cards reviewed`,
+    `${evidence.questionsGraded} graded question${evidence.questionsGraded === 1 ? '' : 's'}`,
+    `${evidence.confidence} confidence`,
+  ].join(' - ')
+}
+
 export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }: Props) {
   const mastery = normalizePercent(topic.mastery)
   const errorRate = topic.errorRate != null ? Math.round(topic.errorRate * 100) : null
+  const masteryEvidence = masteryEvidenceText(topic)
 
   const handleToggle = useCallback(() => {
     onToggle(topic.id)
@@ -74,9 +88,14 @@ export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }:
         <div className="mono min-w-0 truncate text-[11px] text-[color:var(--ink-faint)]">
           {topic.unit ?? '-'}
         </div>
-        <div className="flex min-w-0 items-center gap-3 pr-10">
+        <div className="flex min-w-0 items-center gap-3 pr-10" title={masteryEvidence}>
           <div className="min-w-0 flex-1">
-            <Bar pct={mastery} height={4} accent={masteryColor(mastery)} aria-label={`Mastery ${mastery}%`} />
+            <Bar
+              pct={mastery}
+              height={4}
+              accent={masteryColor(mastery)}
+              aria-label={`Mastery ${mastery}%. ${masteryEvidence}`}
+            />
           </div>
           <span className="mono tabular w-[48px] shrink-0 text-right text-[11px] text-[color:var(--ink-dim)]">
             {mastery}%

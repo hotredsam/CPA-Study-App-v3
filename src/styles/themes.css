@@ -145,6 +145,10 @@ html[data-serif="instrument"] {
   width: 100%;
 }
 
+.main > * {
+  animation: page-enter .16s ease-out both;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -203,6 +207,10 @@ html[data-serif="instrument"] {
   filter: brightness(0.97);
 }
 
+.hov:active {
+  transform: translateY(1px);
+}
+
 html[data-theme="night"] .hov:hover {
   filter: brightness(1.15);
 }
@@ -214,4 +222,30 @@ html[data-theme="night"] .hov:hover {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0.001;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main > *,
+  .pulse-dot {
+    animation: none;
+  }
+
+  .hov {
+    transition: none;
+  }
+
+  .hov:active {
+    transform: none;
+  }
 }

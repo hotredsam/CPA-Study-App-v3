@@ -75,6 +75,16 @@ curl http://localhost:3000/api/health
 If the app says the database is unavailable, start Docker Desktop, run
 `docker compose up -d postgres`, wait for port `5432`, and refresh the page.
 
+Navigation shortcuts are available anywhere outside text inputs. Press a sidebar
+letter directly (`u` for Study, `y` for Topics, `t` for Settings) or use the
+two-key `g` prefix (`g` then `u`, `g` then `y`, etc.). Tab bars support the
+standard arrow-key, Home, and End behavior.
+
+Topic mastery is computed from evidence, not a manually edited percentage. The
+app blends graded accounting performance with reviewed Anki recall, applies
+recency weighting, counts currently due cards, and infers Becker units from
+chunk references such as `F1 M1`, `R1 M1`, and `S1 M1` for ISC.
+
 Runtime verification:
 
 ``` bash

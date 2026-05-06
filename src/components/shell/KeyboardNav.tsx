@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const NAV_MAP: Record<string, { path: string; label: string }> = {
@@ -43,7 +43,7 @@ function ShortcutOverlay({ onClose }: { onClose: () => void }) {
             {Object.entries(NAV_MAP).map(([key, { label }]) => (
               <tr key={key} className="border-t border-[color:var(--border-faint)] first:border-0">
                 <td className="py-1.5 pr-4 font-mono text-[color:var(--accent)]">
-                  g <span className="text-[color:var(--ink-faint)]">then</span> {key}
+                  {key} <span className="text-[color:var(--ink-faint)]">or</span> g {key}
                 </td>
                 <td className="py-1.5 text-[color:var(--ink)]">{label}</td>
               </tr>
@@ -58,43 +58,80 @@ function ShortcutOverlay({ onClose }: { onClose: () => void }) {
   )
 }
 
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tagName = target.tagName.toLowerCase()
+  return (
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select' ||
+    target.isContentEditable ||
+    target.getAttribute('role') === 'textbox'
+  )
+}
+
 export function KeyboardNav() {
   const router = useRouter()
-  const [awaitingSecond, setAwaitingSecond] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const awaitingSecondRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
+    Object.values(NAV_MAP).forEach(({ path }) => router.prefetch(path))
+  }, [router])
+
+  useEffect(() => {
+    function clearAwaitingSecond() {
+      awaitingSecondRef.current = false
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
 
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      if (isTypingTarget(e.target) || e.altKey || e.ctrlKey || e.metaKey) return
 
       if (e.key === '?') {
+        e.preventDefault()
         setShowHelp((v) => !v)
+        clearAwaitingSecond()
         return
       }
 
-      if (awaitingSecond) {
-        const dest = NAV_MAP[e.key]
-        if (dest) router.push(dest.path)
-        setAwaitingSecond(false)
-        clearTimeout(timer)
+      const key = e.key.toLowerCase()
+
+      if (awaitingSecondRef.current) {
+        const dest = NAV_MAP[key]
+        if (dest) {
+          e.preventDefault()
+          router.push(dest.path)
+          setShowHelp(false)
+        }
+        clearAwaitingSecond()
         return
       }
 
-      if (e.key === 'g' && !e.ctrlKey && !e.metaKey) {
-        setAwaitingSecond(true)
-        timer = setTimeout(() => setAwaitingSecond(false), 1000)
+      if (key === 'g') {
+        e.preventDefault()
+        awaitingSecondRef.current = true
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = setTimeout(clearAwaitingSecond, 1000)
+        return
+      }
+
+      const directDest = NAV_MAP[key]
+      if (directDest) {
+        e.preventDefault()
+        router.push(directDest.path)
+        setShowHelp(false)
       }
     }
 
     window.addEventListener('keydown', handler)
     return () => {
       window.removeEventListener('keydown', handler)
-      clearTimeout(timer)
+      clearAwaitingSecond()
     }
-  }, [awaitingSecond, router])
+  }, [router])
 
   if (!showHelp) return null
 

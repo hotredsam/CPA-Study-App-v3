@@ -16,3 +16,16 @@ test("home page renders without console errors", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("sidebar keyboard shortcuts navigate immediately", async ({ page }) => {
+  await page.goto("/");
+
+  await page.keyboard.press("u");
+  await expect(page).toHaveURL(/\/study$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Textbook Study");
+
+  await page.keyboard.press("g");
+  await page.keyboard.press("y");
+  await expect(page).toHaveURL(/\/topics$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Topics");
+});

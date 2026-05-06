@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AiFunctionKey, CpaSection } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { inferBeckerUnitLabel } from "@/lib/becker-units";
 import { runFunction } from "@/lib/llm/router";
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,7 @@ export type TopicExtractOutput = z.infer<typeof TopicExtractOutput>;
 function buildPrompt(input: TopicExtractInput): string {
   const parts: string[] = [
     "Extract structured topic metadata from this CPA textbook chunk. Return JSON with canonicalTopic, subsection, workedExamples[], fasbRefs[], ircRefs[], pcaobRefs[].",
+    "Use canonicalTopic for the teachable accounting concept. Do not use subsection for Becker unit labels such as F1 or F1 M1; the app derives those from the chunk reference.",
     "",
   ];
 
@@ -84,6 +86,11 @@ export async function runTopicExtract(
   }
 
   const output = TopicExtractOutput.parse(result.output);
+  const beckerUnit = inferBeckerUnitLabel({
+    chapterRef: validated.chapterRef,
+    section: validated.section,
+    content: validated.content,
+  });
 
   // Link to an existing Topic if possible; otherwise create one for uploaded
   // textbook content so a blank app can build its topic map from scratch.
@@ -91,6 +98,7 @@ export async function runTopicExtract(
     where: {
       name: { equals: output.canonicalTopic, mode: "insensitive" },
       ...(validated.section ? { section: validated.section } : {}),
+      ...(beckerUnit ? { unit: beckerUnit } : {}),
     },
   });
 
@@ -100,7 +108,7 @@ export async function runTopicExtract(
           data: {
             section: validated.section,
             name: output.canonicalTopic,
-            unit: output.subsection || null,
+            unit: beckerUnit ?? (output.subsection || null),
           },
         })
       : null

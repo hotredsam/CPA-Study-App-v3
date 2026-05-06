@@ -60,6 +60,9 @@ export function TopicsClient() {
       if (!res.ok) throw await errorFromResponse(res)
       return res.json() as Promise<Topic[]>
     },
+    placeholderData: (previousData) => previousData ?? [],
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 
   const handleToggle = useCallback((id: string) => {

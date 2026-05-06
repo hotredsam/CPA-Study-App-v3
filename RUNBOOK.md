@@ -40,6 +40,21 @@ Required env vars (see `.env.example`):
   explanation, transcript with clickable word timestamps, 10 feedback items.
 - Prev/next: on-screen buttons OR `←` / `→` keys.
 
+## Navigation and topic data
+
+- Sidebar shortcuts work outside text inputs: press the visible sidebar letter
+  directly, or press `g` and then the letter.
+- Tab controls use roving focus. Use `Tab` to enter the active tab, `ArrowLeft`
+  / `ArrowRight` to switch tabs, and `Home` / `End` for first and last tabs.
+- Topics should show Becker unit labels from course structure, not AI section
+  prose. Expected prefixes: `A` for AUD, `F` for FAR, `R` for REG, `B` for BAR,
+  `S` for ISC, and `T` for TCP. Re-indexing derives the unit from chunk
+  references/title text such as `F1 M1`.
+- Mastery is evidence-based: graded question accounting scores are recency
+  weighted, reviewed Anki cards contribute recall strength, due cards stay
+  visible, and low-evidence topics show low/no confidence instead of pretending
+  to be mastered.
+
 ## Reprocess a failed recording
 
 The pipeline is idempotent per stage. Two ways to retry:

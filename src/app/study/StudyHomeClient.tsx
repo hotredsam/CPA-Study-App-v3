@@ -101,7 +101,7 @@ export function StudyHomeClient({ recentTextbook, textbooks, cardsDue }: Props) 
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {readyTextbooks.map((book) => (
-              <Card key={book.id} className="flex flex-col gap-3 p-5">
+              <Card key={book.id} className="flex h-full flex-col p-5">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-[color:var(--ink)] leading-snug line-clamp-2">
                     {book.title}
@@ -110,20 +110,20 @@ export function StudyHomeClient({ recentTextbook, textbooks, cardsDue }: Props) 
                     {book.chunkCount} chunk{book.chunkCount !== 1 ? "s" : ""}
                   </p>
                 </div>
-                {book.sections.length > 0 && (
-                  <div className="flex flex-wrap gap-1" aria-label="Sections covered">
-                    {book.sections.map((s) => (
-                      <SectionBadge key={s} section={s} size="xs" />
-                    ))}
+                <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+                  <div className="flex min-w-0 flex-wrap gap-1" aria-label="Sections covered">
+                    {book.sections.length > 0
+                      ? book.sections.map((s) => <SectionBadge key={s} section={s} size="xs" />)
+                      : null}
                   </div>
-                )}
-                <Link
-                  href={`/study/${book.id}/0`}
-                  className="inline-flex items-center justify-center font-medium rounded-[3px] text-xs px-2.5 py-1.5 border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
-                  aria-label={`Start ${book.title} from beginning`}
-                >
-                  Start from beginning
-                </Link>
+                  <Link
+                    href={`/study/${book.id}/0`}
+                    className="shrink-0 inline-flex items-center justify-center font-medium rounded-[3px] text-xs px-2.5 py-1.5 border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
+                    aria-label={`Start ${book.title} from beginning`}
+                  >
+                    Start from beginning
+                  </Link>
+                </div>
               </Card>
             ))}
           </div>

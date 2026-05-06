@@ -27,4 +27,24 @@ describe("createTextbookChunkDrafts", () => {
     expect(chunks).toHaveLength(2);
     expect(chunks[1]?.chapterRef).toBe("Page 3");
   });
+
+  it("uses Becker unit and module labels in chunk references", () => {
+    const words = [
+      "MODULE",
+      "2",
+      "Consolidated",
+      "Financial",
+      "Statements",
+      ...Array.from({ length: 180 }, (_, index) => `w${index + 1}`),
+    ];
+    const chunks = createTextbookChunkDrafts({
+      pages: [{ pageNumber: 7, text: words.join(" ") }],
+      textbookTitle: "FAR F1",
+      section: "FAR",
+      chunkSize: 128,
+      overlapWindow: 28,
+    });
+
+    expect(chunks[0]?.chapterRef).toBe("F1 M2 - Page 7");
+  });
 });

@@ -124,34 +124,23 @@ export function StudyReaderClient({
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         {/* Left: reading area */}
         <div className="space-y-6 min-w-0">
-          <Card>
+          <Card className="textbook-reader-card">
             {chunk.htmlContent ? (
               <HydratedTextbookHtml
                 html={chunk.htmlContent}
                 fallbackText={chunk.content}
-                className="textbook-html-render max-w-none"
-                style={{
-                  fontFamily: "var(--font-serif, Instrument Serif, serif)",
-                  lineHeight: 1.7,
-                  maxWidth: "65ch",
-                }}
+                className="textbook-html-render"
                 ariaLabel={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
               />
             ) : (
               <article
-                className="prose max-w-none"
-                style={{
-                  fontFamily: "var(--font-serif, Instrument Serif, serif)",
-                  lineHeight: 1.7,
-                  maxWidth: "65ch",
-                }}
+                className="textbook-html-render"
                 aria-label={`Chunk content: ${chunk.title ?? `Section ${chunk.order + 1}`}`}
               >
                 {chunk.content.split("\n").map((para, i) =>
                   para.trim() ? (
                     <p
                       key={i}
-                      className="mb-4 text-[color:var(--ink)] text-[1.0625rem] leading-[1.75]"
                     >
                       {para}
                     </p>

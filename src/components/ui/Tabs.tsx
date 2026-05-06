@@ -1,36 +1,84 @@
 'use client'
 
+import { useRef, type KeyboardEvent, type HTMLAttributes } from 'react'
+
 interface TabItem {
   id: string
   label: string
   badge?: number
 }
 
-interface Props {
+interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
   value: string
   onChange: (id: string) => void
   items: TabItem[]
   className?: string
 }
 
-export function Tabs({ value, onChange, items, className = '' }: Props) {
+export function Tabs({ value, onChange, items, className = '', ...rest }: Props) {
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const activeIndex = Math.max(0, items.findIndex((item) => item.id === value))
+
+  function activate(index: number) {
+    if (items.length === 0) return
+    const normalized = (index + items.length) % items.length
+    const next = items[normalized]
+    if (!next) return
+
+    onChange(next.id)
+    window.requestAnimationFrame(() => tabRefs.current[normalized]?.focus())
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    switch (event.key) {
+      case 'ArrowLeft':
+        event.preventDefault()
+        activate(index - 1)
+        break
+      case 'ArrowRight':
+        event.preventDefault()
+        activate(index + 1)
+        break
+      case 'Home':
+        event.preventDefault()
+        activate(0)
+        break
+      case 'End':
+        event.preventDefault()
+        activate(items.length - 1)
+        break
+      case 'Enter':
+      case ' ':
+        event.preventDefault()
+        activate(index)
+        break
+    }
+  }
+
   return (
     <div
       role="tablist"
-      aria-label="Tabs"
+      aria-label={rest['aria-label'] ?? 'Tabs'}
+      {...rest}
       className={`flex gap-0 border-b border-[color:var(--border)] ${className}`}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const active = item.id === value
         return (
           <button
             key={item.id}
+            ref={(node) => {
+              tabRefs.current[index] = node
+            }}
             role="tab"
             id={`tab-${item.id}`}
             aria-selected={active}
             aria-controls={`tabpanel-${item.id}`}
+            aria-keyshortcuts={index < 9 ? String(index + 1) : undefined}
+            tabIndex={index === activeIndex ? 0 : -1}
             type="button"
             onClick={() => onChange(item.id)}
+            onKeyDown={(event) => handleKeyDown(event, index)}
             className={[
               'relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium hov',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1',

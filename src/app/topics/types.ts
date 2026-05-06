@@ -7,6 +7,13 @@ export interface AiNotes {
   performance: string
 }
 
+export interface MasteryEvidence {
+  cardsTotal: number
+  cardsReviewed: number
+  questionsGraded: number
+  confidence: 'none' | 'low' | 'medium' | 'high'
+}
+
 export interface Topic {
   id: string
   section: string
@@ -20,6 +27,7 @@ export interface Topic {
   aiNotes: AiNotes | null
   createdAt: string
   updatedAt: string
+  masteryEvidence?: MasteryEvidence
 }
 
 export type SortField = 'mastery' | 'error' | 'cards' | 'seen'
