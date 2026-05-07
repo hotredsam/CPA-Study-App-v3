@@ -1,27 +1,14 @@
 import { DashboardClient, type DashboardData } from './DashboardClient'
-import { getServerBaseUrl } from '@/lib/server-base-url'
+import { EMPTY_DASHBOARD_DATA, readDashboardData } from '@/lib/dashboard-data'
 
 export const metadata = { title: 'Dashboard - CPA Study Servant' }
+export const dynamic = 'force-dynamic'
 
 async function getDashboardData(): Promise<DashboardData> {
   try {
-    const baseUrl = await getServerBaseUrl()
-    const res = await fetch(`${baseUrl}/api/dashboard`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return res.json() as Promise<DashboardData>
+    return await readDashboardData()
   } catch {
-    // Return a safe empty state if the API is not reachable (e.g., first boot)
-    return {
-      studyStats: { totalHours: 0, weekHours: 0, streak: 0, recordingsCount: 0 },
-      sections: [],
-      weakestTopics: [],
-      recentRecordings: [],
-      cardsDue: 0,
-      currentTextbookFocus: null,
-      routine: null,
-    }
+    return EMPTY_DASHBOARD_DATA
   }
 }
 

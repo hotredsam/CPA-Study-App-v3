@@ -1,45 +1,16 @@
 import { EyebrowHeading } from "@/components/ui/EyebrowHeading";
-import { getServerBaseUrl } from "@/lib/server-base-url";
+import { EMPTY_STUDY_DATA, readStudyData, type StudyData } from "@/lib/study-data";
 import { StudyHomeClient } from "./StudyHomeClient";
 
 export const metadata = { title: "Study — CPA Study Servant" };
 
-type RecentTextbook = {
-  id: string;
-  title: string;
-  lastChunkIdx: number;
-  totalChunks: number;
-} | null;
-
-type TextbookItem = {
-  id: string;
-  title: string;
-  sections: string[];
-  chunkCount: number;
-  indexStatus: string;
-};
-
-type StudyData = {
-  recentTextbook: RecentTextbook;
-  textbooks: TextbookItem[];
-  cardsDue: number;
-};
+export const dynamic = "force-dynamic";
 
 async function fetchStudyData(): Promise<StudyData> {
   try {
-    const baseUrl = await getServerBaseUrl();
-
-    const res = await fetch(`${baseUrl}/api/study`, {
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      return { recentTextbook: null, textbooks: [], cardsDue: 0 };
-    }
-
-    return res.json() as Promise<StudyData>;
+    return await readStudyData();
   } catch {
-    return { recentTextbook: null, textbooks: [], cardsDue: 0 };
+    return EMPTY_STUDY_DATA;
   }
 }
 

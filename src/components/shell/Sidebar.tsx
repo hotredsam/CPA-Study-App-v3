@@ -135,47 +135,27 @@ const NAV_ITEMS: NavItem[] = [
 
 // ─── Badge data fetching ───────────────────────────────────────────────────────
 
-function useTotalHours() {
-  return useQuery({
-    queryKey: ['sidebar-hours'],
-    queryFn: async () => {
-      const res = await fetch('/api/settings/study-hours')
-      if (!res.ok) return null
-      const data = (await res.json()) as { totalHours?: number }
-      return data.totalHours ?? null
-    },
-    staleTime: 2 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    retry: false,
-  })
+interface ShellSummary {
+  totalHours: number | null
+  pipelineCount: number
+  ankiCount: number
 }
 
-function usePipelineBadge() {
+function useShellSummary() {
   return useQuery({
-    queryKey: ['pipeline-badge'],
+    queryKey: ['shell-summary'],
     queryFn: async () => {
-      const res = await fetch('/api/recordings?status=uploaded,segmenting,processing_questions&liveOnly=true&limit=50')
-      if (!res.ok) return 0
-      const data = (await res.json()) as { items?: unknown[] }
-      return data.items?.length ?? 0
+      const res = await fetch('/api/shell/summary')
+      if (!res.ok) return { totalHours: null, pipelineCount: 0, ankiCount: 0 }
+      const data = (await res.json()) as Partial<ShellSummary>
+      return {
+        totalHours: typeof data.totalHours === 'number' ? data.totalHours : null,
+        pipelineCount: typeof data.pipelineCount === 'number' ? data.pipelineCount : 0,
+        ankiCount: typeof data.ankiCount === 'number' ? data.ankiCount : 0,
+      }
     },
-    staleTime: 15_000,
-    refetchInterval: 15_000,
-    retry: false,
-  })
-}
-
-function useAnkiBadge() {
-  return useQuery({
-    queryKey: ['anki-badge'],
-    queryFn: async () => {
-      const res = await fetch('/api/anki/due')
-      if (!res.ok) return 0
-      const data = (await res.json()) as { count?: number }
-      return data.count ?? 0
-    },
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: false,
   })
 }
@@ -184,9 +164,10 @@ function useAnkiBadge() {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { data: pipelineCount = 0 } = usePipelineBadge()
-  const { data: ankiCount = 0 } = useAnkiBadge()
-  const { data: totalHours } = useTotalHours()
+  const { data: shellSummary } = useShellSummary()
+  const pipelineCount = shellSummary?.pipelineCount ?? 0
+  const ankiCount = shellSummary?.ankiCount ?? 0
+  const totalHours = shellSummary?.totalHours ?? null
 
   if (pathname === '/login') return null
 

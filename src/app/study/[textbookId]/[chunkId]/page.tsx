@@ -1,68 +1,17 @@
 import Link from "next/link";
-import { getServerBaseUrl } from "@/lib/server-base-url";
+import { readStudyChunkData, type ChunkData } from "@/lib/study-data";
 import { StudyReaderClient } from "./StudyReaderClient";
 
 interface Props {
   params: Promise<{ textbookId: string; chunkId: string }>;
 }
 
-type Textbook = {
-  id: string;
-  title: string;
-  sections: string[];
-  chunkCount: number;
-};
-
-type Chunk = {
-  id: string;
-  order: number;
-  title: string | null;
-  chapterRef: string | null;
-  content: string;
-  htmlContent: string | null;
-  topicId: string | null;
-  fasbCitation: string | null;
-};
-
-type Topic = {
-  id: string;
-  name: string;
-  section: string;
-  mastery: number;
-} | null;
-
-type PracticeCard = {
-  id: string;
-  front: string;
-  back: string;
-  explanation: string | null;
-  sourceCitation: string | null;
-  difficulty: number | null;
-};
-
-type ChunkData = {
-  textbook: Textbook;
-  chunk: Chunk;
-  topic: Topic;
-  practiceCards: PracticeCard[];
-  prevChunkIdx: number | null;
-  nextChunkIdx: number | null;
-};
-
 async function fetchChunkData(
   textbookId: string,
   chunkId: string,
 ): Promise<ChunkData | null> {
   try {
-    const baseUrl = await getServerBaseUrl();
-
-    const res = await fetch(
-      `${baseUrl}/api/study/${encodeURIComponent(textbookId)}/${encodeURIComponent(chunkId)}`,
-      { cache: "no-store" },
-    );
-
-    if (!res.ok) return null;
-    return res.json() as Promise<ChunkData>;
+    return await readStudyChunkData(textbookId, chunkId);
   } catch {
     return null;
   }
