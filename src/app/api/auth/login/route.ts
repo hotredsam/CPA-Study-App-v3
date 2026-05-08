@@ -1,38 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createSessionToken, AUTH_COOKIE_NAME, DEFAULT_SESSION_TTL_SECONDS, isAuthConfigured } from "@/lib/auth/session";
+import {
+  createSessionToken,
+  AUTH_COOKIE_NAME,
+  DEFAULT_SESSION_TTL_SECONDS,
+  getConfiguredLoginUsername,
+  isAuthConfigured,
+} from "@/lib/auth/session";
 import { verifyPasswordHash } from "@/lib/auth/password";
 import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+const LoginSchema = z
+  .object({
+    username: z.string().trim().min(1).max(120).optional(),
+    email: z.string().trim().min(1).max(320).optional(),
+    password: z.string().min(1),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.username && !data.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Username is required.",
+        path: ["username"],
+      });
+    }
+  });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     if (!isAuthConfigured()) {
-      throw new ApiError("INTERNAL_ERROR", "Login is not configured. Set AUTH_SECRET, APP_LOGIN_EMAIL, and APP_LOGIN_PASSWORD_HASH.");
+      throw new ApiError("INTERNAL_ERROR", "Login is not configured. Set AUTH_SECRET, APP_LOGIN_USERNAME, and APP_LOGIN_PASSWORD_HASH.");
     }
 
     const parsed = LoginSchema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {
-      throw new ApiError("BAD_REQUEST", "Enter a valid email and password.", parsed.error.flatten());
+      throw new ApiError("BAD_REQUEST", "Enter a valid username and password.", parsed.error.flatten());
     }
 
-    const expectedEmail = process.env["APP_LOGIN_EMAIL"];
-    const emailMatches = parsed.data.email.trim().toLowerCase() === expectedEmail?.trim().toLowerCase();
+    const expectedUsername = getConfiguredLoginUsername();
+    if (!expectedUsername) {
+      throw new ApiError("INTERNAL_ERROR", "Login is not configured. Set AUTH_SECRET, APP_LOGIN_USERNAME, and APP_LOGIN_PASSWORD_HASH.");
+    }
+
+    const submittedUsername = (parsed.data.username ?? parsed.data.email ?? "").trim();
+    const usernameMatches = submittedUsername.toLowerCase() === expectedUsername.trim().toLowerCase();
     const passwordMatches = await verifyPasswordHash(parsed.data.password, process.env["APP_LOGIN_PASSWORD_HASH"]);
 
-    if (!emailMatches || !passwordMatches) {
-      throw new ApiError("BAD_REQUEST", "Email or password is incorrect.", undefined, 401);
+    if (!usernameMatches || !passwordMatches) {
+      throw new ApiError("BAD_REQUEST", "Username or password is incorrect.", undefined, 401);
     }
 
     const token = await createSessionToken({
-      email: parsed.data.email.trim().toLowerCase(),
+      username: expectedUsername.trim(),
       secret: process.env["AUTH_SECRET"] ?? "",
     });
     const response = NextResponse.json({ ok: true });

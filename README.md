@@ -98,9 +98,11 @@ openssl rand -base64 32
 pnpm auth:hash "your long password"
 ```
 
-Set `AUTH_REQUIRED=true`, `AUTH_SECRET`, `APP_LOGIN_EMAIL`, and
+Set `AUTH_REQUIRED=true`, `AUTH_SECRET`, `APP_LOGIN_USERNAME`, and
 `APP_LOGIN_PASSWORD_HASH` in Vercel. Local dev can stay open unless
-`AUTH_REQUIRED=true` is present.
+`AUTH_REQUIRED=true` is present. Existing deployments that still have
+`APP_LOGIN_EMAIL` configured continue to work as a legacy fallback, but new
+deployments should use `APP_LOGIN_USERNAME`.
 
 Mobile support uses a bottom safe-area navigation layout and larger touch
 targets. Because mobile Safari does not expose browser screen capture for other

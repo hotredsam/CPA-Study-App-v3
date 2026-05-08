@@ -11,7 +11,7 @@ function messageFromError(value: unknown): string {
 export function LoginClient({ configured }: { configured: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,11 +29,11 @@ export function LoginClient({ configured }: { configured: boolean }) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw new Error(body?.error?.message ?? "Email or password is incorrect.");
+        throw new Error(body?.error?.message ?? "Username or password is incorrect.");
       }
       router.replace(nextPath);
       router.refresh();
@@ -65,15 +65,15 @@ export function LoginClient({ configured }: { configured: boolean }) {
             </div>
           )}
 
-          <label className="block text-sm font-medium" htmlFor="email">
-            Email
+          <label className="block text-sm font-medium" htmlFor="username">
+            Username
           </label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
+            id="username"
+            type="text"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            autoComplete="username"
             className="mt-1 h-11 w-full rounded-[4px] border border-[color:var(--border)] bg-[color:var(--surface)] px-3 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent-faint)]"
             required
           />

@@ -75,12 +75,15 @@ Vercel requires these app variables at minimum:
 - `DATABASE_URL` - production Postgres, not local Docker
 - `AUTH_REQUIRED=true`
 - `AUTH_SECRET` - generate with `openssl rand -base64 32`
-- `APP_LOGIN_EMAIL`
+- `APP_LOGIN_USERNAME`
 - `APP_LOGIN_PASSWORD_HASH` - generate with `pnpm auth:hash "your long password"`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
 - `TRIGGER_PROJECT_ID`, `TRIGGER_SECRET_KEY`
 - `OPENROUTER_API_KEY`
 - `ENCRYPTION_KEY`
+
+`APP_LOGIN_EMAIL` is still accepted as a legacy fallback for older local or
+Vercel environments, but `APP_LOGIN_USERNAME` is the current variable to set.
 
 NAS storage is optional. Vercel can archive processed media to a NAS only if the
 NAS exposes a public, TLS-secured S3/MinIO-compatible endpoint or a tunnel. Put

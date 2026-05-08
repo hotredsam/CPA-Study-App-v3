@@ -2,7 +2,8 @@ export const AUTH_COOKIE_NAME = "cpa_session";
 export const DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export type SessionPayload = {
-  email: string;
+  username: string;
+  email?: string;
   iat: number;
   exp: number;
 };
@@ -36,8 +37,17 @@ async function hmacSha256(data: string, secret: string): Promise<string> {
   return bytesToBase64Url(new Uint8Array(signature));
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function getConfiguredLoginUsername(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const username = env["APP_LOGIN_USERNAME"]?.trim() || env["APP_LOGIN_EMAIL"]?.trim();
+  return username || undefined;
+}
+
 export function isAuthConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(env["AUTH_SECRET"] && env["APP_LOGIN_EMAIL"] && env["APP_LOGIN_PASSWORD_HASH"]);
+  return Boolean(env["AUTH_SECRET"] && getConfiguredLoginUsername(env) && env["APP_LOGIN_PASSWORD_HASH"]);
 }
 
 export function shouldRequireAuth(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -47,14 +57,14 @@ export function shouldRequireAuth(env: NodeJS.ProcessEnv = process.env): boolean
 }
 
 export async function createSessionToken(args: {
-  email: string;
+  username: string;
   secret: string;
   ttlSeconds?: number;
   nowMs?: number;
 }): Promise<string> {
   const nowSeconds = Math.floor((args.nowMs ?? Date.now()) / 1000);
   const payload: SessionPayload = {
-    email: args.email,
+    username: args.username,
     iat: nowSeconds,
     exp: nowSeconds + (args.ttlSeconds ?? DEFAULT_SESSION_TTL_SECONDS),
   };
@@ -75,9 +85,21 @@ export async function verifySessionToken(
   if (signature !== expected) return null;
 
   try {
-    const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(body))) as SessionPayload;
-    if (!payload.email || !payload.exp || payload.exp * 1000 <= nowMs) return null;
-    return payload;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(body))) as unknown;
+    if (!isRecord(payload)) return null;
+
+    const username =
+      typeof payload["username"] === "string"
+        ? payload["username"]
+        : typeof payload["email"] === "string"
+          ? payload["email"]
+          : "";
+    const email = typeof payload["email"] === "string" ? payload["email"] : undefined;
+    const iat = typeof payload["iat"] === "number" ? payload["iat"] : 0;
+    const exp = typeof payload["exp"] === "number" ? payload["exp"] : 0;
+
+    if (!username || !exp || exp * 1000 <= nowMs) return null;
+    return { username, email, iat, exp };
   } catch {
     return null;
   }
