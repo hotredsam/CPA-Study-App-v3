@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/shell/Sidebar'
 import { ToastProvider } from '@/components/shell/ToastProvider'
 import { QueryProvider } from '@/components/shell/QueryProvider'
 import { KeyboardNav } from '@/components/shell/KeyboardNav'
+import { CommandPalette } from '@/components/shell/CommandPalette'
 import { ThemeInitScript } from '@/components/shell/ThemeInitScript'
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryProvider>
           <ToastProvider>
             <KeyboardNav />
+            <CommandPalette />
             <div className="app-shell">
               <Sidebar />
               <main className="main">{children}</main>

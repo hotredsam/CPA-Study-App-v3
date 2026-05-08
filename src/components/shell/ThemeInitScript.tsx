@@ -1,4 +1,8 @@
+import { SHELL_NAV_ITEMS } from '@/lib/navigation'
+
 export function ThemeInitScript() {
+  const shortcutMap = Object.fromEntries(SHELL_NAV_ITEMS.map((item) => [item.key, item.route]))
+
   return (
     <script
       dangerouslySetInnerHTML={{
@@ -15,7 +19,7 @@ export function ThemeInitScript() {
             if (s.accentHue !== undefined) document.documentElement.style.setProperty('--accent-hue', s.accentHue);
           } catch(_) {}
           (function() {
-            var map = { h: '/', r: '/record', s: '/pipeline', v: '/review', y: '/topics', u: '/study', a: '/anki', l: '/library', t: '/settings' };
+            var map = ${JSON.stringify(shortcutMap)};
             var waitingForSecond = false;
             var timeout = null;
             function isTypingTarget(target) {

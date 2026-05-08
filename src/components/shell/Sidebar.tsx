@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { SHELL_NAV_ITEMS, type ShellBadgeType, type ShellNavItem } from '@/lib/navigation'
 
 // ─── Inline SVG icon set ───────────────────────────────────────────────────────
 
@@ -113,25 +114,17 @@ function Logo() {
 
 // ─── Nav items config ──────────────────────────────────────────────────────────
 
-interface NavItem {
-  label: string
-  key: string
-  route: string
-  icon: React.ReactNode
-  badgeType?: 'pipeline' | 'anki'
+const NAV_ICONS: Record<ShellNavItem['id'], React.ReactNode> = {
+  dashboard: <IconDashboard />,
+  record: <IconRecord />,
+  pipeline: <IconActivity />,
+  review: <IconList />,
+  topics: <IconTopics />,
+  study: <IconBookOpen />,
+  anki: <IconCards />,
+  library: <IconBook />,
+  settings: <IconSettings />,
 }
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', key: 'h', route: '/', icon: <IconDashboard /> },
-  { label: 'Record', key: 'r', route: '/record', icon: <IconRecord /> },
-  { label: 'Pipeline', key: 's', route: '/pipeline', icon: <IconActivity />, badgeType: 'pipeline' },
-  { label: 'Review', key: 'v', route: '/review', icon: <IconList /> },
-  { label: 'Topics', key: 'y', route: '/topics', icon: <IconTopics /> },
-  { label: 'Study Textbook', key: 'u', route: '/study', icon: <IconBookOpen /> },
-  { label: 'Anki', key: 'a', route: '/anki', icon: <IconCards />, badgeType: 'anki' },
-  { label: 'Library', key: 'l', route: '/library', icon: <IconBook /> },
-  { label: 'Settings', key: 't', route: '/settings', icon: <IconSettings /> },
-]
 
 // ─── Badge data fetching ───────────────────────────────────────────────────────
 
@@ -171,7 +164,7 @@ export function Sidebar() {
 
   if (pathname === '/login') return null
 
-  function getBadgeCount(badgeType?: 'pipeline' | 'anki'): number {
+  function getBadgeCount(badgeType?: ShellBadgeType): number {
     if (badgeType === 'pipeline') return pipelineCount
     if (badgeType === 'anki') return ankiCount
     return 0
@@ -202,9 +195,10 @@ export function Sidebar() {
 
       {/* Nav items */}
       <ul className="flex flex-col gap-0.5 px-2 flex-1" role="list">
-        {NAV_ITEMS.map((item) => {
+        {SHELL_NAV_ITEMS.map((item) => {
           const active = isActive(item.route)
-          const badgeCount = getBadgeCount(item.badgeType)
+          const badgeType = 'badgeType' in item ? item.badgeType : undefined
+          const badgeCount = getBadgeCount(badgeType)
 
           return (
             <li key={item.route} role="listitem">
@@ -228,7 +222,7 @@ export function Sidebar() {
                     : {}
                 }
               >
-                <span className="shrink-0">{item.icon}</span>
+                <span className="shrink-0">{NAV_ICONS[item.id]}</span>
                 <span className="flex-1">{item.label}</span>
 
                 {/* Keyboard hint */}
@@ -237,11 +231,11 @@ export function Sidebar() {
                 </span>
 
                 {/* Badge */}
-                {item.badgeType && badgeCount > 0 && (
+                {badgeType && badgeCount > 0 && (
                   <span
                     className="ml-1 flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-mono font-semibold text-white"
                     style={{ background: 'var(--accent)' }}
-                    aria-label={`${badgeCount} ${item.badgeType === 'pipeline' ? 'processing' : 'due'}`}
+                    aria-label={`${badgeCount} ${badgeType === 'pipeline' ? 'processing' : 'due'}`}
                   >
                     {badgeCount > 9 ? '9+' : badgeCount}
                   </span>

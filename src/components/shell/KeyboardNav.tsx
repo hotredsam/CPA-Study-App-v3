@@ -1,18 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-const NAV_MAP: Record<string, { path: string; label: string }> = {
-  h: { path: '/',         label: 'Dashboard' },
-  r: { path: '/record',   label: 'Record' },
-  s: { path: '/pipeline', label: 'Pipeline' },
-  v: { path: '/review',   label: 'Review' },
-  y: { path: '/topics',   label: 'Topics' },
-  u: { path: '/study',    label: 'Study' },
-  a: { path: '/anki',     label: 'Anki' },
-  l: { path: '/library',  label: 'Library' },
-  t: { path: '/settings', label: 'Settings' },
-}
+import { isTypingTarget } from '@/lib/keyboard-target'
+import { SHELL_NAV_BY_KEY, SHELL_NAV_ITEMS } from '@/lib/navigation'
 
 function ShortcutOverlay({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -40,7 +30,7 @@ function ShortcutOverlay({ onClose }: { onClose: () => void }) {
         </h2>
         <table className="w-full text-sm">
           <tbody>
-            {Object.entries(NAV_MAP).map(([key, { label }]) => (
+            {SHELL_NAV_ITEMS.map(({ key, label }) => (
               <tr key={key} className="border-t border-[color:var(--border-faint)] first:border-0">
                 <td className="py-1.5 pr-4 font-mono text-[color:var(--accent)]">
                   {key} <span className="text-[color:var(--ink-faint)]">or</span> g {key}
@@ -58,18 +48,6 @@ function ShortcutOverlay({ onClose }: { onClose: () => void }) {
   )
 }
 
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  const tagName = target.tagName.toLowerCase()
-  return (
-    tagName === 'input' ||
-    tagName === 'textarea' ||
-    tagName === 'select' ||
-    target.isContentEditable ||
-    target.getAttribute('role') === 'textbox'
-  )
-}
-
 export function KeyboardNav() {
   const router = useRouter()
   const [showHelp, setShowHelp] = useState(false)
@@ -77,7 +55,7 @@ export function KeyboardNav() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    Object.values(NAV_MAP).forEach(({ path }) => router.prefetch(path))
+    SHELL_NAV_ITEMS.forEach(({ route }) => router.prefetch(route))
   }, [router])
 
   useEffect(() => {
@@ -100,10 +78,10 @@ export function KeyboardNav() {
       const key = e.key.toLowerCase()
 
       if (awaitingSecondRef.current) {
-        const dest = NAV_MAP[key]
+        const dest = SHELL_NAV_BY_KEY[key]
         if (dest) {
           e.preventDefault()
-          router.push(dest.path)
+          router.push(dest.route)
           setShowHelp(false)
         }
         clearAwaitingSecond()
@@ -118,10 +96,10 @@ export function KeyboardNav() {
         return
       }
 
-      const directDest = NAV_MAP[key]
+      const directDest = SHELL_NAV_BY_KEY[key]
       if (directDest) {
         e.preventDefault()
-        router.push(directDest.path)
+        router.push(directDest.route)
         setShowHelp(false)
       }
     }
