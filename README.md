@@ -132,6 +132,7 @@ pnpm lint
 pnpm test
 pnpm build
 pnpm e2e -- --project=chromium
+pnpm simulate:workflows
 pnpm runtime:probe
 pnpm runtime:probe:mobile
 ```
@@ -144,6 +145,7 @@ Before a Vercel deploy, also smoke the production bundle locally:
 
 ``` bash
 PORT=3002 AUTH_BYPASS=true pnpm start
+WORKFLOW_SIM_BASE_URL=http://localhost:3002 pnpm simulate:workflows
 RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe
 RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe:mobile
 ```
@@ -151,6 +153,13 @@ RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe:mobile
 The runtime probes explore non-destructive click and keyboard sequences to depth
 5, reject framework crash text, raw Prisma errors, missing `_document.js`/ENOENT
 output, 404 crash pages, and mobile horizontal overflow.
+
+`pnpm simulate:workflows` is the higher-level real-user rehearsal. It seeds
+temporary local-only recordings, mocks upload/provider endpoints, and exercises
+login setup, dashboard shortcuts, study reader, topics, Anki practice/audio,
+browser recording, iPhone upload, pipeline/review, library, settings, sessions,
+analytics, and mobile primary flows without calling OpenRouter, Trigger.dev, R2,
+or any token-spending provider.
 
 ## Sam's input folder
 

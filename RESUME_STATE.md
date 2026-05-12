@@ -30,6 +30,7 @@ The current branch passed:
 - production `next start` smoke: `/api/health` 200, unauthenticated `/` redirects to `/login?setup=missing`
 - production desktop/mobile product-flow smoke with `AUTH_BYPASS=true`
 - `pnpm e2e -- --project=chromium` (237/237)
+- production `pnpm simulate:workflows` against `http://localhost:3002`
 - production `pnpm runtime:probe` (900 depth-5 desktop sequences)
 - production `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences with overflow checks)
 - `pnpm simulate:month` followed by `pnpm reset:study-progress`

@@ -152,6 +152,12 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 - `pnpm typecheck` — tsc --noEmit
 - `pnpm lint` — next lint
 - `pnpm build` - clean production build
+- `pnpm simulate:workflows` - production-bundle real-user rehearsal. It creates
+  temporary local-only recordings, mocks upload/provider endpoints, and clicks
+  through login setup, dashboard shortcuts, study reader, topics, Anki
+  practice/audio, browser recording, iPhone upload, pipeline/review, library,
+  settings, sessions, analytics, and mobile primary flows without calling
+  OpenRouter, Trigger.dev, R2, or other token-spending providers.
 - `pnpm runtime:probe` - real-browser interaction crawler. It explores
   non-destructive visible click targets and representative keyboard actions to
   depth 5, and fails on HTTP 500s, page errors, raw Prisma text, `_document.js`,
@@ -164,6 +170,7 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 Production-bundle smoke can target a running `next start` server:
 
 ```bash
+WORKFLOW_SIM_BASE_URL=http://localhost:3002 pnpm simulate:workflows
 RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe
 RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe:mobile
 ```
