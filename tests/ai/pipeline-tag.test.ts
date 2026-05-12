@@ -45,7 +45,7 @@ describe("runPipelineTag", () => {
   it("happy path: parses valid output and updates question", async () => {
     const validOutput = {
       section: "FAR",
-      unit: "Revenue Recognition",
+      unit: "F1",
       topic: "ASC 606 Step 3",
       difficulty: "medium" as const,
     };
@@ -77,7 +77,7 @@ describe("runPipelineTag", () => {
   it("links topicId when matching Topic exists", async () => {
     const validOutput = {
       section: "FAR",
-      unit: "Revenue Recognition",
+      unit: "F1",
       topic: "ASC 606 Step 3",
       difficulty: "easy" as const,
     };

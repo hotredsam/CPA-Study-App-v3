@@ -153,6 +153,11 @@ function useShellSummary() {
   })
 }
 
+function badgeLabel(count: number): string {
+  if (count > 999) return '999+'
+  return String(count)
+}
+
 // ─── Sidebar component ─────────────────────────────────────────────────────────
 
 export function Sidebar() {
@@ -233,12 +238,12 @@ export function Sidebar() {
                 {/* Badge */}
                 {badgeType && badgeCount > 0 && (
                   <span
-                    className="ml-1 flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-mono font-semibold text-white"
+                    className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-mono font-semibold text-white"
                     style={{ background: 'var(--accent)' }}
                     aria-hidden="true"
                     title={`${badgeCount} ${badgeType === 'pipeline' ? 'processing' : 'due'}`}
                   >
-                    {badgeCount > 9 ? '9+' : badgeCount}
+                    {badgeLabel(badgeCount)}
                   </span>
                 )}
               </Link>

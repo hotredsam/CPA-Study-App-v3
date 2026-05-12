@@ -10,10 +10,14 @@ const QuerySchema = z.object({
   chunkId: z.string().min(1),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET() {
+  return respond(new ApiError("METHOD_NOT_ALLOWED", "Use POST to generate checkpoint quiz questions."));
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-    const parsed = QuerySchema.safeParse(params);
+    const body = await request.json().catch(() => ({}));
+    const parsed = QuerySchema.safeParse(body);
 
     if (!parsed.success) {
       throw new ApiError("BAD_REQUEST", "chunkId is required", parsed.error.flatten());

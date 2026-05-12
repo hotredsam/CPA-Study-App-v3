@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isTypingTarget } from '@/lib/keyboard-target'
 import { searchShellNav, SHELL_NAV_ITEMS, type ShellNavItem } from '@/lib/navigation'
+import { navigateReliably } from '@/lib/reliable-client-nav'
 
 function routeHint(route: string): string {
   return route === '/' ? 'Home' : route
@@ -20,11 +21,26 @@ export function CommandPalette() {
   const activeItem = results[selectedIndex] ?? results[0] ?? null
   const activeId = activeItem ? `command-palette-option-${activeItem.id}` : undefined
 
+  function openPalette() {
+    const paletteWindow = window as Window & {
+      __cpaPendingCommandPalette?: boolean
+    }
+    paletteWindow.__cpaPendingCommandPalette = false
+    setOpen(true)
+  }
+
   useEffect(() => {
     SHELL_NAV_ITEMS.forEach((item) => router.prefetch(item.route))
   }, [router])
 
   useEffect(() => {
+    const paletteWindow = window as Window & {
+      __cpaCommandPaletteReady?: boolean
+      __cpaPendingCommandPalette?: boolean
+    }
+    paletteWindow.__cpaCommandPaletteReady = true
+    if (paletteWindow.__cpaPendingCommandPalette) openPalette()
+
     const handler = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase()
       const wantsPalette = key === 'k' && (event.ctrlKey || event.metaKey) && !event.altKey
@@ -32,11 +48,14 @@ export function CommandPalette() {
 
       if (isTypingTarget(event.target) && !(event.ctrlKey || event.metaKey)) return
       event.preventDefault()
-      setOpen(true)
+      openPalette()
     }
 
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+      paletteWindow.__cpaCommandPaletteReady = false
+    }
   }, [])
 
   useEffect(() => {
@@ -77,7 +96,7 @@ export function CommandPalette() {
         setOpen(false)
         setQuery('')
         setSelectedIndex(0)
-        router.push(item.route)
+        navigateReliably(router, item.route)
       }
     }
 
@@ -97,7 +116,7 @@ export function CommandPalette() {
 
   function goTo(item: ShellNavItem) {
     closePalette()
-    router.push(item.route)
+    navigateReliably(router, item.route)
   }
 
   if (!open) return null

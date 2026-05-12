@@ -97,7 +97,12 @@ export const gradeQuestion = task({
       const result = await runFunction(
         AiFunctionKey.PIPELINE_GRADE,
         { prompt: gradingPrompt, systemPrompt: GRADING_SYSTEM_PROMPT },
-        { bypassBatch: true },
+        {
+          bypassBatch: true,
+          recordingId: question.recordingId,
+          questionId,
+          topicId: question.topicId ?? undefined,
+        },
       );
       rawJson = result.output;
     } catch (err) {

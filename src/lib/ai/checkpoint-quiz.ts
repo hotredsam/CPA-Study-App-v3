@@ -65,6 +65,8 @@ export async function runCheckpointQuiz(
   const result = await runFunction(AiFunctionKey.CHECKPOINT_QUIZ, {
     prompt: buildPrompt(validated),
     chunkId: validated.chunkId,
+  }, {
+    chunkId: validated.chunkId,
   });
 
   return CheckpointQuizOutput.parse(result.output);

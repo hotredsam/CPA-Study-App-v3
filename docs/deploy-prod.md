@@ -48,6 +48,11 @@
    For local dev, add `"http://localhost:3000"` to AllowedOrigins.
 4. Optionally set a public domain for the bucket (for direct video playback)
 
+The app uploads recordings and PDF textbooks directly from the browser to R2
+with presigned PUT URLs, then calls a completion route that verifies object
+size/type before Trigger.dev processing. Do not route large textbook PDFs through
+Vercel functions.
+
 ---
 
 ## 3. Trigger.dev
@@ -62,7 +67,7 @@
    ```
    This uploads your task code to Trigger.dev Cloud. Tasks will then run on their infrastructure.
 6. In Trigger.dev dashboard → Environment Variables, add:
-   - `DATABASE_URL` (Neon direct connection URL — Trigger.dev tasks run DB migrations)
+   - `DATABASE_URL` (Neon direct connection URL for task runtime; run migrations separately with `pnpm prisma migrate deploy`)
    - `OPENROUTER_API_KEY` (your OpenRouter API key)
    - `ENCRYPTION_KEY` (64-character hex key for encrypted stored API settings)
    - `ENABLE_ADMIN_WIPE=false`
@@ -116,10 +121,12 @@ Add these authorized redirect URIs to the Google OAuth Web Application:
 Before clicking Deploy, confirm these security-sensitive values:
 
 ```
+[ ] pnpm deploy:doctor:prod passes with zero failures using production env vars
 [ ] DATABASE_URL is a Neon/Vercel production Postgres URL, not localhost
 [ ] AUTH_REQUIRED=true
 [ ] AUTH_ALLOWED_EMAILS=hotredsam@gmail.com
 [ ] AUTH_SECRET is a fresh production-only secret
+[ ] AUTH_BYPASS and ALLOW_LOCAL_PROD_AUTH_BYPASS are not set in Vercel
 [ ] OPENROUTER_API_KEY is set only as a server/secret env var
 [ ] No NEXT_PUBLIC_* variable contains database, auth, R2, Trigger, or OpenRouter secrets
 [ ] ENCRYPTION_KEY is 64 hex characters and backed up securely
@@ -146,7 +153,7 @@ After deploy, run this checklist:
 ## 6. Anki Export on Vercel
 
 ⚠️ **Python subprocesses do not work on Vercel.** The `/api/sessions/<id>/export` route
-will return 500 in production on Vercel.
+returns a polished 501 response in production on Vercel.
 
 **Alternatives:**
 - Run the export endpoint from a dedicated server (Fly.io, Railway, DigitalOcean)

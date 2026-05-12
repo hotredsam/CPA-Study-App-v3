@@ -32,27 +32,69 @@ export function ThemeInitScript() {
               if (timeout) window.clearTimeout(timeout);
               timeout = null;
             }
-            window.__cpaKeyboardNavReady = false;
-            window.addEventListener('keydown', function(event) {
-              if (window.__cpaKeyboardNavReady || isTypingTarget(event.target) || event.altKey || event.ctrlKey || event.metaKey) return;
+            function routeForShellKey(event) {
+              if (isTypingTarget(event.target) || event.altKey || event.ctrlKey || event.metaKey) return null;
               var key = String(event.key || '').toLowerCase();
               if (waitingForSecond) {
-                if (map[key]) {
-                  event.preventDefault();
-                  window.location.assign(map[key]);
-                }
+                var secondRoute = map[key] || null;
                 clearSecond();
-                return;
+                return secondRoute;
               }
               if (key === 'g') {
-                event.preventDefault();
                 waitingForSecond = true;
                 timeout = window.setTimeout(clearSecond, 1000);
+                return '';
+              }
+              return map[key] || null;
+            }
+            function clickTabShortcut(event) {
+              if (isTypingTarget(event.target) || !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
+              var index = Number(event.key) - 1;
+              if (!Number.isInteger(index) || index < 0 || index > 8) return false;
+              var selector = '[role="tab"][aria-keyshortcuts="Alt+' + String(index + 1) + '"]';
+              var tab = document.querySelector(selector);
+              if (!tab) return false;
+              window.__cpaPendingTabShortcut = index;
+              if (typeof tab.click === 'function') tab.click();
+              return true;
+            }
+            function navigateFallback(route) {
+              if (!route) return;
+              if (window.location.pathname === route) return;
+              window.location.assign(route);
+            }
+            window.__cpaKeyboardNavReady = false;
+            window.addEventListener('keydown', function(event) {
+              var commandPaletteShortcut = String(event.key || '').toLowerCase() === 'k' && (event.ctrlKey || event.metaKey) && !event.altKey;
+              if (commandPaletteShortcut && !window.__cpaCommandPaletteReady) {
+                event.preventDefault();
+                window.__cpaPendingCommandPalette = true;
                 return;
               }
-              if (map[key]) {
+
+              var tabShortcut = event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+              if (tabShortcut) {
+                window.setTimeout(function() {
+                  if (!event.defaultPrevented && clickTabShortcut(event)) event.preventDefault();
+                }, 0);
+                return;
+              }
+
+              if (window.__cpaKeyboardNavReady) {
+                window.setTimeout(function() {
+                  if (event.defaultPrevented) return;
+                  var fallbackRoute = routeForShellKey(event);
+                  if (fallbackRoute === null) return;
+                  event.preventDefault();
+                  navigateFallback(fallbackRoute);
+                }, 0);
+                return;
+              }
+
+              var route = routeForShellKey(event);
+              if (route !== null) {
                 event.preventDefault();
-                window.location.assign(map[key]);
+                navigateFallback(route);
               }
             });
           })();

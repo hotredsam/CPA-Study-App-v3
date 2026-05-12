@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AiFunctionKey } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { respond } from "@/lib/api-error";
+import { ApiError, respond } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
+
+function isProductionRuntime(): boolean {
+  return process.env["VERCEL"] === "1" || process.env["NODE_ENV"] === "production";
+}
 
 const AiFunctionKeySchema = z.nativeEnum(AiFunctionKey);
 
@@ -46,6 +50,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const { functionKey, model, batchEnabled, cacheEnabled, useOAuthFallback } =
       parsed.data;
+    if (isProductionRuntime() && useOAuthFallback === true) {
+      throw new ApiError("BAD_REQUEST", "OAuth fallback is local development only. Production AI calls must use OpenRouter.");
+    }
 
     const now = new Date();
 

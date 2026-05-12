@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { presignDownload } from '@/lib/r2'
 import { ReviewClient } from './ReviewClient'
 import type { ReviewQuestion, ReviewRecording } from './ReviewClient'
 
@@ -53,10 +54,11 @@ export default async function RecordingReviewPage({
     sections: recording.sections,
   }
 
-  const questions: ReviewQuestion[] = recording.questions.map((q) => ({
+  const questions: ReviewQuestion[] = await Promise.all(recording.questions.map(async (q) => ({
     id: q.id,
     startSec: q.startSec,
     endSec: q.endSec,
+    clipUrl: q.clipR2Key ? await presignDownload(q.clipR2Key, 60 * 30) : null,
     section: q.section,
     status: q.status,
     noAudio: q.noAudio,
@@ -79,7 +81,7 @@ export default async function RecordingReviewPage({
           section: q.topic.section,
         }
       : null,
-  }))
+  })))
 
   return <ReviewClient recording={reviewRecording} questions={questions} />
 }

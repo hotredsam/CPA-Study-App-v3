@@ -8,6 +8,7 @@ export type ErrorCode =
   | "CSRF_BLOCKED"
   | "UNAUTHORIZED"
   | "NOT_FOUND"
+  | "NOT_IMPLEMENTED"
   | "UNPROCESSABLE"
   | "INTERNAL_ERROR"
   | "METHOD_NOT_ALLOWED";
@@ -32,6 +33,7 @@ function codeToStatus(code: ErrorCode): number {
     case "CSRF_BLOCKED": return 403;
     case "UNAUTHORIZED": return 401;
     case "NOT_FOUND": return 404;
+    case "NOT_IMPLEMENTED": return 501;
     case "UNPROCESSABLE": return 422;
     case "METHOD_NOT_ALLOWED": return 405;
     case "INTERNAL_ERROR": return 500;
@@ -115,14 +117,16 @@ export function respond(err: unknown): NextResponse {
     );
   }
 
-  const message = err instanceof Error
-    ? redactSensitiveText(err.message)
-    : "An unexpected error occurred";
   if (process.env["NODE_ENV"] === "production") {
     console.error("[api-error] unhandled error");
   } else {
     console.error("[api-error] unhandled:", err);
   }
+  const message = process.env["NODE_ENV"] === "production"
+    ? "An unexpected error occurred. Please retry shortly."
+    : err instanceof Error
+      ? redactSensitiveText(err.message)
+      : "An unexpected error occurred";
   return NextResponse.json(
     { error: { code: "INTERNAL_ERROR", message } },
     { status: 500, headers: errorHeaders() },

@@ -138,6 +138,13 @@ export async function GET(
       throw new ApiError("UNPROCESSABLE", "no graded questions in this recording");
     }
 
+    if (process.env["VERCEL"] === "1") {
+      throw new ApiError(
+        "NOT_IMPLEMENTED",
+        "Anki .apkg export is not available on Vercel yet. Use the built-in Anki practice and audio modes for now.",
+      );
+    }
+
     const apkgBuffer = await callPython(cards);
 
     const filename = `cpa-${recordingId.slice(0, 8)}.apkg`;

@@ -19,21 +19,23 @@
     "runtime:probe:mobile": "node scripts/runtime-interaction-probe.mjs --mobile",
     "simulate:month": "tsx scripts/simulate-month.ts",
     "simulate:workflows": "node scripts/simulate-real-workflows.mjs",
+    "deploy:doctor": "node scripts/deploy-doctor.mjs",
+    "deploy:doctor:prod": "node scripts/deploy-doctor.mjs --production",
     "reset:study-progress": "tsx scripts/reset-study-progress.ts",
     "trigger:dev": "trigger dev",
     "db:seed": "tsx prisma/seed-night5.ts",
     "verify-seed": "tsx scripts/verify-seed.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.693.0",
-    "@aws-sdk/s3-request-presigner": "^3.693.0",
+    "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@prisma/client": "^6.0.1",
     "@sentry/nextjs": "^10.49.0",
     "@tanstack/react-query": "^5.99.1",
-    "@trigger.dev/react-hooks": "^3.3.0",
-    "@trigger.dev/sdk": "^3.3.0",
-    "fast-xml-parser": "^5.7.1",
-    "next": "^15.0.3",
+    "@trigger.dev/react-hooks": "^4.4.6",
+    "@trigger.dev/sdk": "^4.4.6",
+    "fast-xml-parser": "^5.7.2",
+    "next": "^15.5.18",
     "pino": "^10.3.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -44,26 +46,34 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.49.0",
-    "@trigger.dev/build": "^3.3.0",
+    "@trigger.dev/build": "^4.4.6",
     "@types/node": "^22.9.0",
     "@types/pino": "^7.0.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/sanitize-html": "^2.16.1",
     "@vitejs/plugin-react": "^4.3.3",
     "@vitest/ui": "^2.1.5",
     "autoprefixer": "^10.4.20",
     "chokidar": "^4.0.1",
     "eslint": "^9.15.0",
-    "eslint-config-next": "^15.0.3",
+    "eslint-config-next": "^15.5.18",
     "postcss": "^8.4.49",
     "prisma": "^6.0.1",
     "tailwindcss": "^3.4.15",
-    "trigger.dev": "^3.3.0",
+    "trigger.dev": "^4.4.6",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.5"
   },
   "engines": {
     "node": ">=22"
+  },
+  "pnpm": {
+    "overrides": {
+      "protobufjs": "^7.5.6",
+      "systeminformation": "^5.31.6",
+      "tar": "^7.5.15"
+    }
   }
 }

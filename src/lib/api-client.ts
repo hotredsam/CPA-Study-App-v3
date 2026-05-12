@@ -113,7 +113,12 @@ const BASE = typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_BASE_
  * const { recordingId, uploadUrl } = await createRecording({ contentType: "video/webm" });
  * await fetch(uploadUrl, { method: "PUT", body: file, headers: { "content-type": "video/webm" } });
  */
-export async function createRecording(body: { contentType?: string; durationSec?: number }) {
+export async function createRecording(body: {
+  contentType?: string;
+  durationSec?: number;
+  fileName?: string;
+  sizeBytes?: number;
+}) {
   const res = await fetch(`${BASE}/api/recordings`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -243,7 +248,12 @@ export async function deleteRecording(recordingId: string): Promise<void> {
  */
 export async function reprocessRecording(recordingId: string) {
   const res = await fetch(`${BASE}/api/recordings/${recordingId}/reprocess`, { method: "POST" });
-  return parseResponse(res, z.object({ recordingId: z.string(), runId: z.string() }));
+  return parseResponse(res, z.object({
+    recordingId: z.string(),
+    sourceRecordingId: z.string().optional(),
+    runId: z.string(),
+    preservedPriorReview: z.boolean().optional(),
+  }));
 }
 
 const SessionListItem = z.object({
@@ -319,7 +329,11 @@ const CheckpointQuizResponse = z.object({
  * const { questions } = await getCheckpointQuiz(chunkId);
  */
 export async function getCheckpointQuiz(chunkId: string) {
-  const res = await fetch(`${BASE}/api/study/checkpoint?chunkId=${encodeURIComponent(chunkId)}`);
+  const res = await fetch(`${BASE}/api/study/checkpoint`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ chunkId }),
+  });
   return parseResponse(res, CheckpointQuizResponse);
 }
 
@@ -335,9 +349,11 @@ const RegenerateAnkiCardsResponse = z.object({
  * const { count } = await regenerateAnkiCards(topicId);
  */
 export async function regenerateAnkiCards(topicId: string) {
-  const res = await fetch(
-    `${BASE}/api/anki/regenerate?topicId=${encodeURIComponent(topicId)}`,
-  );
+  const res = await fetch(`${BASE}/api/anki/regenerate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ topicId }),
+  });
   return parseResponse(res, RegenerateAnkiCardsResponse);
 }
 

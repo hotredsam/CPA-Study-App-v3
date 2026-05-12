@@ -57,6 +57,8 @@ export async function runTopicNotes(input: TopicNotesInput): Promise<TopicNotesO
   const result = await runFunction(AiFunctionKey.TOPIC_NOTES, {
     prompt: buildPrompt(validated),
     topicId: validated.topicId,
+  }, {
+    topicId: validated.topicId,
   });
 
   const output = TopicNotesOutput.parse(result.output);

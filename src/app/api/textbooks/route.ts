@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { respond } from "@/lib/api-error";
+import { ApiError, respond } from "@/lib/api-error";
 import { bucket, r2Client } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
 import { getActiveExamSections } from "@/lib/exam-settings";
 import { queueTextbookIndex } from "@/lib/textbooks/queue";
+import { serializeTextbook, textbookWithCountInclude } from "@/lib/textbooks/serialize";
+import { isAllowedPdfUpload, MAX_TEXTBOOK_UPLOAD_BYTES } from "@/lib/upload-constraints";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { clientRateLimitKey, rateLimitResponse } from "@/lib/security/request";
 
@@ -14,34 +16,12 @@ export const dynamic = "force-dynamic";
 
 const CpaSectionSchema = z.enum(CPA_SECTION_OPTIONS);
 
-type TextbookWithCount = Awaited<ReturnType<typeof prisma.textbook.findFirstOrThrow>> & {
-  _count?: { chunks: number };
-};
-
-function serializeTextbook(textbook: TextbookWithCount) {
-  return {
-    id: textbook.id,
-    title: textbook.title,
-    publisher: textbook.publisher,
-    sections: textbook.sections.filter(isActiveCpaSection),
-    pages: textbook.pages,
-    chunkCount: textbook._count?.chunks ?? textbook.chunkCount,
-    indexStatus: textbook.indexStatus,
-    sizeBytes: textbook.sizeBytes?.toString() ?? null,
-    citedCount: textbook.citedCount,
-    uploadedAt: textbook.uploadedAt,
-    indexedAt: textbook.indexedAt,
-  };
-}
-
 export async function GET() {
   try {
     const activeSections = await getActiveExamSections();
     const textbooks = await prisma.textbook.findMany({
       orderBy: { uploadedAt: "desc" },
-      include: {
-        _count: { select: { chunks: true } },
-      },
+      include: textbookWithCountInclude,
     });
 
     const items = textbooks
@@ -106,6 +86,14 @@ export async function POST(request: Request) {
     });
 
     if (file) {
+      if (!isAllowedPdfUpload({ fileName, contentType: file.type })) {
+        throw new ApiError("BAD_REQUEST", "Only PDF textbook uploads are supported right now.");
+      }
+      if (file.size > MAX_TEXTBOOK_UPLOAD_BYTES) {
+        throw new ApiError("BAD_REQUEST", "Textbook file is too large for server upload. Use the direct upload flow.", {
+          maxBytes: MAX_TEXTBOOK_UPLOAD_BYTES,
+        }, 413);
+      }
       const ext = fileName.split(".").pop()?.toLowerCase() || "bin";
       const r2Key = `textbooks/${textbook.id}/source.${ext}`;
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -139,9 +127,7 @@ export async function POST(request: Request) {
 
     const textbookWithCount = await prisma.textbook.findUniqueOrThrow({
       where: { id: textbook.id },
-      include: {
-        _count: { select: { chunks: true } },
-      },
+      include: textbookWithCountInclude,
     });
 
     return NextResponse.json({ textbook: serializeTextbook(textbookWithCount) }, { status: 201 });

@@ -45,10 +45,32 @@ interface TextbookFocus {
   href: string
 }
 
+interface NextStudyAction {
+  id: string
+  title: string
+  detail: string
+  href: string
+  section: string | null
+  kind: 'anki' | 'drill' | 'textbook' | 'review'
+}
+
+interface WeakTopicDrill {
+  id: string
+  name: string
+  section: string
+  mastery: number
+  errorRate: number
+  cardsDue: number
+  practiceHref: string
+  audioHref: string
+}
+
 export interface DashboardData {
   studyStats: StudyStats
   sections: SectionData[]
   weakestTopics: WeakTopic[]
+  nextStudyActions: NextStudyAction[]
+  weakTopicDrills: WeakTopicDrill[]
   recentRecordings: RecentRecording[]
   cardsDue: number
   currentTextbookFocus: TextbookFocus | null
@@ -307,8 +329,94 @@ function RoutineSection({ routine }: { routine: ParsedRoutine }) {
   )
 }
 
+function NextStudyQueue({
+  actions,
+  drills,
+}: {
+  actions: NextStudyAction[]
+  drills: WeakTopicDrill[]
+}) {
+  if (actions.length === 0 && drills.length === 0) return null
+
+  return (
+    <section aria-label="Next study queue" className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr]">
+      <Card pad={false}>
+        <div className="border-b border-[color:var(--border)] px-4 py-3">
+          <div className="eyebrow">NEXT STUDY QUEUE</div>
+        </div>
+        <div>
+          {actions.length === 0 ? (
+            <div className="px-4 py-4 text-sm text-[color:var(--ink-faint)]">No urgent study actions right now.</div>
+          ) : (
+            actions.map((action, i) => (
+              <Link
+                key={action.id}
+                href={action.href}
+                className={`grid items-center gap-3 px-4 py-3 hov ${i === actions.length - 1 ? '' : 'border-b border-[color:var(--border)]'}`}
+                style={{ gridTemplateColumns: '52px 1fr auto' }}
+              >
+                {action.section ? <SectionBadge section={action.section} size="xs" /> : <span className="eyebrow">{action.kind}</span>}
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px] font-medium text-[color:var(--ink)]">{action.title}</span>
+                  <span className="mt-0.5 block truncate text-xs text-[color:var(--ink-faint)]">{action.detail}</span>
+                </span>
+                <span className="mono text-[11px] uppercase tracking-[0.08em] text-[color:var(--accent)]">Start</span>
+              </Link>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card pad={false}>
+        <div className="border-b border-[color:var(--border)] px-4 py-3">
+          <div className="eyebrow">WEAK-TOPIC DRILLS</div>
+        </div>
+        <div>
+          {drills.length === 0 ? (
+            <div className="px-4 py-4 text-sm text-[color:var(--ink-faint)]">Drills appear after topics have review history.</div>
+          ) : (
+            drills.map((drill, i) => (
+              <div
+                key={drill.id}
+                className={`grid gap-3 px-4 py-3 ${i === drills.length - 1 ? '' : 'border-b border-[color:var(--border)]'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <SectionBadge section={drill.section} size="xs" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-medium text-[color:var(--ink)]">{drill.name}</div>
+                    <div className="mono mt-0.5 text-[10px] text-[color:var(--ink-faint)]">
+                      {drill.mastery}% mastery - {drill.errorRate}% error - {drill.cardsDue} due
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link href={drill.practiceHref} tabIndex={-1}>
+                    <Btn variant="ghost" size="sm" className="w-full">Practice</Btn>
+                  </Link>
+                  <Link href={drill.audioHref} tabIndex={-1}>
+                    <Btn variant="subtle" size="sm" className="w-full">Audio</Btn>
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+    </section>
+  )
+}
+
 export function DashboardClient({ data }: { data: DashboardData }) {
-  const { studyStats, sections, weakestTopics, recentRecordings, cardsDue, currentTextbookFocus } = data
+  const {
+    studyStats,
+    sections,
+    weakestTopics,
+    nextStudyActions,
+    weakTopicDrills,
+    recentRecordings,
+    cardsDue,
+    currentTextbookFocus,
+  } = data
   const routineData = data.routine ?? EMPTY_ROUTINE
   const displayTotalHours = studyStats.totalHours
   const displayWeekHours = studyStats.weekHours
@@ -348,7 +456,14 @@ export function DashboardClient({ data }: { data: DashboardData }) {
     <div className="flex flex-col gap-5">
       <EyebrowHeading
         eyebrow={`DASHBOARD - ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
-        title={`${displayTotalHours.toFixed(1)} hours in, ${displayWeekHours.toFixed(1)} this week, ${dashboardStatus}.`}
+        title={
+          <>
+            <span className="hidden sm:inline">
+              {`${displayTotalHours.toFixed(1)} hours in, ${displayWeekHours.toFixed(1)} this week, ${dashboardStatus}.`}
+            </span>
+            <span className="sm:hidden">Ready to study.</span>
+          </>
+        }
         sub={`${currentFocus.section ? `${currentFocus.section}: ` : ''}${currentFocus.title}. Anki has ${displayCardsDue} reviews due. ${studyStats.processingCount ?? 0} recordings processing in the background.`}
         right={
           <div className="flex gap-2">
@@ -410,6 +525,8 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         <Stat label="STREAK" value={displayStreak} unit="days" />
         <Stat label="RECORDINGS" value={displayRecordingsCount} unit={`${studyStats.processingCount ?? 0} processing`} />
       </div>
+
+      <NextStudyQueue actions={nextStudyActions} drills={weakTopicDrills} />
 
       <section aria-label="Section progress">
         <div className="eyebrow mb-2.5">SECTIONS - HOURS, PROGRESS & DUE DATES</div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRealtimeRun } from "@trigger.dev/react-hooks";
 import { StageProgress } from "@/lib/schemas/stageProgress";
 
@@ -45,6 +46,7 @@ type StreamProps = {
 };
 
 function StatusStream({ recordingId, runId, publicAccessToken, questions }: StreamProps) {
+  const router = useRouter();
   const { run, error } = useRealtimeRun(runId, { accessToken: publicAccessToken });
 
   const progress = useMemo<StageProgress | null>(() => {
@@ -53,6 +55,17 @@ function StatusStream({ recordingId, runId, publicAccessToken, questions }: Stre
     const parsed = StageProgress.safeParse(raw);
     return parsed.success ? parsed.data : null;
   }, [run?.metadata?.progress]);
+  const progressStage = progress?.stage;
+  const progressPct = progress?.pct;
+
+  useEffect(() => {
+    if (!progressStage && run?.status !== "COMPLETED") return undefined;
+    if (progressStage === "segmenting" || progressStage === "grading" || run?.status === "COMPLETED") {
+      const handle = window.setTimeout(() => router.refresh(), 600);
+      return () => window.clearTimeout(handle);
+    }
+    return undefined;
+  }, [progressStage, progressPct, router, run?.status]);
 
   if (error) {
     return <p className="text-sm text-red-700">Stream error: {error.message}</p>;

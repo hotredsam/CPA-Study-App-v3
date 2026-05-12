@@ -438,10 +438,19 @@ model ModelCall {
   inputTokens  Int?
   outputTokens Int?
   usdCost      Float?
+  estimatedUsd Float?
   cacheHit     Boolean  @default(false)
   batchJobId   String?
+  recordingId  String?
+  questionId   String?
+  topicId      String?
+  chunkId      String?
   createdAt    DateTime @default(now())
 
   @@index([functionKey, createdAt])
+  @@index([recordingId, createdAt])
+  @@index([questionId, createdAt])
+  @@index([topicId, createdAt])
+  @@index([chunkId, createdAt])
   @@index([createdAt])
 }

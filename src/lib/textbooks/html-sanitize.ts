@@ -1,25 +1,4 @@
-const DISALLOWED_BLOCK_TAGS = [
-  "script",
-  "style",
-  "iframe",
-  "object",
-  "embed",
-  "canvas",
-  "picture",
-  "video",
-  "audio",
-  "form",
-  "input",
-  "button",
-  "textarea",
-  "select",
-  "meta",
-  "link",
-  "base",
-  "template",
-];
-
-const DISALLOWED_VOID_TAGS = ["img", "source", "track"];
+import sanitizeHtml from "sanitize-html";
 
 const BRANDING_PATTERNS = [
   /(?:\u00a9|\(c\)|copyright)\s*[^<\n]*(?:becker|professional education|all rights reserved)[^<\n]*/gi,
@@ -42,26 +21,55 @@ function removePublisherBranding(input: string): string {
 }
 
 export function sanitizeChunkHtml(input: string): string {
-  let html = input
+  const withoutDocNoise = input
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<!doctype[\s\S]*?>/gi, "");
 
-  for (const tag of DISALLOWED_BLOCK_TAGS) {
-    html = html.replace(new RegExp(`<${tag}\\b[\\s\\S]*?<\\/${tag}>`, "gi"), "");
-    html = html.replace(new RegExp(`<${tag}\\b[^>]*\\/?>`, "gi"), "");
-  }
-
-  for (const tag of DISALLOWED_VOID_TAGS) {
-    html = html.replace(new RegExp(`<${tag}\\b[^>]*\\/?>`, "gi"), "");
-  }
-
-  html = html
-    .replace(/\s+on[a-z]+\s*=\s*("(?:[^"]*)"|'(?:[^']*)'|[^\s>]+)/gi, "")
-    .replace(/\s+(href|src|xlink:href)\s*=\s*("(?:\s*(?:javascript:|data:|https?:|\/\/)[^"]*)"|'(?:\s*(?:javascript:|data:|https?:|\/\/)[^']*)'|(?:javascript:|data:|https?:|\/\/)[^\s>]+)/gi, "")
-    .replace(/\s+style\s*=\s*"[^"]*"/gi, "")
-    .replace(/\s+style\s*=\s*'[^']*'/gi, "")
-    .replace(/\s+(fill|stroke)\s*=\s*"(?:#[0-9a-f]{3,8}|rgb\([^"]+\)|hsl\([^"]+\))"/gi, "")
-    .replace(/\s+(fill|stroke)\s*=\s*'(?:#[0-9a-f]{3,8}|rgb\([^']+\)|hsl\([^']+\))'/gi, "");
+  const html = sanitizeHtml(withoutDocNoise, {
+    allowedTags: [
+      "article",
+      "section",
+      "div",
+      "p",
+      "br",
+      "hr",
+      "h2",
+      "h3",
+      "h4",
+      "strong",
+      "em",
+      "b",
+      "i",
+      "u",
+      "sub",
+      "sup",
+      "ul",
+      "ol",
+      "li",
+      "blockquote",
+      "code",
+      "pre",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
+      "dl",
+      "dt",
+      "dd",
+      "span",
+    ],
+    allowedAttributes: {
+      table: ["aria-label"],
+      th: ["colspan", "rowspan", "scope"],
+      td: ["colspan", "rowspan"],
+    },
+    allowedSchemes: [],
+    disallowedTagsMode: "discard",
+    enforceHtmlBoundary: true,
+    parser: { lowerCaseAttributeNames: true },
+  });
 
   return removePublisherBranding(html).trim();
 }

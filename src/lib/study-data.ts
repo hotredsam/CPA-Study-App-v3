@@ -1,5 +1,7 @@
 import { ApiError } from "@/lib/api-error";
+import { countDueAnkiCards } from "@/lib/anki-due";
 import { prisma } from "@/lib/prisma";
+import { sanitizeChunkHtml } from "@/lib/textbooks/html-sanitize";
 
 export type RecentTextbook = {
   id: string;
@@ -84,9 +86,7 @@ export async function readStudyData(): Promise<StudyData> {
         indexedAt: true,
       },
     }),
-    prisma.reviewState.count({
-      where: { nextReviewAt: { lte: new Date() } },
-    }),
+    countDueAnkiCards(),
   ]);
 
   const recentTextbook = textbooks.find((textbook) => textbook.indexStatus === "READY") ?? null;
@@ -172,7 +172,10 @@ export async function readStudyChunkData(textbookId: string, chunkId: string): P
 
   return {
     textbook,
-    chunk,
+    chunk: {
+      ...chunk,
+      htmlContent: chunk.htmlContent ? sanitizeChunkHtml(chunk.htmlContent) : null,
+    },
     topic,
     practiceCards,
     prevChunkIdx: order > 0 ? order - 1 : null,

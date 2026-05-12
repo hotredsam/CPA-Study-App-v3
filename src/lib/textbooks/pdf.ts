@@ -1,4 +1,6 @@
 import { getOpenRouterApiKey } from "@/lib/llm/openrouter";
+import { assertSpendAllowed } from "@/lib/budget/spend-gates";
+import { prisma } from "@/lib/prisma";
 import type { PageText } from "./chunking";
 
 export type PdfExtractionResult = {
@@ -80,6 +82,8 @@ export async function extractPdfText(args: {
 }): Promise<PdfExtractionResult> {
   const engine = configuredPdfEngine(args.ocrMode);
   await args.onProgress?.({ pageNumber: 0, pageCount: 1, mode: "openrouter" });
+  const estimatedUsd = 0.12;
+  await assertSpendAllowed("TEXTBOOK_PDF_PARSE", {}, estimatedUsd);
 
   const apiKey = await getOpenRouterApiKey();
   const payload = {
@@ -123,11 +127,20 @@ export async function extractPdfText(args: {
   });
 
   if (!response.ok) {
-    const text = await response.text().catch(() => "(unreadable body)");
-    throw new Error(`OpenRouter PDF parser failed ${response.status}: ${text.slice(0, 500)}`);
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(`OpenRouter PDF parser failed with status ${response.status}`);
   }
 
   const data = (await response.json()) as OpenRouterPdfResponse;
+  await prisma.modelCall.create({
+    data: {
+      functionKey: "TEXTBOOK_PDF_PARSE",
+      model: configuredPdfModel(),
+      estimatedUsd,
+      usdCost: null,
+      cacheHit: false,
+    },
+  });
   const annotations = data.choices?.[0]?.message?.annotations ?? [];
   const pages = annotationsToPages(annotations);
 

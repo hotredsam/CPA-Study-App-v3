@@ -1,10 +1,12 @@
 import { schedules, logger } from "@trigger.dev/sdk/v3";
 import { createHash } from "node:crypto";
-import { AiFunctionKey, Prisma } from "@prisma/client";
+import { AiFunctionKey, CpaSection, Prisma } from "@prisma/client";
+import { runAnkiGen } from "@/lib/ai/anki-gen";
+import { TopicExtractOutput } from "@/lib/ai/topic-extract";
 import { prisma } from "@/lib/prisma";
+import { assertSpendAllowed, estimateFunctionUsd, type SpendContext } from "@/lib/budget/spend-gates";
 import { callOpenRouter, type LLMMessage } from "@/lib/llm/openrouter";
 import { extractJsonFromResponse } from "@/lib/claude-cli";
-import { TopicExtractOutput } from "@/lib/ai/topic-extract";
 
 function sha256(input: string): string {
   return createHash("sha256").update(input).digest("hex");
@@ -33,6 +35,27 @@ function parseModelOutput(content: string): unknown {
   } catch {
     return content;
   }
+}
+
+function spendContextFromPayload(payload: Prisma.JsonValue): SpendContext {
+  if (!isRecord(payload)) return {};
+  return {
+    recordingId: typeof payload["recordingId"] === "string" ? payload["recordingId"] : undefined,
+    questionId: typeof payload["questionId"] === "string" ? payload["questionId"] : undefined,
+    topicId: typeof payload["topicId"] === "string" ? payload["topicId"] : undefined,
+    chunkId: typeof payload["chunkId"] === "string" ? payload["chunkId"] : undefined,
+  };
+}
+
+function parseCpaSection(value: unknown): CpaSection | null {
+  return typeof value === "string" && Object.values(CpaSection).includes(value as CpaSection)
+    ? value as CpaSection
+    : null;
+}
+
+function payloadString(payload: Record<string, unknown>, key: string): string | null {
+  const value = payload[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 async function cacheBatchOutput(
@@ -65,19 +88,67 @@ async function applyTopicExtractOutput(payload: Prisma.JsonValue, output: unknow
 
   const parsed = TopicExtractOutput.safeParse(output);
   if (!parsed.success) return;
+  const section = parseCpaSection(payload["section"]);
+  const beckerUnit = payloadString(payload, "beckerUnit");
 
   const matchingTopic = await prisma.topic.findFirst({
     where: {
       name: { equals: parsed.data.canonicalTopic, mode: "insensitive" },
+      ...(section ? { section } : {}),
+      ...(beckerUnit ? { unit: beckerUnit } : {}),
     },
   });
 
-  if (!matchingTopic) return;
+  const topic = matchingTopic ?? (
+    section
+      ? await prisma.topic.create({
+          data: {
+            section,
+            name: parsed.data.canonicalTopic,
+            unit: beckerUnit ?? (parsed.data.subsection || null),
+          },
+        })
+      : null
+  );
+
+  if (!topic) return;
 
   await prisma.chunk.update({
     where: { id: payload["chunkId"] },
-    data: { topicId: matchingTopic.id },
+    data: { topicId: topic.id },
   });
+
+  if (!section) return;
+
+  const existingCards = await prisma.ankiCard.count({ where: { chunkId: payload["chunkId"] } });
+  if (existingCards > 0) return;
+
+  const chunk = await prisma.chunk.findUnique({
+    where: { id: payload["chunkId"] },
+    select: {
+      id: true,
+      content: true,
+      chapterRef: true,
+    },
+  });
+  if (!chunk) return;
+
+  try {
+    await runAnkiGen({
+      chunkId: chunk.id,
+      content: chunk.content,
+      topicId: topic.id,
+      topicName: topic.name,
+      chapterRef: chunk.chapterRef ?? undefined,
+      section,
+    });
+  } catch (err) {
+    logger.warn("batch-coalesce-runner: anki generation after topic extraction failed", {
+      chunkId: chunk.id,
+      topicId: topic.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 /**
@@ -144,6 +215,11 @@ export const batchCoalesceRunner = schedules.task({
             });
           }
 
+          const functionKeyEnum = job.functionKey as AiFunctionKey;
+          const context = spendContextFromPayload(job.payload);
+          const estimatedUsd = estimateFunctionUsd(functionKeyEnum);
+          await assertSpendAllowed(functionKeyEnum, context, estimatedUsd);
+
           const llmResult = await callOpenRouter({
             model,
             messages: buildMessages(job.payload),
@@ -159,8 +235,13 @@ export const batchCoalesceRunner = schedules.task({
               inputTokens: llmResult.inputTokens,
               outputTokens: llmResult.outputTokens,
               usdCost: llmResult.usdCost,
+              estimatedUsd,
               cacheHit: false,
               batchJobId: job.id,
+              recordingId: context.recordingId,
+              questionId: context.questionId,
+              topicId: context.topicId,
+              chunkId: context.chunkId,
             },
           });
 

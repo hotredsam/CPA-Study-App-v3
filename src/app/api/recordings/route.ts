@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { keys, presignUpload } from "@/lib/r2";
 import { ApiError, respond } from "@/lib/api-error";
 import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
+import { isAllowedRecordingUpload, MAX_RECORDING_UPLOAD_BYTES, normalizedContentType } from "@/lib/upload-constraints";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { clientRateLimitKey, rateLimitResponse } from "@/lib/security/request";
 
@@ -133,7 +134,9 @@ export async function GET(request: Request) {
 
 const StartBody = z.object({
   durationSec: z.number().int().min(1).max(60 * 60 * 4).optional(),
-  contentType: z.string().default("video/webm"),
+  contentType: z.string().min(1).max(120).default("video/webm"),
+  fileName: z.string().max(240).optional(),
+  sizeBytes: z.number().int().min(1).max(MAX_RECORDING_UPLOAD_BYTES).optional(),
   title: z.string().min(1).max(160).optional(),
   sections: z.array(CpaSectionSchema).default([]),
   modelUsed: z.string().min(1).max(120).optional(),
@@ -153,6 +156,9 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       throw new ApiError("BAD_REQUEST", "invalid body", parsed.error.flatten());
     }
+    if (!isAllowedRecordingUpload(parsed.data)) {
+      throw new ApiError("BAD_REQUEST", "Unsupported recording file type. Use WebM, MP4, MOV, or M4V video.");
+    }
 
     const recording = await prisma.recording.create({
       data: {
@@ -165,7 +171,8 @@ export async function POST(request: Request) {
     });
 
     const key = keys.recordingRaw(recording.id);
-    const uploadUrl = await presignUpload(key, parsed.data.contentType);
+    const contentType = normalizedContentType(parsed.data.contentType, "video/webm");
+    const uploadUrl = await presignUpload(key, contentType);
 
     await prisma.recording.update({
       where: { id: recording.id },

@@ -151,7 +151,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: Sea
                       </Link>
                       {r.firstQuestionId ? (
                         <Link
-                          href={`/review/${r.firstQuestionId}`}
+                          href={`/review/${r.id}`}
                           className="rounded bg-brand-500 px-2 py-1 text-xs text-white hover:bg-brand-700"
                         >
                           Review →

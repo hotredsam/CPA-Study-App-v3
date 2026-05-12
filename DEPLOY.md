@@ -7,12 +7,12 @@
 - PostgreSQL 15+ (Neon in prod, Docker in dev)
 - Cloudflare R2 bucket with CORS configured
 - Trigger.dev account + project
-- **Python 3.9+ with `genanki`** — required for Anki `.apkg` export:
+- **Python 3.9+ with `genanki`** - required only for local Anki `.apkg` export:
   ```bash
   pip install genanki
   ```
   On Vercel (serverless), Python subprocesses are not available. The `/api/sessions/[id]/export`
-  route will return 500 in that environment. For production Anki export, consider:
+  route returns a polished 501 response in that environment. For production Anki export, consider:
   - Running a small VPS/Container that serves this endpoint
   - Or a separate Trigger.dev task that generates the .apkg and uploads it to R2
 
@@ -46,6 +46,11 @@ The Trigger.dev dashboard will show your worker connected.
 ---
 
 ## Production Deployment
+
+Textbook and recording uploads use presigned Cloudflare R2 PUT URLs in
+production. The app currently accepts PDF textbooks only; EPUB/HTML converters
+are not exposed. Keep R2 CORS configured for direct browser PUTs from the final
+Vercel domain.
 
 ### 1. Provision Neon Postgres
 
@@ -149,9 +154,11 @@ In Google Cloud Console, the OAuth Web Application must include:
 
 ## Security checklist before clicking Deploy
 
+- `pnpm deploy:doctor:prod` passes with zero failures while production env vars are loaded.
 - `DATABASE_URL` points to production Postgres, never `localhost`.
 - `AUTH_REQUIRED=true` and `AUTH_ALLOWED_EMAILS=hotredsam@gmail.com`.
 - `AUTH_SECRET` is unique to production and not reused from local `.env`.
+- `AUTH_BYPASS` and `ALLOW_LOCAL_PROD_AUTH_BYPASS` are not set in Vercel.
 - `OPENROUTER_API_KEY` exists only in Vercel/Trigger.dev secret env vars, never
   in a `NEXT_PUBLIC_*` variable.
 - `ENCRYPTION_KEY` is a 64-character hex value and is backed up securely before

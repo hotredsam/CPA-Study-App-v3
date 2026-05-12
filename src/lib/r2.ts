@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./env";
 
@@ -33,6 +33,23 @@ export async function presignDownload(key: string, expiresIn = 900): Promise<str
     Key: key,
   });
   return getSignedUrl(r2Client(), cmd, { expiresIn });
+}
+
+export async function headObject(key: string) {
+  const cmd = new HeadObjectCommand({
+    Bucket: bucket(),
+    Key: key,
+  });
+  return r2Client().send(cmd);
+}
+
+export async function copyObject(sourceKey: string, destinationKey: string) {
+  const cmd = new CopyObjectCommand({
+    Bucket: bucket(),
+    CopySource: `${bucket()}/${sourceKey}`,
+    Key: destinationKey,
+  });
+  return r2Client().send(cmd);
 }
 
 export const keys = {

@@ -18,19 +18,37 @@ Required env vars (see `.env.example`):
 - `R2_*` - Cloudflare R2 credentials (endpoint, access key, secret, bucket)
 - `TRIGGER_SECRET_KEY` - Trigger.dev secret (dev scope)
 - `OPENROUTER_API_KEY` - AI routing for indexing and generated study content
+- `SPEND_GATES_ENABLED=true` plus the `OPENROUTER_*_CAP_USD` limits - hard caps
+  that prevent runaway OpenRouter calls
 
 ## Record a session
 
 1. Go to `/record`.
-2. Pick a mic (Default is fine) and click **Start recording**.
-3. Browser asks for a screen/window/tab — pick the Becker tab.
-4. Work through questions normally; narrate your reasoning.
-5. Click **Stop** or close the shared tab.
-6. Watch the upload progress bar fill; on completion you're routed to `/recordings/<id>/status`.
+2. Pick a mic and allow browser microphone access so the level meter can prove
+   the device is available.
+3. Confirm the preflight checks are green. Browser recording and iPhone upload
+   are blocked until DB, R2, Trigger, and OpenRouter key checks are healthy.
+4. Click **Start recording**.
+5. Browser asks for a screen/window/tab - pick the Becker tab.
+6. Work through questions normally; narrate your reasoning.
+7. Click **Stop** or close the shared tab.
+8. Watch the upload progress bar fill; on completion you're routed to `/recordings/<id>/status`.
 
 On iPhone, use the native iOS screen recorder for Becker, then open `/record`
 and upload the saved video under **iPhone Screen Recording**. Mobile browsers do
 not currently expose `getDisplayMedia()` for recording another app's screen.
+
+Recording and iPhone-upload completion verify the R2 object before processing:
+video uploads must use an expected video MIME/extension and stay under the
+2 GB size cap. Very long browser recordings are still held in memory until
+upload; for marathon sessions, prefer the iPhone/native file upload fallback or
+split sessions until resumable multipart recording is implemented.
+
+## Upload textbooks
+
+Use `/library` and upload PDFs only. Production uploads go directly from the
+browser to R2 with a presigned PUT; the app then verifies object size/type and
+queues indexing. EPUB/HTML is intentionally hidden until those converters exist.
 
 ## Watch the pipeline
 
@@ -40,7 +58,7 @@ not currently expose `getDisplayMedia()` for recording another app's screen.
 
 ## Review graded questions
 
-- `/review/<questionId>` — question, choices, user vs correct answer, Becker
+- `/review/<recordingId>` — question, choices, user vs correct answer, Becker
   explanation, transcript with clickable word timestamps, 10 feedback items.
 - Prev/next: on-screen buttons OR `←` / `→` keys.
 
@@ -51,7 +69,8 @@ not currently expose `getDisplayMedia()` for recording another app's screen.
 - On phone-sized screens, navigation moves to the bottom safe area for thumb
   reach and keeps primary targets at touch-friendly sizes.
 - Tab controls use roving focus. Use `Tab` to enter the active tab, `ArrowLeft`
-  / `ArrowRight` to switch tabs, and `Home` / `End` for first and last tabs.
+  / `ArrowRight` to switch tabs, `Home` / `End` for first and last tabs, or
+  `Alt+1` through `Alt+9` to jump directly without stealing Anki's rating keys.
 - Topics should show Becker unit labels from course structure, not AI section
   prose. Expected prefixes: `A` for AUD, `F` for FAR, `R` for REG, `B` for BAR,
   `S` for ISC, and `T` for TCP. Re-indexing derives the unit from chunk
@@ -65,8 +84,10 @@ not currently expose `getDisplayMedia()` for recording another app's screen.
   exam-useful learning objectives while skipping common-sense business context
   and duplicates already covered for the topic.
 - `/anki` has an Audio tab for concept review. It reads the prompt and answer
-  aloud when browser speech synthesis is available. Ratings post to the normal
-  Anki review endpoint, so audio reviews count toward due-card progress.
+  aloud when browser speech synthesis is available, can auto-advance in
+  hands-free mode, and supports voice ratings in browsers that expose speech
+  recognition. Ratings post to the normal Anki review endpoint, so audio
+  reviews count toward due-card progress.
 
 ## Production deploy notes
 
@@ -82,6 +103,12 @@ Vercel requires these app variables at minimum:
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
 - `TRIGGER_PROJECT_ID`, `TRIGGER_SECRET_KEY`
 - `OPENROUTER_API_KEY`
+- `SPEND_GATES_ENABLED=true`
+- `OPENROUTER_MAX_COST_PER_CALL_USD=0.25`
+- `OPENROUTER_DAILY_CAP_USD=5`
+- `OPENROUTER_RECORDING_CAP_USD=2`
+- `OPENROUTER_QUESTION_CAP_USD=0.75`
+- `TRIGGER_ACTIVE_RECORDING_LIMIT=3`
 - `ENCRYPTION_KEY`
 
 Google OAuth callback URLs must include `https://<your-domain>/api/auth/callback/google`
@@ -103,6 +130,11 @@ address.
 - State-changing API requests are protected by the signed Google session,
   same-origin checks, and per-IP rate limits. A `CSRF_BLOCKED` or `RATE_LIMITED`
   response usually means the browser request did not originate from this app.
+- Recording completion refuses duplicate Trigger runs and caps concurrent active
+  recordings with `TRIGGER_ACTIVE_RECORDING_LIMIT`.
+- AI calls are blocked before execution if spend gates would exceed the per-call,
+  daily, recording, or question caps. The app records `recordingId`,
+  `questionId`, `topicId`, and `chunkId` on `ModelCall` rows when available.
 - If you suspect an env secret leaked, rotate `OPENROUTER_API_KEY`,
   `AUTH_SECRET`, R2 credentials, and `TRIGGER_SECRET_KEY`, then redeploy Vercel
   and Trigger.dev.
@@ -139,11 +171,12 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 | `/record` shows "permission denied" | OS denied screen-capture | Grant Chrome permission in OS settings |
 | Upload stalls at 0% | R2 presigned URL expired (15 min) | Re-click Start — a fresh URL is minted |
 | Status page shows amber "no runId" | Trigger.dev secret missing | Set `TRIGGER_SECRET_KEY`, restart `pnpm dev` |
-| `segmentRecording` emits the stub marker | Task 4 not yet live | Expected until fixture boundaries are locked — see `sam-input/TODO.xml` |
-| `gradeQuestion` writes empty items | Task 7 not yet live | Same — blocked on 10-item key lock |
+| `segmentRecording` finds too few question clips | The recording lacks clear Becker screen transitions or the upload is corrupt | Reprocess from the status page after confirming the source video plays; the app keeps old review data until the new run is queued. |
+| `gradeQuestion` writes incomplete feedback | Extraction/transcription failed for that clip or the OpenRouter response did not match schema | Reprocess the recording; if it repeats, inspect the question row and Trigger.dev run logs. |
 | Word-timestamps missing | `ggml-small.en` w/o `token_timestamps` | Enabled by default in `src/lib/whisper.ts`; verify `smart-whisper` version |
 | Runtime error mentions `.next\server\pages\_document.js` or missing route files | Two Next dev/build processes shared a stale `.next` directory | Stop dev servers with `pnpm kill-ports`, then run `pnpm dev`. E2E uses isolated `.next-e2e`; do not manually run two `next dev` processes against the same dist dir. |
-| Browser upload works locally but stalls in production | R2 bucket CORS or CSP is blocking the presigned PUT | Keep the production CSP R2 `connect-src` entries in `next.config.ts`, then configure Cloudflare R2 CORS to allow `PUT` from the Vercel domain with `content-type`. |
+| Browser upload works locally but stalls in production | R2 bucket CORS or CSP is blocking the presigned PUT | Keep the middleware CSP `connect-src` broad enough for HTTPS R2 presigned URLs, then configure Cloudflare R2 CORS to allow `PUT` from the Vercel domain with `content-type`. |
+| AI action returns `OpenRouter spend gate blocked this AI call` | A per-call, daily, recording, or question cap would be exceeded | Raise the relevant `OPENROUTER_*_CAP_USD` env var only if the action is intentional, then redeploy/restart. |
 
 ## Tests
 
@@ -152,6 +185,10 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 - `pnpm typecheck` — tsc --noEmit
 - `pnpm lint` — next lint
 - `pnpm build` - clean production build
+- `pnpm deploy:doctor` - local preflight for required env, secret hygiene, spend
+  caps, and optional smoke checks via `DEPLOY_DOCTOR_BASE_URL`
+- `pnpm deploy:doctor:prod` - production preflight; fails if auth is missing,
+  `DATABASE_URL` points to localhost, or required server-side secrets are absent
 - `pnpm simulate:workflows` - production-bundle real-user rehearsal. It creates
   temporary local-only recordings, mocks upload/provider endpoints, and clicks
   through login setup, dashboard shortcuts, study reader, topics, Anki
@@ -170,14 +207,28 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 Production-bundle smoke can target a running `next start` server:
 
 ```bash
+node scripts/kill-dev-ports.mjs 3002
+PORT=3002 AUTH_BYPASS=true ALLOW_LOCAL_PROD_AUTH_BYPASS=true pnpm start
+DEPLOY_DOCTOR_BASE_URL=http://localhost:3002 pnpm deploy:doctor
 WORKFLOW_SIM_BASE_URL=http://localhost:3002 pnpm simulate:workflows
 RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe
 RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe:mobile
 ```
 
-If the full 900-sequence crawl is slow, split routes with
-`RUNTIME_PROBE_ROUTES=/,/record,/topics` while keeping the same base URL. Keep
-the total route coverage equivalent before calling a deploy ready.
+On Windows, use PowerShell syntax for the temporary env vars or `Start-Process`
+as needed; the important part is killing the exact smoke-test port first so an
+old production server cannot serve stale `.next` assets.
+
+Run `pnpm deploy:doctor:prod` separately with real production environment
+variables loaded. It must pass with zero failures before clicking Deploy in
+Vercel; local `.env` intentionally fails because it uses localhost Postgres and
+local auth shortcuts. Never set `AUTH_BYPASS` or `ALLOW_LOCAL_PROD_AUTH_BYPASS`
+in Vercel.
+
+The default crawl is 75 generated sequences per route, which is intentionally
+slow. For production-smoke runs, `RUNTIME_PROBE_MAX_SEQUENCES=25` still covers
+all routes to depth 5 and keeps the pass practical. Split routes with
+`RUNTIME_PROBE_ROUTES=/,/record,/topics` only when debugging a failure.
 
 ## Local database recovery
 

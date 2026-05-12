@@ -169,8 +169,9 @@ export function TopicsClient() {
             size="sm"
             variant="ghost"
             onClick={handleBulkRefresh}
-            disabled={bulkRefreshing}
+            disabled={bulkRefreshing || isLoading || isError || topics.length === 0}
             aria-label="Refresh AI notes for all shown topics"
+            title={topics.length === 0 ? 'No shown topics to refresh.' : undefined}
           >
             {bulkRefreshing ? 'Refreshing...' : 'Refresh AI notes for all'}
           </Btn>

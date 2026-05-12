@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import Link from 'next/link'
 import type { Feedback, Topic, CpaSection } from '@prisma/client'
 import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
@@ -37,6 +37,7 @@ export type ReviewQuestion = {
   id: string
   startSec: number
   endSec: number
+  clipUrl: string | null
   section: CpaSection | null
   status: string
   noAudio: boolean
@@ -275,7 +276,39 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
   )
 }
 
-function TranscriptCard({ question }: { question: ReviewQuestion }) {
+function ClipPlayer({
+  question,
+  videoRef,
+}: {
+  question: ReviewQuestion
+  videoRef: RefObject<HTMLVideoElement | null>
+}) {
+  return (
+    <Card>
+      <p className="eyebrow mb-3">Clip</p>
+      {question.clipUrl ? (
+        <video
+          ref={videoRef}
+          src={question.clipUrl}
+          controls
+          preload="metadata"
+          className="w-full rounded border border-[color:var(--border)] bg-black"
+          aria-label="Question clip playback"
+        />
+      ) : (
+        <p className="text-sm text-[color:var(--ink-faint)]">Clip media is not available for this question yet.</p>
+      )}
+    </Card>
+  )
+}
+
+function TranscriptCard({
+  question,
+  onJumpTo,
+}: {
+  question: ReviewQuestion
+  onJumpTo: (seconds: number) => void
+}) {
   const transcript = (question.transcript ?? null) as TranscriptShape | null
   const segments = transcript?.segments ?? []
   const fullText = segments.map((s) => s.text ?? '').join(' ')
@@ -323,13 +356,7 @@ function TranscriptCard({ question }: { question: ReviewQuestion }) {
                 type="button"
                 className="mono tabular text-[11px] text-[color:var(--accent)] hover:underline shrink-0"
                 title={`Jump to ${formatSec(s.start)}`}
-                onClick={() => {
-                  window.dispatchEvent(
-                    new CustomEvent('servant:toast', {
-                      detail: { message: `Transcript timestamp ${formatSec(s.start)}` },
-                    }),
-                  )
-                }}
+                onClick={() => onJumpTo(s.start ?? 0)}
               >
                 {formatSec(s.start)}
               </button>
@@ -691,8 +718,15 @@ export function ReviewClient({
 }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [layout, setLayout] = useState<Layout>('split')
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const question = questions[activeIdx] ?? null
+
+  const jumpToClipTime = useCallback((seconds: number) => {
+    if (!videoRef.current) return
+    videoRef.current.currentTime = Math.max(0, seconds)
+    void videoRef.current.play().catch(() => undefined)
+  }, [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -763,7 +797,8 @@ export function ReviewClient({
                 <div className="grid gap-4" style={{ gridTemplateColumns: '2fr 1fr' }}>
                   <div className="space-y-4">
                     <QuestionCard question={question} />
-                    <TranscriptCard question={question} />
+                    <ClipPlayer question={question} videoRef={videoRef} />
+                    <TranscriptCard question={question} onJumpTo={jumpToClipTime} />
                     <FlowchartCard question={question} />
                     <SourcesCard question={question} />
                     <AIChat recordingId={recording.id} questionId={question.id} />
@@ -776,7 +811,8 @@ export function ReviewClient({
               ) : (
                 <div className="space-y-4">
                   <QuestionCard question={question} />
-                  <TranscriptCard question={question} />
+                  <ClipPlayer question={question} videoRef={videoRef} />
+                  <TranscriptCard question={question} onJumpTo={jumpToClipTime} />
                   <ScoreCard feedback={question.feedback} />
                   <FeedbackCard feedback={question.feedback} />
                   <FlowchartCard question={question} />

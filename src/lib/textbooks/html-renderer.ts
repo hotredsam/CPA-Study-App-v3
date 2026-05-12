@@ -1,4 +1,6 @@
 import { getOpenRouterApiKey } from "@/lib/llm/openrouter";
+import { assertSpendAllowed } from "@/lib/budget/spend-gates";
+import { prisma } from "@/lib/prisma";
 import { escapeHtml, extractSanitizedHtmlFragment } from "./html-sanitize";
 
 type OpenRouterHtmlResponse = {
@@ -103,6 +105,8 @@ export function fallbackChunkHtml(input: {
 export async function renderChunkHtml(input: RenderChunkHtmlInput): Promise<string> {
   const apiKey = await getOpenRouterApiKey();
   const prompt = buildPrompt(input);
+  const estimatedUsd = 0.18;
+  await assertSpendAllowed("TEXTBOOK_HTML_RENDER", {}, estimatedUsd);
 
   const payload = {
     model: configuredHtmlModel(),
@@ -142,11 +146,20 @@ export async function renderChunkHtml(input: RenderChunkHtmlInput): Promise<stri
   });
 
   if (!response.ok) {
-    const text = await response.text().catch(() => "(unreadable body)");
-    throw new Error(`OpenRouter textbook HTML render failed ${response.status}: ${text.slice(0, 500)}`);
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(`OpenRouter textbook HTML render failed with status ${response.status}`);
   }
 
   const data = (await response.json()) as OpenRouterHtmlResponse;
+  await prisma.modelCall.create({
+    data: {
+      functionKey: "TEXTBOOK_HTML_RENDER",
+      model: configuredHtmlModel(),
+      estimatedUsd,
+      usdCost: null,
+      cacheHit: false,
+    },
+  });
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("OpenRouter textbook HTML render returned no content");

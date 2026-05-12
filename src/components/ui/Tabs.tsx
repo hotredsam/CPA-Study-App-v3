@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, type KeyboardEvent, type HTMLAttributes } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, type KeyboardEvent, type HTMLAttributes } from 'react'
 
 interface TabItem {
   id: string
@@ -19,7 +19,7 @@ export function Tabs({ value, onChange, items, className = '', ...rest }: Props)
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const activeIndex = Math.max(0, items.findIndex((item) => item.id === value))
 
-  function activate(index: number) {
+  const activate = useCallback((index: number) => {
     if (items.length === 0) return
     const normalized = (index + items.length) % items.length
     const next = items[normalized]
@@ -27,7 +27,7 @@ export function Tabs({ value, onChange, items, className = '', ...rest }: Props)
 
     onChange(next.id)
     window.requestAnimationFrame(() => tabRefs.current[normalized]?.focus())
-  }
+  }, [items, onChange])
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     switch (event.key) {
@@ -55,6 +55,29 @@ export function Tabs({ value, onChange, items, className = '', ...rest }: Props)
     }
   }
 
+  useLayoutEffect(() => {
+    const tabWindow = window as Window & { __cpaPendingTabShortcut?: number }
+    const pendingIndex = tabWindow.__cpaPendingTabShortcut
+    if (typeof pendingIndex !== 'number') return
+    tabWindow.__cpaPendingTabShortcut = undefined
+    if (pendingIndex >= 0 && pendingIndex < items.length) activate(pendingIndex)
+  }, [activate, items.length])
+
+  useEffect(() => {
+    function handleWindowKeyDown(event: globalThis.KeyboardEvent) {
+      const target = event.target as HTMLElement | null
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      const index = Number(event.key) - 1
+      if (!Number.isInteger(index) || index < 0 || index >= items.length || index > 8) return
+      event.preventDefault()
+      activate(index)
+    }
+
+    window.addEventListener('keydown', handleWindowKeyDown)
+    return () => window.removeEventListener('keydown', handleWindowKeyDown)
+  }, [activate, items.length])
+
   return (
     <div
       role="tablist"
@@ -74,7 +97,7 @@ export function Tabs({ value, onChange, items, className = '', ...rest }: Props)
             id={`tab-${item.id}`}
             aria-selected={active}
             aria-controls={`tabpanel-${item.id}`}
-            aria-keyshortcuts={index < 9 ? String(index + 1) : undefined}
+            aria-keyshortcuts={index < 9 ? `Alt+${index + 1}` : undefined}
             tabIndex={index === activeIndex ? 0 : -1}
             type="button"
             onClick={() => onChange(item.id)}

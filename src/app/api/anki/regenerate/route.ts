@@ -10,10 +10,14 @@ const QuerySchema = z.object({
   topicId: z.string().min(1),
 });
 
-export async function GET(request: NextRequest) {
+export async function GET() {
+  return respond(new ApiError("METHOD_NOT_ALLOWED", "Use POST to regenerate Anki cards."));
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-    const parsed = QuerySchema.safeParse(params);
+    const body = await request.json().catch(() => ({}));
+    const parsed = QuerySchema.safeParse(body);
 
     if (!parsed.success) {
       throw new ApiError("BAD_REQUEST", "topicId is required", parsed.error.flatten());
@@ -31,9 +35,26 @@ export async function GET(request: NextRequest) {
       orderBy: { order: "asc" },
     });
 
-    await prisma.ankiCard.deleteMany({ where: { topicId } });
+    const oldCardCount = await prisma.ankiCard.count({ where: { topicId } });
+    const nowIso = new Date().toISOString();
+    const generatedCards: Array<{
+      front: string;
+      back: string;
+      explanation: string | null;
+      sourceCitation: string | null;
+      chunkId: string;
+      topicId: string;
+      section: typeof topic.section;
+      difficulty: number | null;
+      srsState: {
+        ease: number;
+        interval: number;
+        nextDue: string;
+        lapses: number;
+        repetitions: number;
+      };
+    }> = [];
 
-    let count = 0;
     for (const chunk of chunks) {
       const result = await runAnkiGen({
         chunkId: chunk.id,
@@ -42,11 +63,46 @@ export async function GET(request: NextRequest) {
         topicName: topic.name,
         chapterRef: chunk.chapterRef ?? undefined,
         section: topic.section,
+        existingCards: generatedCards.map((card) => ({ front: card.front, back: card.back })),
+        persist: false,
       });
-      count += result.cards.length;
+      generatedCards.push(
+        ...result.cards.map((card) => ({
+          front: card.front,
+          back: card.back,
+          explanation: card.explanation,
+          sourceCitation: card.citation,
+          chunkId: chunk.id,
+          topicId,
+          section: topic.section,
+          difficulty: card.difficulty,
+          srsState: {
+            ease: 2.5,
+            interval: 0,
+            nextDue: nowIso,
+            lapses: 0,
+            repetitions: 0,
+          },
+        })),
+      );
     }
 
-    return NextResponse.json({ count, topicId });
+    if (oldCardCount > 0 && generatedCards.length === 0) {
+      throw new ApiError("UNPROCESSABLE", "Regeneration produced no replacement cards, so the existing topic deck was kept.");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.ankiCard.deleteMany({ where: { topicId } });
+      if (generatedCards.length > 0) {
+        await tx.ankiCard.createMany({ data: generatedCards });
+      }
+      await tx.topic.update({
+        where: { id: topicId },
+        data: { cardsDue: generatedCards.length },
+      });
+    });
+
+    return NextResponse.json({ count: generatedCards.length, topicId });
   } catch (err) {
     return respond(err);
   }

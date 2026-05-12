@@ -290,10 +290,15 @@ async function installNoSpendRoutes(page, temp) {
   });
 
   await page.route("**/api/recordings/*/complete", async (route) => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-2) ?? temp.browserUploadId;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ runId: "simulation-no-trigger-call" }),
+      body: JSON.stringify({
+        recording: { id, status: "uploaded", triggerRunId: "simulation-no-trigger-call" },
+        runId: "simulation-no-trigger-call",
+        publicAccessToken: "simulation-token",
+      }),
     });
   });
 
@@ -362,6 +367,62 @@ async function installNoSpendRoutes(page, temp) {
           chunkCount: 3,
           indexStatus: "QUEUED",
           sizeBytes: "1024",
+          citedCount: 0,
+          uploadedAt: iso(),
+          indexedAt: null,
+        },
+      }),
+    });
+  });
+
+  await page.route("**/api/textbooks/upload-url", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        uploadUrl: absolute("/__workflow-textbook-upload"),
+        r2Key: "textbooks/workflow-uploaded-textbook/source.pdf",
+        expiresInSec: 900,
+        maxBytes: 262144000,
+        textbook: {
+          id: "workflow-uploaded-textbook",
+          title: "Workflow Uploaded Textbook",
+          publisher: "Simulation",
+          sections: ["FAR"],
+          pages: 12,
+          chunkCount: 0,
+          indexStatus: "QUEUED",
+          sizeBytes: "2048",
+          citedCount: 0,
+          uploadedAt: iso(),
+          indexedAt: null,
+        },
+      }),
+    });
+  });
+
+  await page.route("**/__workflow-textbook-upload", async (route) => {
+    await route.fulfill({ status: 200, contentType: "text/plain", body: "ok" });
+  });
+
+  await page.route("**/api/textbooks/workflow-uploaded-textbook/complete", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        textbook: {
+          id: "workflow-uploaded-textbook",
+          title: "Workflow Uploaded Textbook",
+          publisher: "Simulation",
+          sections: ["FAR"],
+          pages: 12,
+          chunkCount: 0,
+          indexStatus: "QUEUED",
+          sizeBytes: "2048",
           citedCount: 0,
           uploadedAt: iso(),
           indexedAt: null,
@@ -550,6 +611,11 @@ async function ankiWorkflow(page, guard) {
   }
   await page.getByRole("tab", { name: "Audio" }).click();
   await expect(page.getByRole("tabpanel")).toContainText(/Audio review|Audio deck|Audio review is clear/i);
+  const handsFree = page.getByRole("button", { name: /Hands-free/i });
+  if (await handsFree.count()) {
+    await handsFree.click();
+    await expect(handsFree).toContainText(/on/i);
+  }
   await page.getByRole("tab", { name: "Browse" }).click();
   await expect(page.getByRole("tabpanel")).toContainText(/Browse|Cards|Search/i);
   await guard.assertHealthy("anki");

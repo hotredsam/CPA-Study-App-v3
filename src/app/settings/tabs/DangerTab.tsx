@@ -88,7 +88,7 @@ function ConfirmRow({ label, description, confirmLabel = label, onConfirm }: Con
 }
 
 // ---------------------------------------------------------------------------
-// Delete All Data — requires typing "DELETE"
+// Reset study progress - requires typing "RESET"
 // ---------------------------------------------------------------------------
 
 function DeleteAllDataRow() {
@@ -107,8 +107,8 @@ function DeleteAllDataRow() {
   }
 
   const handleDelete = async () => {
-    if (confirmText !== 'DELETE') {
-      emitToast('Type DELETE to confirm', 'error')
+    if (confirmText !== 'RESET') {
+      emitToast('Type RESET to confirm', 'error')
       return
     }
     setPending(true)
@@ -119,7 +119,8 @@ function DeleteAllDataRow() {
       } else if (!res.ok) {
         emitToast(`Error: HTTP ${res.status}`, 'error')
       } else {
-        emitToast('All data wiped.', 'success')
+        const data = await res.json().catch(() => null) as { note?: string } | null
+        emitToast(data?.note ?? 'Study progress reset; textbook library preserved.', 'success')
       }
     } finally {
       setPending(false)
@@ -131,14 +132,14 @@ function DeleteAllDataRow() {
     <div className="flex items-center justify-between gap-4 py-4">
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-          Delete all data
+          Reset study progress
         </span>
         <span className="text-xs" style={{ color: 'var(--ink-dim)' }}>
-          Irreversibly destroys all recordings, questions, feedback, cards, and settings.
+          Clears recordings, questions, feedback, reviews, routines, and model logs while preserving textbooks, indexed chunks, cards, settings, and R2 blobs.
         </span>
       </div>
       <Btn variant="danger" size="sm" onClick={handleOpen}>
-        Delete all data
+        Reset progress
       </Btn>
 
       {showModal && (
@@ -163,12 +164,12 @@ function DeleteAllDataRow() {
               className="text-base font-semibold mb-2"
               style={{ color: 'var(--bad)' }}
             >
-              Delete all data
+              Reset study progress
             </h2>
             <p className="text-sm mb-4" style={{ color: 'var(--ink-dim)' }}>
               This action cannot be undone. Type{' '}
               <span className="font-mono font-semibold" style={{ color: 'var(--bad)' }}>
-                DELETE
+                RESET
               </span>{' '}
               to confirm.
             </p>
@@ -176,8 +177,8 @@ function DeleteAllDataRow() {
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Type DELETE"
-              aria-label="Type DELETE to confirm data wipe"
+              placeholder="Type RESET"
+              aria-label="Type RESET to confirm study progress reset"
               className="w-full rounded border border-[color:var(--border)] bg-[color:var(--canvas)] text-[color:var(--ink)] px-2.5 py-1.5 text-sm mb-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--bad)]"
             />
             <div className="flex justify-end gap-2">
@@ -188,10 +189,10 @@ function DeleteAllDataRow() {
                 variant="danger"
                 size="sm"
                 onClick={handleDelete}
-                disabled={confirmText !== 'DELETE' || pending}
-                aria-disabled={confirmText !== 'DELETE'}
+                disabled={confirmText !== 'RESET' || pending}
+                aria-disabled={confirmText !== 'RESET'}
               >
-                {pending ? 'Deleting…' : 'Delete all data'}
+                {pending ? 'Resetting...' : 'Reset progress'}
               </Btn>
             </div>
           </div>

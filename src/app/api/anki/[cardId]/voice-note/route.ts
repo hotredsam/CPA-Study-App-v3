@@ -4,6 +4,7 @@ import { ApiError, respond } from "@/lib/api-error";
 import { runVoiceNote } from "@/lib/ai/voice-note";
 import { r2Client, bucket } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { isAllowedVoiceNoteUpload, MAX_VOICE_NOTE_BYTES } from "@/lib/upload-constraints";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,12 @@ export async function POST(
     if (!card) {
       throw new ApiError("NOT_FOUND", `AnkiCard not found: ${cardId}`);
     }
+    const contentLength = Number(request.headers.get("content-length") ?? "0");
+    if (Number.isFinite(contentLength) && contentLength > MAX_VOICE_NOTE_BYTES) {
+      throw new ApiError("BAD_REQUEST", "Voice note is too large.", {
+        maxBytes: MAX_VOICE_NOTE_BYTES,
+      }, 413);
+    }
 
     const formData = await request.formData();
     const audioFile = formData.get("audio");
@@ -27,6 +34,14 @@ export async function POST(
     }
 
     const mimeType = audioFile.type || "audio/webm";
+    if (!isAllowedVoiceNoteUpload({ contentType: mimeType })) {
+      throw new ApiError("BAD_REQUEST", "Unsupported voice note file type.");
+    }
+    if (audioFile.size > MAX_VOICE_NOTE_BYTES) {
+      throw new ApiError("BAD_REQUEST", "Voice note is too large.", {
+        maxBytes: MAX_VOICE_NOTE_BYTES,
+      }, 413);
+    }
     const ext = mimeType.includes("mp4") ? "mp4" : "webm";
     const timestamp = Date.now();
     const r2Key = `voice-notes/${cardId}/${timestamp}.${ext}`;

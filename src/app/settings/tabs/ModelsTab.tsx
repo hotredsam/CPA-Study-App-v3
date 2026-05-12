@@ -391,7 +391,6 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
   const [modelInput, setModelInput] = useState(config.model)
   const [batch, setBatch] = useState(config.batchEnabled)
   const [cache, setCache] = useState(config.cacheEnabled)
-  const [oauth, setOauth] = useState(config.useOAuthFallback)
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -403,7 +402,7 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
           model: modelInput,
           batchEnabled: batch,
           cacheEnabled: cache,
-          useOAuthFallback: oauth,
+          useOAuthFallback: false,
         }),
       })
       if (!res.ok) throw await errorFromResponse(res)
@@ -498,7 +497,7 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm" style={{ color: 'var(--ink)' }}>Batch</span>
               <Toggle on={batch} onChange={setBatch} label={`${label} batch enabled`} />
@@ -506,10 +505,6 @@ function ModelConfigRow({ config }: ModelConfigRowProps) {
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm" style={{ color: 'var(--ink)' }}>Cache</span>
               <Toggle on={cache} onChange={setCache} label={`${label} cache enabled`} />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm" style={{ color: 'var(--ink)' }}>OAuth fallback</span>
-              <Toggle on={oauth} onChange={setOauth} label={`${label} OAuth fallback`} />
             </div>
           </div>
 

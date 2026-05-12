@@ -28,22 +28,39 @@ type TextbookRow = {
 }
 
 const FALLBACK_SECTIONS: CpaSection[] = DEFAULT_EXAM_SECTIONS_SETTINGS.sections
+const MAX_TEXTBOOK_UPLOAD_BYTES = 250 * 1024 * 1024
 
 function titleFromFile(file: File): string {
-  return file.name.replace(/\.(pdf|epub|html|htm)$/i, '')
+  return file.name.replace(/\.pdf$/i, '')
 }
 
 function isSupportedUploadFile(file: File): boolean {
   const name = file.name.toLowerCase()
-  return (
-    file.type === 'application/pdf' ||
-    file.type === 'application/epub+zip' ||
-    file.type === 'text/html' ||
-    name.endsWith('.pdf') ||
-    name.endsWith('.epub') ||
-    name.endsWith('.html') ||
-    name.endsWith('.htm')
-  )
+  return file.type === 'application/pdf' || name.endsWith('.pdf')
+}
+
+function uploadWithProgress(
+  uploadUrl: string,
+  file: File,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', uploadUrl)
+    xhr.setRequestHeader('Content-Type', file.type || 'application/pdf')
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(event.loaded, event.total)
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+      } else {
+        reject(new Error(`Textbook upload failed with HTTP ${xhr.status}`))
+      }
+    }
+    xhr.onerror = () => reject(new Error('Textbook upload failed'))
+    xhr.send(file)
+  })
 }
 
 // ─── Index status badge ───────────────────────────────────────────────────────
@@ -91,6 +108,7 @@ function UploadModal({
   const [files, setFiles] = useState<File[]>(initialFiles)
   const [loading, setLoading] = useState(false)
   const [uploadIndex, setUploadIndex] = useState(0)
+  const [uploadPct, setUploadPct] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const { data: examSettings } = useExamSections()
   const sectionOptions = examSettings?.sections ?? FALLBACK_SECTIONS
@@ -112,25 +130,47 @@ function UploadModal({
     }
     setLoading(true)
     setUploadIndex(0)
+    setUploadPct(0)
     setError(null)
     try {
-      const uploadFiles = files.length > 0 ? files : [null]
-      for (const [index, currentFile] of uploadFiles.entries()) {
-        setUploadIndex(index + 1)
-        const form = new FormData()
-        form.set('title', currentFile ? (isBulk ? titleFromFile(currentFile) : title.trim()) : title.trim())
-        if (publisher) form.set('publisher', publisher)
-        sections.forEach((section) => form.append('sections', section))
-        if (currentFile) form.set('file', currentFile)
-
-        const res = await fetch('/api/textbooks', {
-          method: 'POST',
-          body: form,
-        })
-        if (!res.ok) {
-          throw await errorFromResponse(res)
+      if (files.length === 0) {
+        throw new Error('Choose a PDF file first.')
+      }
+      for (const [index, currentFile] of files.entries()) {
+        if (!isSupportedUploadFile(currentFile)) {
+          throw new Error(`${currentFile.name} is not a PDF file.`)
         }
-        const data = (await res.json()) as { textbook: TextbookRow }
+        if (currentFile.size > MAX_TEXTBOOK_UPLOAD_BYTES) {
+          throw new Error(`${currentFile.name} is too large. Maximum PDF size is 250 MB.`)
+        }
+        setUploadIndex(index + 1)
+        setUploadPct(0)
+        const startRes = await fetch('/api/textbooks/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: isBulk ? titleFromFile(currentFile) : title.trim(),
+            publisher: publisher || undefined,
+            sections,
+            fileName: currentFile.name,
+            contentType: currentFile.type || 'application/pdf',
+            sizeBytes: currentFile.size,
+          }),
+        })
+        if (!startRes.ok) {
+          throw await errorFromResponse(startRes)
+        }
+        const startData = (await startRes.json()) as { textbook: TextbookRow; uploadUrl: string }
+        await uploadWithProgress(startData.uploadUrl, currentFile, (loaded, total) => {
+          setUploadPct(total > 0 ? Math.round((loaded / total) * 100) : 0)
+        })
+        const completeRes = await fetch(`/api/textbooks/${startData.textbook.id}/complete`, {
+          method: 'POST',
+        })
+        if (!completeRes.ok) {
+          throw await errorFromResponse(completeRes)
+        }
+        const data = (await completeRes.json()) as { textbook: TextbookRow }
         onSuccess(data.textbook)
       }
       onClose()
@@ -259,7 +299,7 @@ function UploadModal({
                   id="tb-file"
                   type="file"
                   multiple
-                  accept=".pdf,.epub,.html,.htm,application/pdf,application/epub+zip,text/html"
+                  accept=".pdf,application/pdf"
                   onChange={(e) => {
                     const selected = Array.from(e.target.files ?? [])
                     setFiles(selected)
@@ -296,6 +336,20 @@ function UploadModal({
             </p>
           )}
 
+          {loading && (
+            <div role="status" aria-live="polite" className="space-y-1">
+              <div className="h-2 overflow-hidden rounded bg-[color:var(--canvas-2)]">
+                <div
+                  className="h-full bg-[color:var(--accent)] transition-[width] duration-200"
+                  style={{ width: `${uploadPct}%` }}
+                />
+              </div>
+              <p className="text-xs text-[color:var(--ink-faint)]">
+                Uploading {files.length > 1 ? `${uploadIndex}/${files.length} ` : ''}{uploadPct}%
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-1">
             {loading && files.length > 1 && (
               <span className="self-center text-xs text-[color:var(--ink-faint)]">
@@ -309,7 +363,7 @@ function UploadModal({
               variant="primary"
               size="sm"
               onClick={() => void handleSubmit()}
-              disabled={loading || (!isBulk && !title.trim())}
+              disabled={loading || files.length === 0 || (!isBulk && !title.trim())}
             >
               {loading ? 'Uploading...' : files.length > 1 ? `Upload ${files.length} Textbooks` : 'Upload'}
             </Btn>

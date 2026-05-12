@@ -27,7 +27,14 @@ describe("google auth config", () => {
 
   it("requires auth on Vercel or when explicitly enabled", () => {
     expect(shouldRequireAuth({ VERCEL: "1" } as unknown as NodeJS.ProcessEnv)).toBe(true);
+    expect(shouldRequireAuth({ NODE_ENV: "production", AUTH_BYPASS: "true" } as unknown as NodeJS.ProcessEnv)).toBe(true);
     expect(shouldRequireAuth({ AUTH_REQUIRED: "true" } as unknown as NodeJS.ProcessEnv)).toBe(true);
-    expect(shouldRequireAuth({ AUTH_BYPASS: "true", VERCEL: "1" } as unknown as NodeJS.ProcessEnv)).toBe(false);
+    expect(shouldRequireAuth({ AUTH_BYPASS: "true" } as unknown as NodeJS.ProcessEnv)).toBe(false);
+    expect(shouldRequireAuth({
+      NODE_ENV: "production",
+      AUTH_BYPASS: "true",
+      ALLOW_LOCAL_PROD_AUTH_BYPASS: "true",
+    } as unknown as NodeJS.ProcessEnv)).toBe(false);
+    expect(shouldRequireAuth({ AUTH_BYPASS: "true", VERCEL: "1" } as unknown as NodeJS.ProcessEnv)).toBe(true);
   });
 });

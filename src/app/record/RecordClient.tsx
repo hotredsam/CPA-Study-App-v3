@@ -13,6 +13,10 @@ import { Bar } from "@/components/ui/Bar";
 import { SectionBadge } from "@/components/ui/SectionBadge";
 import { DEFAULT_EXAM_SECTIONS_SETTINGS, useExamSections } from "@/hooks/useExamSections";
 import type { CpaSectionCode } from "@/lib/cpa-sections";
+import {
+  isAllowedRecordingUpload,
+  MAX_RECORDING_UPLOAD_BYTES,
+} from "@/lib/upload-constraints";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +32,8 @@ type HealthData = {
   db: HealthStatus;
   r2: HealthStatus;
   trigger: HealthStatus;
+  openrouter?: HealthStatus;
+  encryption?: HealthStatus;
 };
 
 type Check = {
@@ -85,6 +91,52 @@ function uploadWithProgress(
     xhr.onerror = () => reject(new Error("Upload network error"));
     xhr.send(blob);
   });
+}
+
+function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB"] as const;
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function messageFromJsonBody(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const record = body as Record<string, unknown>;
+  if (typeof record.message === "string") return record.message;
+  const error = record.error;
+  if (error && typeof error === "object") {
+    const errorRecord = error as Record<string, unknown>;
+    if (typeof errorRecord.message === "string") return errorRecord.message;
+    if (typeof errorRecord.code === "string") return errorRecord.code;
+  }
+  return null;
+}
+
+async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.json().catch(() => null) as unknown;
+  const message = messageFromJsonBody(body);
+  return message ? `${fallback}: ${message}` : `${fallback}: HTTP ${response.status}`;
+}
+
+function recordingErrorMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : "";
+  const message = err instanceof Error ? err.message : String(err);
+
+  if (name === "NotAllowedError" || /permission|denied/i.test(message)) {
+    return "Screen or microphone permission was denied. Allow browser access, then try again.";
+  }
+  if (name === "NotSupportedError" || /not supported/i.test(message)) {
+    return "This browser cannot start live screen recording. On iPhone or unsupported browsers, upload the native screen-recording file instead.";
+  }
+  if (name === "NotFoundError" || /not found/i.test(message)) {
+    return "No screen or microphone source was available. Connect a microphone or use the iPhone upload option.";
+  }
+  return message || "Recording could not start. Try again or upload a saved screen recording.";
 }
 
 // ─── Setup phase ─────────────────────────────────────────────────────────────
@@ -252,8 +304,9 @@ function SetupPhase({
     setHealthLoading(true);
     Promise.all([
       fetch("/api/health").then(async (r) => {
-        if (!r.ok) throw new Error("Health check failed");
-        return r.json() as Promise<HealthData>;
+        const data = await r.json().catch(() => null) as unknown;
+        if (!data || typeof data !== "object") throw new Error("Health check failed");
+        return data as HealthData;
       }),
       fetch("/api/settings/openrouter-key")
         .then((r) => r.json())
@@ -277,24 +330,50 @@ function SetupPhase({
     );
   };
 
+  const fileTooLarge = screenRecordingFile
+    ? screenRecordingFile.size > MAX_RECORDING_UPLOAD_BYTES
+    : false;
+  const fileTypeSupported = screenRecordingFile
+    ? isAllowedRecordingUpload({
+        fileName: screenRecordingFile.name,
+        contentType: screenRecordingFile.type,
+      })
+    : true;
+  const fileProblem = fileTooLarge
+    ? `Maximum recording upload size is ${formatBytes(MAX_RECORDING_UPLOAD_BYTES)}.`
+    : !fileTypeSupported
+    ? "Use a WebM, MP4, MOV, or M4V video file."
+    : null;
+  const micReady = micStatus === "ready" && !micPermDenied;
+  const dbReady = health?.db === "ok";
+  const r2Ready = health?.r2 === "ok";
+  const triggerReady = health?.trigger === "ok";
+  const aiHealthReady = health?.openrouter === undefined || health.openrouter === "ok";
+  const aiReady = hasOpenRouterKey === true && aiHealthReady;
+  const requiredServicesReady = dbReady && r2Ready && triggerReady && aiReady;
+
   const checks: Check[] = [
     {
-      label: "Display captured",
+      label: "Screen source selected",
       status: screenSource ? "ok" : "warn",
     },
     {
-      label: "Mic signal",
+      label: "Mic permission",
       status: micStatus === "checking"
         ? "loading"
         : micStatus === "denied" || micStatus === "unsupported"
         ? "fail"
-        : micStatus === "ready" || selectedMic || mics.length > 0
+        : micReady
         ? "ok"
         : "warn",
     },
     {
-      label: "OpenRouter API",
-      status: hasOpenRouterKey === null ? "loading" : hasOpenRouterKey ? "ok" : "warn",
+      label: "OpenRouter key",
+      status: hasOpenRouterKey === null || healthLoading
+        ? "loading"
+        : aiReady
+        ? "ok"
+        : "fail",
     },
     {
       label: "R2 storage",
@@ -307,32 +386,31 @@ function SetupPhase({
         : "fail",
     },
     {
-      label: "Workers pipeline",
+      label: "Trigger pipeline",
       status: healthLoading
         ? "loading"
         : health?.trigger === "ok"
         ? "ok"
-        : "warn",
+        : "fail",
     },
     {
-      label: "Textbook sources",
-      status: "ok",
+      label: "Textbook database",
+      status: healthLoading ? "loading" : dbReady ? "ok" : "fail",
     },
     {
       label: "Sections assigned",
       status: selectedSections.length > 0 ? "ok" : "warn",
     },
     {
-      label: "Budget OK",
-      status: healthLoading ? "loading" : health ? "ok" : "fail",
+      label: "Budget guard",
+      status: healthLoading ? "loading" : dbReady && aiReady ? "ok" : "warn",
     },
   ];
 
-  const requiredServicesReady = health?.db === "ok" && health?.r2 === "ok";
   const canStart =
-    !micPermDenied && Boolean(screenSource) && selectedSections.length > 0 && requiredServicesReady;
+    micReady && Boolean(screenSource) && selectedSections.length > 0 && requiredServicesReady;
   const canUpload =
-    screenRecordingFile !== null && selectedSections.length > 0 && requiredServicesReady;
+    screenRecordingFile !== null && selectedSections.length > 0 && requiredServicesReady && !fileProblem;
 
   const selectedMicLabel =
     mics.find((m) => m.deviceId === selectedMic)?.label ?? "Default";
@@ -561,15 +639,25 @@ function SetupPhase({
                 htmlFor="screen-recording-upload"
                 className="block text-xs font-semibold uppercase tracking-widest text-[color:var(--ink-faint)]"
               >
-                iPhone Screen Recording
+                Choose iPhone Recording File
               </label>
+              <p id="screen-recording-help" className="mt-1 text-xs text-[color:var(--ink-faint)]">
+                MP4, MOV, M4V, or WebM up to {formatBytes(MAX_RECORDING_UPLOAD_BYTES)}. Choose a file first, then upload.
+              </p>
               <input
                 id="screen-recording-upload"
                 type="file"
                 accept="video/*,.mov,.mp4,.webm"
                 onChange={(event) => setScreenRecordingFile(event.target.files?.[0] ?? null)}
+                aria-label="iPhone Screen Recording"
+                aria-describedby="screen-recording-help screen-recording-file-problem"
                 className="mt-2 block min-h-11 w-full text-sm text-[color:var(--ink-dim)] file:mr-3 file:rounded file:border-0 file:bg-[color:var(--surface)] file:px-3 file:py-3 file:text-sm file:font-medium file:text-[color:var(--ink)] hover:file:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)] sm:min-h-0 sm:file:py-2"
               />
+              {fileProblem && (
+                <p id="screen-recording-file-problem" className="mt-2 text-xs font-medium text-[color:var(--bad)]" role="alert">
+                  {fileProblem}
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Btn
                   variant="subtle"
@@ -585,7 +673,7 @@ function SetupPhase({
                 </Btn>
                 {screenRecordingFile && (
                   <span className="text-xs text-[color:var(--ink-faint)]">
-                    {(screenRecordingFile.size / 1024 / 1024).toFixed(1)} MB
+                    {formatBytes(screenRecordingFile.size)}
                   </span>
                 )}
               </div>
@@ -602,6 +690,21 @@ function SetupPhase({
             {!canStart && selectedSections.length === 0 && (
               <p className="mt-2 text-xs text-[color:var(--ink-faint)]">
                 Select at least one CPA section to start.
+              </p>
+            )}
+            {!canStart && selectedSections.length > 0 && !micReady && (
+              <p className="mt-2 text-xs text-[color:var(--ink-faint)]">
+                Allow microphone access before starting a browser recording.
+              </p>
+            )}
+            {!canStart && selectedSections.length > 0 && micReady && !requiredServicesReady && (
+              <p className="mt-2 text-xs text-[color:var(--ink-faint)]">
+                Database, R2, Trigger, and OpenRouter must be healthy before recording.
+              </p>
+            )}
+            {!canUpload && screenRecordingFile && !fileProblem && !requiredServicesReady && (
+              <p className="mt-2 text-xs text-[color:var(--ink-faint)]">
+                Upload is paused until database, R2, Trigger, and OpenRouter checks pass.
               </p>
             )}
           </div>
@@ -933,6 +1036,9 @@ export function RecordClient() {
       elapsedSecRef.current = 0;
 
       try {
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+          throw new DOMException("Screen recording is not supported in this browser.", "NotSupportedError");
+        }
         // Capture display
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: { frameRate: { ideal: 30 } },
@@ -990,8 +1096,7 @@ export function RecordClient() {
           }
         }, 500);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(msg);
+        setError(recordingErrorMessage(err));
         stopAllTracks();
       }
     },
@@ -1030,11 +1135,13 @@ export function RecordClient() {
       contentType,
       durationSec,
       title,
+      fileName,
     }: {
       blob: Blob;
       contentType: string;
       durationSec?: number;
       title: string;
+      fileName?: string;
     }) => {
       stopAllTracks();
       setPhase("uploading");
@@ -1051,12 +1158,14 @@ export function RecordClient() {
           body: JSON.stringify({
             durationSec,
             contentType,
+            fileName,
+            sizeBytes: blob.size,
             sections: currentOptionsRef.current?.sections ?? [],
             modelUsed: currentOptionsRef.current?.model,
             title,
           }),
         });
-        if (!startRes.ok) throw new Error(`Failed to create recording: HTTP ${startRes.status}`);
+        if (!startRes.ok) throw new Error(await responseErrorMessage(startRes, "Failed to create recording"));
         const { recordingId: newId, uploadUrl } = (await startRes.json()) as {
           recordingId: string;
           uploadUrl: string;
@@ -1086,7 +1195,7 @@ export function RecordClient() {
         const completeRes = await fetch(`/api/recordings/${newId}/complete`, {
           method: "POST",
         });
-        if (!completeRes.ok) throw new Error(`Failed to complete recording: HTTP ${completeRes.status}`);
+        if (!completeRes.ok) throw new Error(await responseErrorMessage(completeRes, "Failed to complete recording"));
 
         setUploadDone(true);
 
@@ -1117,6 +1226,7 @@ export function RecordClient() {
         contentType: "video/webm",
         durationSec: elapsedSecRef.current > 0 ? elapsedSecRef.current : undefined,
         title: sections.length ? `${sections.join("+")} screen recording` : "Screen recording",
+        fileName: "screen-recording.webm",
       });
     },
     [uploadRecordingBlob],
@@ -1125,6 +1235,14 @@ export function RecordClient() {
   const handleFileUpload = useCallback(
     async (file: File, opts: RecordingOptions) => {
       setError(null);
+      if (file.size > MAX_RECORDING_UPLOAD_BYTES) {
+        setError(`Recording is too large. Maximum upload size is ${formatBytes(MAX_RECORDING_UPLOAD_BYTES)}.`);
+        return;
+      }
+      if (!isAllowedRecordingUpload({ fileName: file.name, contentType: file.type })) {
+        setError("Unsupported recording file type. Use WebM, MP4, MOV, or M4V video.");
+        return;
+      }
       currentOptionsRef.current = opts;
       await uploadRecordingBlob({
         blob: file,
@@ -1132,6 +1250,7 @@ export function RecordClient() {
         title: opts.sections.length
           ? `${opts.sections.join("+")} uploaded screen recording`
           : file.name || "Uploaded screen recording",
+        fileName: file.name,
       });
     },
     [uploadRecordingBlob],
@@ -1157,7 +1276,7 @@ export function RecordClient() {
           role="alert"
           className="mb-4 rounded border border-[color:var(--bad)] bg-[color:var(--bad)]/10 px-4 py-3 text-sm text-[color:var(--bad)]"
         >
-          <strong>Error:</strong> {error}
+          <strong>Recording unavailable:</strong> {error}
           <button
             type="button"
             onClick={() => setError(null)}

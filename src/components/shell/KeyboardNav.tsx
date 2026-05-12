@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { isTypingTarget } from '@/lib/keyboard-target'
 import { SHELL_NAV_BY_KEY, SHELL_NAV_ITEMS } from '@/lib/navigation'
+import { navigateReliably } from '@/lib/reliable-client-nav'
 
 function ShortcutOverlay({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -81,7 +82,7 @@ export function KeyboardNav() {
         const dest = SHELL_NAV_BY_KEY[key]
         if (dest) {
           e.preventDefault()
-          router.push(dest.route)
+          navigateReliably(router, dest.route)
           setShowHelp(false)
         }
         clearAwaitingSecond()
@@ -99,7 +100,7 @@ export function KeyboardNav() {
       const directDest = SHELL_NAV_BY_KEY[key]
       if (directDest) {
         e.preventDefault()
-        router.push(directDest.route)
+        navigateReliably(router, directDest.route)
         setShowHelp(false)
       }
     }

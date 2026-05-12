@@ -123,6 +123,10 @@ export async function runChatTutor(input: ChatTutorInput): Promise<ChatTutorOutp
   const result = await runFunction(AiFunctionKey.CHAT_TUTOR, {
     prompt,
     conversationId,
+  }, {
+    recordingId: validated.context?.recordingId,
+    questionId: validated.context?.questionId,
+    topicId: validated.context?.topicId,
   });
 
   const reply = typeof result.output === "string"

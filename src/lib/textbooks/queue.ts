@@ -7,6 +7,7 @@ export type TextbookIndexQueueResult = {
 
 function shouldRunLocally(): boolean {
   const mode = process.env.TEXTBOOK_INDEXER_MODE?.trim().toLowerCase();
+  if (process.env.VERCEL === "1") return false;
   if (mode === "trigger") return false;
   if (mode === "local") return true;
   return process.env.NODE_ENV !== "production";

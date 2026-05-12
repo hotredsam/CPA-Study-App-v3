@@ -1,25 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 function messageFromError(value: unknown): string {
   if (value instanceof Error) return value.message;
   return "Login failed. Please try again.";
 }
 
-export function LoginClient({ configured, allowedEmail }: { configured: boolean; allowedEmail: string }) {
-  const searchParams = useSearchParams();
+export function LoginClient({
+  configured,
+  allowedEmail,
+  nextPath,
+  providerError,
+  setupMissing,
+}: {
+  configured: boolean;
+  allowedEmail: string;
+  nextPath: string;
+  providerError: string | null;
+  setupMissing: boolean;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const nextPath = useMemo(() => {
-    const raw = searchParams.get("next");
-    return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
-  }, [searchParams]);
-
-  const providerError = searchParams.get("error");
-  const setupMissing = searchParams.get("setup") === "missing";
   const visibleError =
     error ??
     (providerError

@@ -1,5 +1,6 @@
 import type { CpaSection, RecordingStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { countDueAnkiCards } from "@/lib/anki-due";
 import { respond } from "@/lib/api-error";
 import { getActiveExamSections } from "@/lib/exam-settings";
 import { prisma } from "@/lib/prisma";
@@ -27,16 +28,7 @@ export async function GET(): Promise<NextResponse> {
           updatedAt: { gte: liveSince },
         },
       }),
-      prisma.ankiCard.count({
-        where: {
-          section: { in: activeSections as unknown as CpaSection[] },
-          srsState: {
-            path: ["nextDue"],
-            lte: now.toISOString(),
-            not: null as unknown as string,
-          },
-        },
-      }),
+      countDueAnkiCards({ sections: activeSections as unknown as CpaSection[], now }),
     ]);
 
     return NextResponse.json(

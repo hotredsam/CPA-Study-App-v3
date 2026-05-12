@@ -53,6 +53,7 @@ test("command palette supports keyboard selection and escape", async ({ page }) 
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/record$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Preflight");
 
   await page.keyboard.press("Control+K");
   await expect(page.getByRole("dialog", { name: "Command palette" })).toBeVisible();

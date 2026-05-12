@@ -3,11 +3,17 @@ import { AiFunctionKey, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { callClaude, extractJsonFromResponse } from "@/lib/claude-cli";
+import {
+  assertSpendAllowed,
+  estimateFunctionUsd,
+  type SpendContext,
+} from "@/lib/budget/spend-gates";
 import { callOpenRouter, type LLMCallResult, type LLMMessage } from "./openrouter";
 
-export interface RunFunctionOptions {
+export interface RunFunctionOptions extends SpendContext {
   bypassCache?: boolean;
   bypassBatch?: boolean;
+  estimatedUsd?: number;
 }
 
 export interface RunFunctionResult {
@@ -15,6 +21,10 @@ export interface RunFunctionResult {
   cacheHit: boolean;
   batchJobId?: string;
   expectedCompletionAt?: Date;
+}
+
+function isProductionRuntime(): boolean {
+  return process.env["VERCEL"] === "1" || process.env["NODE_ENV"] === "production";
 }
 
 /**
@@ -83,6 +93,12 @@ export async function runFunction(
 ): Promise<RunFunctionResult> {
   const bypassCache = opts?.bypassCache ?? false;
   const bypassBatch = opts?.bypassBatch ?? false;
+  const spendContext: SpendContext = {
+    recordingId: opts?.recordingId,
+    questionId: opts?.questionId,
+    topicId: opts?.topicId,
+    chunkId: opts?.chunkId,
+  };
 
   // Step 1: Load ModelConfig
   const modelConfig = await prisma.modelConfig.findUnique({
@@ -138,6 +154,9 @@ export async function runFunction(
 
   // Step 5: Check batch
   if (modelConfig.batchEnabled && !bypassBatch) {
+    const estimatedUsd = estimateFunctionUsd(functionKey, opts?.estimatedUsd);
+    await assertSpendAllowed(functionKey, spendContext, estimatedUsd);
+
     const now = new Date();
     const windowEnd = new Date(now.getTime() + 6 * 60 * 60 * 1000); // +6h
 
@@ -161,8 +180,10 @@ export async function runFunction(
 
   // Step 6: Dispatch
   let llmResult: LLMCallResult;
+  const estimatedUsd = estimateFunctionUsd(functionKey, opts?.estimatedUsd);
+  await assertSpendAllowed(functionKey, spendContext, estimatedUsd);
 
-  if (modelConfig.useOAuthFallback) {
+  if (modelConfig.useOAuthFallback && !isProductionRuntime()) {
     llmResult = await claudeCliCall(payload);
   } else {
     const messages = buildMessages(functionKey, payload);
@@ -189,7 +210,12 @@ export async function runFunction(
       inputTokens: llmResult.inputTokens,
       outputTokens: llmResult.outputTokens,
       usdCost: llmResult.usdCost,
+      estimatedUsd,
       cacheHit: false,
+      recordingId: spendContext.recordingId,
+      questionId: spendContext.questionId,
+      topicId: spendContext.topicId,
+      chunkId: spendContext.chunkId,
     },
   });
 
@@ -234,7 +260,12 @@ export async function runFunction(
     inputTokens: llmResult.inputTokens,
     outputTokens: llmResult.outputTokens,
     usdCost: llmResult.usdCost,
+    estimatedUsd,
     cacheHit: false,
+    recordingId: spendContext.recordingId,
+    questionId: spendContext.questionId,
+    topicId: spendContext.topicId,
+    chunkId: spendContext.chunkId,
   });
 
   // Step 11: Return result

@@ -7,6 +7,7 @@ process.env["ENCRYPTION_KEY"] = "b".repeat(64);
 // Mock @/lib/prisma
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $queryRaw: vi.fn(),
     modelConfig: {
       findUnique: vi.fn(),
     },
@@ -61,6 +62,7 @@ const mockCacheUpdate = vi.mocked(prisma.cacheEntry.update);
 const mockCacheUpsert = vi.mocked(prisma.cacheEntry.upsert);
 const mockBatchCreate = vi.mocked(prisma.batchJob.create);
 const mockModelCallCreate = vi.mocked(prisma.modelCall.create);
+const mockQueryRaw = vi.mocked(prisma.$queryRaw);
 const mockCallOpenRouter = vi.mocked(callOpenRouter);
 
 function makeModelConfig(overrides: Partial<{
@@ -122,11 +124,18 @@ function makeCacheEntry(output: Prisma.JsonValue = { score: 9 }) {
 describe("runFunction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete process.env["SPEND_GATES_ENABLED"];
+    delete process.env["OPENROUTER_MAX_COST_PER_CALL_USD"];
+    delete process.env["OPENROUTER_DAILY_CAP_USD"];
+    delete process.env["OPENROUTER_RECORDING_CAP_USD"];
+    delete process.env["OPENROUTER_QUESTION_CAP_USD"];
 
     // Default budget — no issues
     mockBudgetFind.mockResolvedValue(makeBudget());
     // Default: no cache hit
     mockCacheFind.mockResolvedValue(null);
+    // Default: spend gates see no existing spend
+    mockQueryRaw.mockResolvedValue([{ total: 0 }]);
     // Default: model call create succeeds
     mockModelCallCreate.mockResolvedValue({
       id: "call-1",
@@ -135,8 +144,13 @@ describe("runFunction", () => {
       inputTokens: 10,
       outputTokens: 20,
       usdCost: 0.00005,
+      estimatedUsd: 0.06,
       cacheHit: false,
       batchJobId: null,
+      recordingId: null,
+      questionId: null,
+      topicId: null,
+      chunkId: null,
       createdAt: new Date(),
     });
     // Default: cache upsert succeeds
@@ -351,6 +365,45 @@ describe("runFunction", () => {
         data: { currentUsageUsd: { increment: 0.00005 } },
       }),
     );
+  });
+
+  it("records spend context on ModelCall rows", async () => {
+    mockModelConfig.mockResolvedValue(makeModelConfig());
+
+    await runFunction(
+      AiFunctionKey.PIPELINE_GRADE,
+      { prompt: "test" },
+      {
+        recordingId: "rec-1",
+        questionId: "question-1",
+        topicId: "topic-1",
+        chunkId: "chunk-1",
+      },
+    );
+
+    expect(mockModelCallCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          recordingId: "rec-1",
+          questionId: "question-1",
+          topicId: "topic-1",
+          chunkId: "chunk-1",
+          estimatedUsd: 0.06,
+        }),
+      }),
+    );
+  });
+
+  it("blocks uncached calls when a spend gate would be exceeded", async () => {
+    mockModelConfig.mockResolvedValue(makeModelConfig());
+    process.env["OPENROUTER_DAILY_CAP_USD"] = "0.01";
+
+    await expect(
+      runFunction(AiFunctionKey.PIPELINE_GRADE, { prompt: "test" }),
+    ).rejects.toThrow(/spend gate/i);
+
+    expect(mockCallOpenRouter).not.toHaveBeenCalled();
+    expect(mockModelCallCreate).not.toHaveBeenCalled();
   });
 
   it("bypasses cache lookup when bypassCache=true", async () => {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ApiError, respond } from "@/lib/api-error";
+import { sanitizeChunkHtml } from "@/lib/textbooks/html-sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,13 @@ export async function GET(
       }),
     ]);
 
-    return NextResponse.json({ total, chunks });
+    return NextResponse.json({
+      total,
+      chunks: chunks.map((chunk) => ({
+        ...chunk,
+        htmlContent: chunk.htmlContent ? sanitizeChunkHtml(chunk.htmlContent) : null,
+      })),
+    });
   } catch (err) {
     return respond(err);
   }

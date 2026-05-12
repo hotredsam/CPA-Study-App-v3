@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { EyebrowHeading } from '@/components/ui/EyebrowHeading'
 import { SectionBadge } from '@/components/ui/SectionBadge'
 import { isActiveCpaSection } from '@/lib/cpa-sections'
+import { sanitizeChunkHtml } from '@/lib/textbooks/html-sanitize'
 import { TextbookViewerClient } from './TextbookViewerClient'
 
 export const dynamic = 'force-dynamic'
@@ -83,7 +84,10 @@ export default async function TextbookPage({
       />
       <TextbookViewerClient
         textbookId={textbook.id}
-        initialChunks={chunks}
+        initialChunks={chunks.map((chunk) => ({
+          ...chunk,
+          htmlContent: chunk.htmlContent ? sanitizeChunkHtml(chunk.htmlContent) : null,
+        }))}
         total={total}
       />
     </div>

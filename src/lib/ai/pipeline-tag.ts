@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AiFunctionKey } from "@prisma/client";
+import { AiFunctionKey, CpaSection } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { runFunction } from "@/lib/llm/router";
 
@@ -14,8 +14,8 @@ export const PipelineTagInput = z.object({
 });
 
 export const PipelineTagOutput = z.object({
-  section: z.string(),
-  unit: z.string(),
+  section: z.nativeEnum(CpaSection),
+  unit: z.string().regex(/^[ABFRIST]\d{1,2}$/),
   topic: z.string(),
   difficulty: z.enum(["easy", "medium", "hard"]),
 });
@@ -29,7 +29,7 @@ export type PipelineTagOutput = z.infer<typeof PipelineTagOutput>;
 
 function buildPrompt(input: PipelineTagInput): string {
   const parts: string[] = [
-    "You are a CPA exam content tagger. Given this question transcript and extracted text, identify the CPA exam section (AUD/FAR/REG/TCP/BAR/ISC), unit (a broad subtopic within that section), topic (specific concept), and difficulty. Return JSON only.",
+    "You are a CPA exam content tagger. Given this question transcript and extracted text, identify the CPA exam section (AUD/FAR/REG/TCP/BAR/ISC), Becker-style unit code when inferable (for example F1, R1, A1, T1, B1, S1), topic (specific concept), and difficulty. Return JSON only.",
     "",
   ];
 
@@ -44,7 +44,7 @@ function buildPrompt(input: PipelineTagInput): string {
   }
 
   parts.push(
-    'Return exactly this JSON shape: {"section":"FAR","unit":"Revenue Recognition","topic":"ASC 606 Step 3","difficulty":"medium"}',
+    'Return exactly this JSON shape: {"section":"FAR","unit":"F1","topic":"ASC 606 Step 3","difficulty":"medium"}',
   );
 
   return parts.join("\n");
@@ -60,24 +60,29 @@ export async function runPipelineTag(input: PipelineTagInput): Promise<PipelineT
   const result = await runFunction(AiFunctionKey.PIPELINE_TAG, {
     prompt: buildPrompt(validated),
     questionId: validated.questionId,
+  }, {
+    questionId: validated.questionId,
   });
 
   const output = PipelineTagOutput.parse(result.output);
 
-  // Write Question.topicId if a matching Topic exists (case-insensitive name match)
+  // Write Question.topicId only when the topic matches inside the same CPA section.
   const matchingTopic = await prisma.topic.findFirst({
     where: {
+      section: output.section,
       name: { equals: output.topic, mode: "insensitive" },
     },
   });
+  const unit = matchingTopic?.unit ?? output.unit;
 
   await prisma.question.update({
     where: { id: validated.questionId },
     data: {
+      section: output.section,
       topicId: matchingTopic?.id ?? undefined,
       tags: {
         section: output.section,
-        unit: output.unit,
+        unit,
         topic: output.topic,
         difficulty: output.difficulty,
       },
@@ -85,5 +90,5 @@ export async function runPipelineTag(input: PipelineTagInput): Promise<PipelineT
     },
   });
 
-  return output;
+  return { ...output, unit };
 }

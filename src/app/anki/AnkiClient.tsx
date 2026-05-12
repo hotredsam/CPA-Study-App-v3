@@ -18,11 +18,18 @@ const MODE_TABS = [
   { id: 'browse', label: 'Browse' },
 ]
 
+function modeFromParams(mode: string | null, topicId?: string): AnkiMode {
+  if (mode === 'daily' || mode === 'practice' || mode === 'audio' || mode === 'path' || mode === 'browse') {
+    return mode
+  }
+  return topicId ? 'practice' : 'daily'
+}
+
 export function AnkiClient() {
   const searchParams = useSearchParams()
-  // If topicId param present, start directly in practice mode
+  // Deep links can open a topic directly in practice or audio mode.
   const topicId = searchParams.get('topicId') ?? undefined
-  const [mode, setMode] = useState<AnkiMode>(topicId ? 'practice' : 'daily')
+  const [mode, setMode] = useState<AnkiMode>(() => modeFromParams(searchParams.get('mode'), topicId))
 
   return (
     <div>

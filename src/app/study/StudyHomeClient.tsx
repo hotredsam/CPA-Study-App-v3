@@ -110,7 +110,7 @@ export function StudyHomeClient({ recentTextbook, textbooks, cardsDue }: Props) 
                     {book.chunkCount} chunk{book.chunkCount !== 1 ? "s" : ""}
                   </p>
                 </div>
-                <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+                <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                   <div className="flex min-w-0 flex-wrap gap-1" aria-label="Sections covered">
                     {book.sections.length > 0
                       ? book.sections.map((s) => <SectionBadge key={s} section={s} size="xs" />)

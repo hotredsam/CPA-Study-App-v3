@@ -66,9 +66,19 @@ export async function runTopicExtract(
   input: TopicExtractInput,
 ): Promise<TopicExtractOutput & { batchJobId?: string }> {
   const validated = TopicExtractInput.parse(input);
+  const beckerUnit = inferBeckerUnitLabel({
+    chapterRef: validated.chapterRef,
+    section: validated.section,
+    content: validated.content,
+  });
 
   const result = await runFunction(AiFunctionKey.TOPIC_EXTRACT, {
     prompt: buildPrompt(validated),
+    chunkId: validated.chunkId,
+    chapterRef: validated.chapterRef,
+    section: validated.section,
+    beckerUnit,
+  }, {
     chunkId: validated.chunkId,
   });
 
@@ -86,11 +96,6 @@ export async function runTopicExtract(
   }
 
   const output = TopicExtractOutput.parse(result.output);
-  const beckerUnit = inferBeckerUnitLabel({
-    chapterRef: validated.chapterRef,
-    section: validated.section,
-    content: validated.content,
-  });
 
   // Link to an existing Topic if possible; otherwise create one for uploaded
   // textbook content so a blank app can build its topic map from scratch.

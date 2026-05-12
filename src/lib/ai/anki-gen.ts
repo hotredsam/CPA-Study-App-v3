@@ -16,6 +16,7 @@ export const AnkiGenInput = z.object({
   chapterRef: z.string().optional(),
   section: z.nativeEnum(CpaSection).optional(),
   existingCards: z.array(z.object({ front: z.string(), back: z.string() })).optional(),
+  persist: z.boolean().default(true),
 });
 
 const AnkiCardItem = z.object({
@@ -30,7 +31,7 @@ export const AnkiGenOutput = z.object({
   cards: z.array(AnkiCardItem).max(12),
 });
 
-export type AnkiGenInput = z.infer<typeof AnkiGenInput>;
+export type AnkiGenInput = z.input<typeof AnkiGenInput>;
 export type AnkiGenOutput = z.infer<typeof AnkiGenOutput>;
 export type AnkiCardItem = z.infer<typeof AnkiCardItem>;
 
@@ -102,6 +103,9 @@ export async function runAnkiGen(input: AnkiGenInput): Promise<AnkiGenOutput> {
   const result = await runFunction(AiFunctionKey.ANKI_GEN, {
     prompt: buildPrompt(validated),
     chunkId: validated.chunkId,
+  }, {
+    chunkId: validated.chunkId,
+    topicId: validated.topicId,
   });
 
   const output = AnkiGenOutput.parse(result.output);
@@ -111,20 +115,29 @@ export async function runAnkiGen(input: AnkiGenInput): Promise<AnkiGenOutput> {
     existingCards,
   });
 
-  // Create or update AnkiCard rows in DB for each card
-  for (const card of coverageCards) {
-    await prisma.ankiCard.create({
-      data: {
-        front: card.front,
-        back: card.back,
-        explanation: card.explanation,
-        sourceCitation: card.citation,
-        chunkId: validated.chunkId,
-        topicId: validated.topicId ?? null,
-        section: validated.section ?? null,
-        difficulty: card.difficulty,
-      },
-    });
+  if (validated.persist) {
+    const nowIso = new Date().toISOString();
+    for (const card of coverageCards) {
+      await prisma.ankiCard.create({
+        data: {
+          front: card.front,
+          back: card.back,
+          explanation: card.explanation,
+          sourceCitation: card.citation,
+          chunkId: validated.chunkId,
+          topicId: validated.topicId ?? null,
+          section: validated.section ?? null,
+          difficulty: card.difficulty,
+          srsState: {
+            ease: 2.5,
+            interval: 0,
+            nextDue: nowIso,
+            lapses: 0,
+            repetitions: 0,
+          },
+        },
+      });
+    }
   }
 
   return { cards: coverageCards };

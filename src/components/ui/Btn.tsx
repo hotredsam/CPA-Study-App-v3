@@ -21,9 +21,9 @@ const VARIANT_STYLES: Record<BtnVariant, string> = {
 }
 
 const SIZE_STYLES: Record<BtnSize, string> = {
-  sm: 'h-[26px] text-xs px-2.5 gap-1.5',
-  md: 'h-8 text-[13px] px-3 gap-2',
-  lg: 'h-10 text-sm px-[18px] gap-2.5',
+  sm: 'min-h-8 md:h-[26px] text-xs px-2.5 gap-1.5',
+  md: 'min-h-10 md:h-8 text-[13px] px-3 gap-2',
+  lg: 'min-h-11 md:h-10 text-sm px-[18px] gap-2.5',
 }
 
 export function Btn({
