@@ -19,6 +19,8 @@ export interface Topic {
   section: string
   name: string
   unit: string | null
+  bookHref: string | null
+  coverageLabel: string | null
   mastery: number
   errorRate: number | null
   cardsDue: number

@@ -155,9 +155,22 @@ Default: `ggml-small.en.bin`. If accuracy lags:
 - `pnpm runtime:probe` - real-browser interaction crawler. It explores
   non-destructive visible click targets and representative keyboard actions to
   depth 5, and fails on HTTP 500s, page errors, raw Prisma text, `_document.js`,
-  `ENOENT`, or framework crash overlays.
+  `ENOENT`, 404 crash pages, or framework crash overlays. It dismisses
+  confirmation dialogs so token-spending actions are not accepted during probes.
 - `pnpm runtime:probe:mobile` - same crawler in a 440x956 touch viewport used
-  to approximate a Pro Max class phone.
+  to approximate a Pro Max class phone. Mobile probe also fails on horizontal
+  document overflow after each explored action.
+
+Production-bundle smoke can target a running `next start` server:
+
+```bash
+RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe
+RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe:mobile
+```
+
+If the full 900-sequence crawl is slow, split routes with
+`RUNTIME_PROBE_ROUTES=/,/record,/topics` while keeping the same base URL. Keep
+the total route coverage equivalent before calling a deploy ready.
 
 ## Local database recovery
 

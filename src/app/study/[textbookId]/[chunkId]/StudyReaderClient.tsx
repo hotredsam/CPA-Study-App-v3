@@ -80,6 +80,8 @@ export function StudyReaderClient({
   const progressPct =
     textbook.chunkCount > 0 ? ((chunk.order + 1) / textbook.chunkCount) * 100 : 0;
   const topicMasteryPct = topic ? normalizePercent(topic.mastery) : 0;
+  const prevHref = prevChunkIdx !== null ? `/study/${textbook.id}/${prevChunkIdx}` : null;
+  const nextHref = nextChunkIdx !== null ? `/study/${textbook.id}/${nextChunkIdx}` : null;
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -119,6 +121,42 @@ export function StudyReaderClient({
           {chunk.order + 1} / {textbook.chunkCount}
         </span>
       </div>
+
+      <nav className="grid grid-cols-3 gap-2 lg:hidden" aria-label="Chunk navigation">
+        {prevHref ? (
+          <Link
+            href={prevHref}
+            className="inline-flex min-h-11 items-center justify-center rounded-[3px] border border-[color:var(--border)] bg-[color:var(--surface)] px-3 text-sm font-medium text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+            aria-label="Previous chunk"
+          >
+            Prev
+          </Link>
+        ) : (
+          <span className="inline-flex min-h-11 items-center justify-center rounded-[3px] border border-[color:var(--border)] px-3 text-sm text-[color:var(--ink-faint)] opacity-50">
+            Prev
+          </span>
+        )}
+        <Link
+          href="/study"
+          className="inline-flex min-h-11 items-center justify-center rounded-[3px] border border-[color:var(--border)] bg-[color:var(--surface)] px-3 text-sm font-medium text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+          aria-label="Back to study home"
+        >
+          Study
+        </Link>
+        {nextHref ? (
+          <Link
+            href={nextHref}
+            className="inline-flex min-h-11 items-center justify-center rounded-[3px] border border-[color:var(--border)] bg-[color:var(--surface)] px-3 text-sm font-medium text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+            aria-label="Next chunk"
+          >
+            Next
+          </Link>
+        ) : (
+          <span className="inline-flex min-h-11 items-center justify-center rounded-[3px] border border-[color:var(--border)] px-3 text-sm text-[color:var(--ink-faint)] opacity-50">
+            Next
+          </span>
+        )}
+      </nav>
 
       {/* Two-column layout */}
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
@@ -242,7 +280,7 @@ export function StudyReaderClient({
             <div className="flex gap-2 mb-4">
               {prevChunkIdx !== null ? (
                 <Link
-                  href={`/study/${textbook.id}/${prevChunkIdx}`}
+                  href={prevHref ?? "/study"}
                   className="flex-1 inline-flex items-center justify-center text-xs font-medium rounded-[3px] px-2.5 py-1.5 border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
                   aria-label="Previous chunk"
                 >
@@ -255,7 +293,7 @@ export function StudyReaderClient({
               )}
               {nextChunkIdx !== null ? (
                 <Link
-                  href={`/study/${textbook.id}/${nextChunkIdx}`}
+                  href={nextHref ?? "/study"}
                   className="flex-1 inline-flex items-center justify-center text-xs font-medium rounded-[3px] px-2.5 py-1.5 border border-[color:var(--border)] text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
                   aria-label="Next chunk"
                 >

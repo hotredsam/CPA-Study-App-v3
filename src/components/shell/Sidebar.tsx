@@ -201,7 +201,7 @@ export function Sidebar() {
           const badgeCount = getBadgeCount(badgeType)
 
           return (
-            <li key={item.route} role="listitem">
+            <li key={item.route} role="listitem" data-nav-id={item.id}>
               <Link
                 href={item.route}
                 aria-current={active ? 'page' : undefined}
@@ -235,7 +235,8 @@ export function Sidebar() {
                   <span
                     className="ml-1 flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-mono font-semibold text-white"
                     style={{ background: 'var(--accent)' }}
-                    aria-label={`${badgeCount} ${badgeType === 'pipeline' ? 'processing' : 'due'}`}
+                    aria-hidden="true"
+                    title={`${badgeCount} ${badgeType === 'pipeline' ? 'processing' : 'due'}`}
                   >
                     {badgeCount > 9 ? '9+' : badgeCount}
                   </span>

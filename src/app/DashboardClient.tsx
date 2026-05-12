@@ -340,12 +340,15 @@ export function DashboardClient({ data }: { data: DashboardData }) {
   const focusMastery = clampPercent(focusStats.mastery)
   const totalTarget = 1200
   const totalPct = clampPercent((displayTotalHours / totalTarget) * 100)
+  const totalRoutineTasks =
+    routineData.morning.length + routineData.midday.length + routineData.evening.length
+  const dashboardStatus = totalRoutineTasks > 0 ? 'on pace' : 'ready to start'
 
   return (
     <div className="flex flex-col gap-5">
       <EyebrowHeading
         eyebrow={`DASHBOARD - ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
-        title={`${displayTotalHours.toFixed(1)} hours in, ${displayWeekHours.toFixed(1)} this week, on pace.`}
+        title={`${displayTotalHours.toFixed(1)} hours in, ${displayWeekHours.toFixed(1)} this week, ${dashboardStatus}.`}
         sub={`${currentFocus.section ? `${currentFocus.section}: ` : ''}${currentFocus.title}. Anki has ${displayCardsDue} reviews due. ${studyStats.processingCount ?? 0} recordings processing in the background.`}
         right={
           <div className="flex gap-2">

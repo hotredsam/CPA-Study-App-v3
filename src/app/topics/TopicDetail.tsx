@@ -43,6 +43,11 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
   }, [])
 
   const handleRefreshAiNotes = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Refresh AI notes for this topic? This may use one small OpenRouter call.',
+    )
+    if (!confirmed) return
+
     setRefreshing(true)
     try {
       await refreshTopicNotes(topic.id)
@@ -55,6 +60,11 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
   }, [topic.id])
 
   const handleRegenAnki = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Regenerate Anki cards for this topic? Existing cards for this topic will be replaced and this may use OpenRouter calls.',
+    )
+    if (!confirmed) return
+
     setRegenning(true)
     try {
       const result = await regenerateAnkiCards(topic.id)
@@ -158,7 +168,7 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
           {regenning ? 'Regenerating...' : 'Regen Anki cards'}
         </Btn>
         <a
-          href={`/study?topicId=${topic.id}`}
+          href={topic.bookHref ?? `/study?topicId=${topic.id}`}
           className="flex w-full items-center justify-center rounded-[3px] border border-[color:var(--border)] text-[color:var(--ink-dim)] text-sm px-3.5 py-2 hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
         >
           Open in book
@@ -181,7 +191,7 @@ export function TopicDetail({ topic, onNotesChange }: Props) {
         <div className="mt-3 rounded-[3px] border border-[color:var(--accent-border)] bg-[color:var(--accent-faint)] p-3">
           <p className="eyebrow text-[color:var(--accent)]">WHERE COVERED</p>
           <p className="mt-1 text-xs leading-5 text-[color:var(--ink-dim)]">
-            Becker FAR 7.3 - FASB ASC 606-10-32 - Ninja FAR Notes p.68
+            {topic.coverageLabel ?? topic.unit ?? 'No indexed textbook chunk is linked yet.'}
           </p>
         </div>
       </div>

@@ -23,13 +23,15 @@ The current branch passed:
 
 - `pnpm typecheck`
 - `pnpm lint`
-- `pnpm test` (213/213)
+- `pnpm test` (222/222)
 - `pnpm prisma validate`
 - `pnpm prisma migrate status`
 - `pnpm build`
-- `pnpm e2e -- --project=chromium` (235/235)
-- `pnpm runtime:probe` (900 depth-5 desktop sequences)
-- `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences)
+- production `next start` smoke: `/api/health` 200, unauthenticated `/` redirects to `/login?setup=missing`
+- production desktop/mobile product-flow smoke with `AUTH_BYPASS=true`
+- `pnpm e2e -- --project=chromium` (237/237)
+- production `pnpm runtime:probe` (900 depth-5 desktop sequences)
+- production `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences with overflow checks)
 - `pnpm simulate:month` followed by `pnpm reset:study-progress`
 
 The 30-day simulator uses direct local database writes only and does not call

@@ -385,10 +385,12 @@ function TextbookTableRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-1.5 items-center">
-          <a href={`/library/${textbook.id}`}>
-            <Btn variant="ghost" size="sm" aria-label={`Open ${textbook.title}`}>
+          <a
+            href={`/library/${textbook.id}`}
+            aria-label={`Open ${textbook.title}`}
+            className="inline-flex h-[26px] items-center justify-center gap-1.5 rounded-[3px] border border-[color:var(--border)] bg-[color:var(--surface)] px-2.5 text-xs font-medium text-[color:var(--ink-dim)] hover:border-[color:var(--border-hi)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
+          >
               Open
-            </Btn>
           </a>
           <button
             type="button"

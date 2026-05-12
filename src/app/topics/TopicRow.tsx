@@ -112,8 +112,10 @@ export function TopicRow({ topic, isLast, isExpanded, onToggle, onNotesChange }:
         <div className="mono tabular whitespace-nowrap text-[12px] text-[color:var(--ink-dim)]">
           {relTime(topic.lastSeen)}
         </div>
-        <div className="text-center text-[color:var(--ink-faint)]" aria-hidden="true">
-          {isExpanded ? '^' : 'v'}
+        <div className="justify-self-end" aria-hidden="true">
+          <span className="inline-flex min-h-8 items-center rounded-[3px] border border-[color:var(--border)] px-2 text-[11px] font-medium text-[color:var(--ink-faint)]">
+            {isExpanded ? 'Collapse' : 'Details'}
+          </span>
         </div>
       </div>
 

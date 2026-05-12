@@ -133,11 +133,24 @@ pnpm test
 pnpm build
 pnpm e2e -- --project=chromium
 pnpm runtime:probe
+pnpm runtime:probe:mobile
 ```
 
 `pnpm dev` and `pnpm build` clean only disposable Next.js build artifacts after
 reclaiming ports 3000/3001. Playwright uses a separate `.next-e2e` dist folder
 so E2E runs cannot corrupt the user-facing dev server on port 3000.
+
+Before a Vercel deploy, also smoke the production bundle locally:
+
+``` bash
+PORT=3002 AUTH_BYPASS=true pnpm start
+RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe
+RUNTIME_PROBE_BASE_URL=http://localhost:3002 pnpm runtime:probe:mobile
+```
+
+The runtime probes explore non-destructive click and keyboard sequences to depth
+5, reject framework crash text, raw Prisma errors, missing `_document.js`/ENOENT
+output, 404 crash pages, and mobile horizontal overflow.
 
 ## Sam's input folder
 

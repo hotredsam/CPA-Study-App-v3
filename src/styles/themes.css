@@ -187,6 +187,16 @@ html[data-serif="instrument"] {
     flex: 0 0 auto;
   }
 
+  .side li[data-nav-id="dashboard"] { order: 1; }
+  .side li[data-nav-id="study"] { order: 2; }
+  .side li[data-nav-id="anki"] { order: 3; }
+  .side li[data-nav-id="record"] { order: 4; }
+  .side li[data-nav-id="topics"] { order: 5; }
+  .side li[data-nav-id="review"] { order: 6; }
+  .side li[data-nav-id="pipeline"] { order: 7; }
+  .side li[data-nav-id="library"] { order: 8; }
+  .side li[data-nav-id="settings"] { order: 9; }
+
   .side a {
     min-height: 52px;
     min-width: 68px;
@@ -257,7 +267,7 @@ html[data-theme="night"] .hov:hover {
 }
 
 .topic-grid {
-  grid-template-columns: 60px minmax(220px,1fr) 130px 230px 150px 70px 80px 24px;
+  grid-template-columns: 60px minmax(220px,1fr) 130px 230px 150px 70px 80px 90px;
 }
 
 .mobile-action-button {
@@ -307,7 +317,7 @@ html[data-theme="night"] .hov:hover {
 
 @media (max-width: 700px) {
   .topic-grid {
-    grid-template-columns: 46px minmax(0,1fr) 52px minmax(74px,86px) 24px;
+    grid-template-columns: 46px minmax(0,1fr) 52px minmax(74px,86px) 76px;
   }
 
   .topic-grid > :nth-child(5),

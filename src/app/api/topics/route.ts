@@ -25,6 +25,8 @@ type TopicListItem = {
   section: CpaSection
   name: string
   unit: string | null
+  bookHref: string | null
+  coverageLabel: string | null
   mastery: number
   errorRate: number | null
   cardsDue: number
@@ -102,7 +104,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         createdAt: true,
         updatedAt: true,
         chunks: {
+          orderBy: { order: 'asc' },
           select: {
+            textbookId: true,
+            order: true,
             chapterRef: true,
             title: true,
             textbook: { select: { title: true } },
@@ -138,6 +143,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const now = new Date()
     const measuredTopics = topics.map((topic) => {
+      const firstChunk = topic.chunks[0] ?? null
       const metrics = computeTopicMasteryMetrics({
         section: topic.section,
         storedUnit: topic.unit,
@@ -153,6 +159,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         section: topic.section,
         name: topic.name,
         unit: metrics.unit,
+        bookHref: firstChunk ? `/study/${firstChunk.textbookId}/${firstChunk.order}` : null,
+        coverageLabel: firstChunk
+          ? [firstChunk.textbook?.title, firstChunk.chapterRef, firstChunk.title]
+              .filter(Boolean)
+              .join(' - ')
+          : null,
         mastery: metrics.mastery,
         errorRate: metrics.errorRate,
         cardsDue: metrics.cardsDue,

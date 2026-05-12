@@ -476,7 +476,7 @@ function SetupPhase({
                     onClick={() => toggleSection(s)}
                     aria-pressed={active}
                     className={[
-                      "rounded-full px-3 py-1 text-xs font-semibold font-mono uppercase tracking-wide transition-colors",
+                      "min-h-11 min-w-11 rounded-full px-3 py-1 text-xs font-semibold font-mono uppercase tracking-wide transition-colors sm:min-h-0 sm:min-w-0",
                       "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]",
                       active
                         ? "ring-2 ring-[color:var(--accent)] ring-offset-1"
@@ -568,12 +568,13 @@ function SetupPhase({
                 type="file"
                 accept="video/*,.mov,.mp4,.webm"
                 onChange={(event) => setScreenRecordingFile(event.target.files?.[0] ?? null)}
-                className="mt-2 block w-full text-sm text-[color:var(--ink-dim)] file:mr-3 file:rounded file:border-0 file:bg-[color:var(--surface)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[color:var(--ink)] hover:file:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)]"
+                className="mt-2 block min-h-11 w-full text-sm text-[color:var(--ink-dim)] file:mr-3 file:rounded file:border-0 file:bg-[color:var(--surface)] file:px-3 file:py-3 file:text-sm file:font-medium file:text-[color:var(--ink)] hover:file:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent)] sm:min-h-0 sm:file:py-2"
               />
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Btn
                   variant="subtle"
                   size="sm"
+                  className="min-h-11 sm:min-h-0"
                   disabled={!canUpload}
                   onClick={() => {
                     if (screenRecordingFile) onUploadFile(screenRecordingFile, recordingOptions);
@@ -853,7 +854,7 @@ function UploadPhase({
             <h2 className="text-lg font-semibold text-[color:var(--good)]">Recording uploaded!</h2>
             {recordingId && (
               <a
-                href="/pipeline"
+                href={`/recordings/${recordingId}/status`}
                 className="inline-flex items-center justify-center font-medium rounded-[3px] text-sm px-3.5 py-2 bg-[color:var(--accent)] text-white hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
               >
                 View pipeline status
@@ -1097,7 +1098,7 @@ export function RecordClient() {
         );
 
         // Redirect after short delay
-        setTimeout(() => router.push("/pipeline"), 2000);
+        setTimeout(() => router.push(`/recordings/${newId}/status`), 2000);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg);

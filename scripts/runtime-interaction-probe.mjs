@@ -33,6 +33,7 @@ const crashPatterns = [
   /Internal Server Error/i,
   /Cannot find module/i,
   /ENOENT/i,
+  /This page could not be found/i,
   /_document\.js/i,
   /Invalid `prisma\./i,
   /PrismaClientInitializationError/i,
@@ -99,6 +100,16 @@ async function assertHealthy(page, route, sequence, telemetry) {
   if (fatalConsole) {
     throw new Error(`${route} ${describeSequence(sequence)} console crash: ${fatalConsole}`);
   }
+
+  if (mobileProfile) {
+    const overflow = await page.evaluate(() => {
+      const width = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+      return width - window.innerWidth;
+    });
+    if (overflow > 2) {
+      throw new Error(`${route} ${describeSequence(sequence)} caused ${overflow}px horizontal overflow at ${url}`);
+    }
+  }
 }
 
 async function collectActions(page) {
@@ -130,7 +141,7 @@ async function collectActions(page) {
     for (const anchor of Array.from(document.querySelectorAll("a[href]"))) {
       if (!isVisible(anchor)) continue;
       const href = anchor.getAttribute("href") ?? "";
-      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) continue;
+      if (!href || href.startsWith("mailto:") || href.startsWith("tel:")) continue;
 
       const parsed = new URL(href, window.location.href);
       if (parsed.origin !== origin || parsed.pathname.startsWith("/api")) continue;
@@ -223,6 +234,10 @@ async function newProbedPage(context) {
     if (message.type() === "error") telemetry.consoleErrors.push(message.text());
   });
   page.on("pageerror", (error) => telemetry.pageErrors.push(error.message));
+  page.on("dialog", async (dialog) => {
+    telemetry.consoleErrors.push(`dismissed dialog: ${dialog.message()}`);
+    await dialog.dismiss().catch(() => undefined);
+  });
   page.on("response", (response) => {
     if (response.status() >= 500) {
       telemetry.responses.push({ status: response.status(), url: response.url() });

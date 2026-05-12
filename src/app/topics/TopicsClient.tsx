@@ -76,12 +76,17 @@ export function TopicsClient() {
   }, [queryClient, queryKey])
 
   const handleBulkRefresh = useCallback(async () => {
+    const scopeLabel = sectionFilter !== 'all' ? sectionFilter : 'all sections'
+    const confirmed = window.confirm(
+      `Refresh AI notes for ${scopeLabel}? This may make OpenRouter calls for the shown topics.`,
+    )
+    if (!confirmed) return
+
     setBulkRefreshing(true)
     try {
       const result = await bulkRefreshTopicNotes({
         section: sectionFilter !== 'all' ? sectionFilter : undefined,
       })
-      const scopeLabel = sectionFilter !== 'all' ? sectionFilter : 'all sections'
       dispatchToast(
         `Refreshed AI notes for ${result.processed} topics (${scopeLabel}). Estimated cost: ~$${(result.processed * 0.002).toFixed(3)}`,
       )
@@ -169,7 +174,13 @@ export function TopicsClient() {
           >
             {bulkRefreshing ? 'Refreshing...' : 'Refresh AI notes for all'}
           </Btn>
-          <Btn size="sm" variant="primary" aria-label="Process all shown topics">
+          <Btn
+            size="sm"
+            variant="primary"
+            disabled
+            aria-label="Process all shown topics"
+            title="Use individual refresh actions until bulk processing is wired to the indexing queue."
+          >
             Process all shown
           </Btn>
         </div>
