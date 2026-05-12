@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { isGoogleAuthConfigured } from "@/lib/auth/google";
 import { createOAuthStateToken, OAUTH_STATE_COOKIE_NAME, OAUTH_STATE_TTL_SECONDS, safeNextPath } from "@/lib/auth/session";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { clientRateLimitKey, rateLimitResponse } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,6 +15,13 @@ function redirectToLogin(request: NextRequest, setupMissing = false): NextRespon
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const rateLimit = checkRateLimit({
+    key: clientRateLimitKey(request, "auth:google"),
+    limit: 20,
+    windowMs: 10 * 60_000,
+  });
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
   if (!isGoogleAuthConfigured()) {
     return redirectToLogin(request, true);
   }

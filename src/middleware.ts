@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAllowedAuthEmail, isGoogleAuthConfigured, shouldRequireAuth } from "@/lib/auth/google";
 import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import {
+  clientRateLimitKey,
+  hasTrustedSameOrigin,
+  isStateChangingMethod,
+  rateLimitResponse,
+} from "@/lib/security/request";
 
 const PUBLIC_PATH_PREFIXES = [
   "/_next",
@@ -45,6 +52,22 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   );
 
   if (isAllowedAuthEmail(session?.email)) {
+    if (pathname.startsWith("/api/") && isStateChangingMethod(request.method)) {
+      const rateLimit = checkRateLimit({
+        key: clientRateLimitKey(request, `api:${pathname}`),
+        limit: 60,
+        windowMs: 60_000,
+      });
+      if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
+      if (!hasTrustedSameOrigin(request)) {
+        return NextResponse.json(
+          { error: { code: "CSRF_BLOCKED", message: "Cross-site request blocked." } },
+          { status: 403, headers: { "Cache-Control": "no-store" } },
+        );
+      }
+    }
+
     return NextResponse.next();
   }
 

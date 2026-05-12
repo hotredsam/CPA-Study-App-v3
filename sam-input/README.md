@@ -5,7 +5,7 @@ Drop work here and I'll pick it up.
 ## Two ways to send me work
 
 **1. Edit `TODO.xml` and save.**
-A PostToolUse hook fires when the XML changes, parses the diff, and kicks off a Claude Code run with whatever you wrote.
+A PostToolUse hook fires when the XML changes, parses the diff, and kicks off a Codex run with whatever you wrote.
 
 **2. Drop an audio file in `audio/`.**
 Any `*.wav`, `*.m4a`, or `*.mp3` is transcribed locally with whisper.cpp. The transcript is appended to `TODO.xml` as a new `<item>` with `source="audio"`, and the file is moved to `.processed/audio-archive/`.

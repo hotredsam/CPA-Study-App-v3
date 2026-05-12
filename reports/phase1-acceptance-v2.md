@@ -41,7 +41,7 @@ Every piece of AI-generated output carries `_precision: "provisional"` or
 `precision: "provisional"` until:
 1. Fixture boundaries are manually verified (blocker `2026-04-17-fixture-boundaries`)
 2. 10 FeedbackItem keys are locked (blocker `2026-04-17-feedback-items`)
-3. Real Claude vision is added (needs ANTHROPIC_API_KEY in Trigger.dev environment)
+3. OpenRouter vision extraction is enabled (needs `OPENROUTER_API_KEY` in Trigger.dev environment)
 
 ## Manual acceptance checklist (for Sam, post Night 2)
 
@@ -78,6 +78,6 @@ The corrupt fixture (`fixtures/sample-corrupt.mkv` — 6 MB truncated) should:
 
 1. Verify fixture boundaries
 2. Lock 10 FeedbackItem keys → update FeedbackPayload Zod schema + migrate
-3. Add ANTHROPIC_API_KEY to Trigger.dev environment secrets (prod)
-4. Upgrade extraction to real vision (use API key with image messages)
+3. Add `OPENROUTER_API_KEY` to Trigger.dev environment secrets (prod)
+4. Upgrade extraction to real OpenRouter vision calls (use image messages)
 5. Verify full pipeline runs without errors on sample-3q and sample-5q

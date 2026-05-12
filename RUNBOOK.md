@@ -78,6 +78,7 @@ Vercel requires these app variables at minimum:
 - `AUTH_GOOGLE_ID` - Google OAuth client ID
 - `AUTH_GOOGLE_SECRET` - Google OAuth client secret
 - `AUTH_ALLOWED_EMAILS=hotredsam@gmail.com`
+- `ENABLE_ADMIN_WIPE=false` - keep destructive maintenance disabled in prod
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
 - `TRIGGER_PROJECT_ID`, `TRIGGER_SECRET_KEY`
 - `OPENROUTER_API_KEY`
@@ -90,6 +91,21 @@ NAS storage is optional. Vercel can archive processed media to a NAS only if the
 NAS exposes a public, TLS-secured S3/MinIO-compatible endpoint or a tunnel. Put
 that endpoint in `PROCESSED_ARCHIVE_S3_*`; do not point Vercel at a private LAN
 address.
+
+## Security notes
+
+- The production app is single-user by default. `AUTH_ALLOWED_EMAILS` should stay
+  `hotredsam@gmail.com` unless you intentionally add another account.
+- OpenRouter keys must stay server-side. Use `OPENROUTER_API_KEY` in Vercel and
+  Trigger.dev env vars; do not expose it through `NEXT_PUBLIC_*`.
+- The Settings key endpoint stores only encrypted key material and returns only
+  `{ hasKey: boolean }`.
+- State-changing API requests are protected by the signed Google session,
+  same-origin checks, and per-IP rate limits. A `CSRF_BLOCKED` or `RATE_LIMITED`
+  response usually means the browser request did not originate from this app.
+- If you suspect an env secret leaked, rotate `OPENROUTER_API_KEY`,
+  `AUTH_SECRET`, R2 credentials, and `TRIGGER_SECRET_KEY`, then redeploy Vercel
+  and Trigger.dev.
 
 ## Reprocess a failed recording
 

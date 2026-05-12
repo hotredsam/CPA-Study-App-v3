@@ -73,7 +73,7 @@ All endpoints added to `src/lib/api-client.ts` with typed Zod schemas.
 
 ## What still needs Sam's attention
 
-1. **Whisper + API key on Linux** — Deploy to trigger.dev cloud with `ANTHROPIC_API_KEY` + `WHISPER_MODEL_PATH` to get real extraction/grading quality
+1. **Whisper + OpenRouter key on Linux** — Deploy to trigger.dev cloud with `OPENROUTER_API_KEY` + `WHISPER_MODEL_PATH` to get real extraction/grading quality
 2. **Scene detection tuning** — Lower threshold from 0.3 to 0.15 to test if Becker video segments properly
 3. **Feedback items lock** — Still provisional; the 10 item keys need to be finalized (blocker `2026-04-17-feedback-items`)
 4. **Reprocess route has runtime=nodejs** — The `import { processRecording }` from trigger task causes edge runtime conflict; marked `runtime = "nodejs"` in the route. Sam should verify this works in Vercel deployment.
@@ -96,4 +96,4 @@ All endpoints added to `src/lib/api-client.ts` with typed Zod schemas.
 - `pnpm test` ✅ 59/59
 - All 3 fixtures: end-to-end pipeline working
 - trigger:dev: connected and processing tasks (running in background)
-- Next.js dev server: healthy on port 3001
+- Next.js dev server: healthy on a temporary alternate port during that historical run. Current local default is 3000.

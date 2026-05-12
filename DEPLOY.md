@@ -84,6 +84,7 @@ In the Trigger.dev dashboard (https://cloud.trigger.dev), set these environment 
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
 - `OPENROUTER_API_KEY`
 - `ENCRYPTION_KEY`
+- `ENABLE_ADMIN_WIPE=false`
 - `WHISPER_MODEL_PATH` (path to model file in the task container, if using custom image)
 
 ### 4. Vercel
@@ -103,6 +104,7 @@ Set these environment variables in the Vercel project dashboard (Settings → En
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
 | `AUTH_ALLOWED_EMAILS` | `hotredsam@gmail.com` |
+| `ENABLE_ADMIN_WIPE` | `false` unless intentionally running maintenance |
 | `R2_ACCOUNT_ID` | Cloudflare account ID |
 | `R2_ACCESS_KEY_ID` | R2 API token key ID |
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret |
@@ -130,6 +132,7 @@ In Google Cloud Console, the OAuth Web Application must include:
 | `AUTH_GOOGLE_ID` | Yes | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Yes | Google OAuth client secret |
 | `AUTH_ALLOWED_EMAILS` | Yes | Comma-separated allowlist; use `hotredsam@gmail.com` |
+| `ENABLE_ADMIN_WIPE` | No | Keep `false` in production so the admin wipe route is disabled |
 | `R2_ACCOUNT_ID` | Yes | Cloudflare account ID (found in R2 dashboard) |
 | `R2_ACCESS_KEY_ID` | Yes | R2 API token — Key ID |
 | `R2_SECRET_ACCESS_KEY` | Yes | R2 API token — Secret |
@@ -143,6 +146,20 @@ In Google Cloud Console, the OAuth Web Application must include:
 | `NODE_ENV` | Auto-set | Set by Vercel/Node; do not set manually |
 
 ---
+
+## Security checklist before clicking Deploy
+
+- `DATABASE_URL` points to production Postgres, never `localhost`.
+- `AUTH_REQUIRED=true` and `AUTH_ALLOWED_EMAILS=hotredsam@gmail.com`.
+- `AUTH_SECRET` is unique to production and not reused from local `.env`.
+- `OPENROUTER_API_KEY` exists only in Vercel/Trigger.dev secret env vars, never
+  in a `NEXT_PUBLIC_*` variable.
+- `ENCRYPTION_KEY` is a 64-character hex value and is backed up securely before
+  users save keys through Settings.
+- `ENABLE_ADMIN_WIPE=false`.
+- Google OAuth callback includes the exact production domain:
+  `https://<your-vercel-domain>/api/auth/callback/google`.
+- R2 CORS allows only the final Vercel domain and local dev if needed.
 
 ## Troubleshooting
 

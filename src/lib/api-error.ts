@@ -4,6 +4,9 @@ import { ZodError } from "zod";
 export type ErrorCode =
   | "BAD_REQUEST"
   | "DATABASE_UNAVAILABLE"
+  | "RATE_LIMITED"
+  | "CSRF_BLOCKED"
+  | "UNAUTHORIZED"
   | "NOT_FOUND"
   | "UNPROCESSABLE"
   | "INTERNAL_ERROR"
@@ -25,6 +28,9 @@ function codeToStatus(code: ErrorCode): number {
   switch (code) {
     case "BAD_REQUEST": return 400;
     case "DATABASE_UNAVAILABLE": return 503;
+    case "RATE_LIMITED": return 429;
+    case "CSRF_BLOCKED": return 403;
+    case "UNAUTHORIZED": return 401;
     case "NOT_FOUND": return 404;
     case "UNPROCESSABLE": return 422;
     case "METHOD_NOT_ALLOWED": return 405;
@@ -34,6 +40,10 @@ function codeToStatus(code: ErrorCode): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function errorHeaders(): HeadersInit {
+  return { "Cache-Control": "no-store" };
 }
 
 export function isDatabaseUnavailableError(err: unknown): boolean {
@@ -61,7 +71,7 @@ export function respond(err: unknown): NextResponse {
   if (err instanceof ApiError) {
     return NextResponse.json(
       { error: { code: err.code, message: err.message, details: err.details } },
-      { status: err.status },
+      { status: err.status, headers: errorHeaders() },
     );
   }
 
@@ -74,29 +84,41 @@ export function respond(err: unknown): NextResponse {
           details: err.flatten(),
         },
       },
-      { status: 400 },
+      { status: 400, headers: errorHeaders() },
     );
   }
 
   if (isDatabaseUnavailableError(err)) {
-    console.error("[api-error] database unavailable:", err);
+    if (process.env["NODE_ENV"] === "production") {
+      console.error("[api-error] database unavailable");
+    } else {
+      console.error("[api-error] database unavailable:", err);
+    }
     return NextResponse.json(
       {
         error: {
           code: "DATABASE_UNAVAILABLE",
-          message:
-            "Database is unavailable. Start Docker Desktop and run `docker compose up -d postgres`, then retry.",
+          message: process.env["NODE_ENV"] === "production"
+            ? "Database is temporarily unavailable. Please retry shortly."
+            : "Database is unavailable. Start Docker Desktop and run `docker compose up -d postgres`, then retry.",
         },
       },
-      { status: 503 },
+      { status: 503, headers: errorHeaders() },
     );
   }
 
-  const message =
-    err instanceof Error ? err.message : "An unexpected error occurred";
-  console.error("[api-error] unhandled:", err);
+  const message = process.env["NODE_ENV"] === "production"
+    ? "An unexpected error occurred."
+    : err instanceof Error
+      ? err.message
+      : "An unexpected error occurred";
+  if (process.env["NODE_ENV"] === "production") {
+    console.error("[api-error] unhandled error");
+  } else {
+    console.error("[api-error] unhandled:", err);
+  }
   return NextResponse.json(
     { error: { code: "INTERNAL_ERROR", message } },
-    { status: 500 },
+    { status: 500, headers: errorHeaders() },
   );
 }

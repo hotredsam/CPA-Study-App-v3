@@ -17,7 +17,7 @@ A web app that ingests screen recordings of Becker CPA practice question session
 ## Locked Decisions
 
 - **Language / runtime**: TypeScript on Node 22. Single stack keeps the video + AI pipeline in one language.
-- **Frontend**: Next.js (App Router) + Tailwind. Desktop-first, optimized for 16:9 Chrome on the 57" Odyssey G9.
+- **Frontend**: Next.js (App Router) + Tailwind. Desktop-first for deep study work, with responsive mobile support for iPhone review, uploads, and Anki Audio.
 - **Backend**: Next.js route handlers for the API. Long jobs run on **Trigger.dev v3** tasks — no separate worker deployment.
 - **Database**: Postgres via Prisma. Stores recordings, questions, feedback, user history, textbook metadata, stage progress snapshots.
 - **Blob storage**: Cloudflare R2 (S3-compatible). Raw recordings, per-question clips, extracted audio, keyframe images.
@@ -35,7 +35,7 @@ A web app that ingests screen recordings of Becker CPA practice question session
 - Offline AI inference for *grading* (grading stays on OpenRouter-routed models; only transcription/segmentation are local).
 - Multiple study modes (one unified mode with filtering after the fact).
 - Native desktop app.
-- Mobile-first UI.
+- A separate mobile-first native app. The web app remains responsive and usable on mobile.
 
 ---
 

@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, respond } from "./api-error";
 import { z } from "zod";
 
 describe("api-error", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("respond(ApiError) returns correct status + envelope for 400", async () => {
     const err = new ApiError("BAD_REQUEST", "bad input", { field: "required" });
     const res = respond(err);

@@ -36,11 +36,11 @@ meaningful. See `sam-input/TODO.xml` blocker `2026-04-17-fixture-boundaries`.
 pnpm trigger:dev   # in one terminal — starts the local Trigger.dev runner
 pnpm dev           # in another terminal — starts Next.js
 
-# Then go to http://localhost:3001/record and record OR:
+# Then go to http://localhost:3000/record and record OR:
 # POST directly to the API with a fixture file:
 
 # 1. Create a Recording row + get presigned upload URL
-curl -X POST http://localhost:3001/api/recordings \
+curl -X POST http://localhost:3000/api/recordings \
   -H "content-type: application/json" \
   -d '{"contentType":"video/mp4","durationSec":658}'
 
@@ -49,9 +49,9 @@ curl -X PUT "<uploadUrl>" --data-binary @fixtures/sample-3q.mp4 \
   -H "content-type: video/mp4"
 
 # 3. Trigger the pipeline
-curl -X POST http://localhost:3001/api/recordings/<recordingId>/complete
+curl -X POST http://localhost:3000/api/recordings/<recordingId>/complete
 
-# 4. Watch progress at http://localhost:3001/recordings/<recordingId>/status
+# 4. Watch progress at http://localhost:3000/recordings/<recordingId>/status
 ```
 
 ## Accuracy acceptance criteria (post-verification)

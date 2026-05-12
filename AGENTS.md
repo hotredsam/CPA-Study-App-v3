@@ -1,43 +1,50 @@
-# CPA Study System — Build Contract
+# CPA Study System - Build Contract
 
 Source of truth: `PLAN.md`. Read it before every task.
 
 ## Stack (locked)
+
 - TypeScript strict, no `any`, no `@ts-ignore`
-- Node 22, pnpm (Node 24 is tolerated if pinned 22 is unavailable — see BUILD_LOG.md Section 2)
-- Next.js (App Router) + Tailwind
+- Node 22, pnpm (Node 24 is tolerated if pinned 22 is unavailable; see `BUILD_LOG.md`)
+- Next.js App Router + Tailwind
 - Prisma + Postgres
-- Trigger.dev v3 — all long-running work
-- Local whisper.cpp via smart-whisper — NEVER OpenAI Whisper API
-- OpenRouter for production AI routing; Codex OAuth is local dev tooling only
+- Trigger.dev v3 for all long-running work
+- Local `whisper.cpp` via smart-whisper; never use the OpenAI Whisper API
+- OpenRouter for production AI routing; Codex/OAuth tooling is local dev assistance only
 - Cloudflare R2 blobs
-- ffmpeg local in Trigger.dev task container
+- ffmpeg local in the Trigger.dev task container
+- Google OAuth single-user allowlist for `hotredsam@gmail.com`
 
 ## Commands
-- `pnpm dev` — Next.js
-- `pnpm test` — Vitest
-- `pnpm typecheck` — `tsc --noEmit`
-- `pnpm lint` — eslint
-- `pnpm e2e` — Playwright
-- `pnpm prisma migrate dev` — migrate
-- `npx trigger.dev@latest dev` — Trigger.dev runner
+
+- `pnpm dev` - Next.js
+- `pnpm test` - Vitest
+- `pnpm typecheck` - `tsc --noEmit`
+- `pnpm lint` - ESLint
+- `pnpm e2e` - Playwright
+- `pnpm prisma migrate dev` - local migrations
+- `npx trigger.dev@latest dev` - Trigger.dev runner
 
 ## Conventions
-- Named exports only (except Next.js page/layout/route files).
-- Colocate tests with source (`foo.ts` → `foo.test.ts`).
+
+- Named exports only, except Next.js page/layout/route files.
+- Colocate tests with source (`foo.ts` -> `foo.test.ts`).
 - Zod validation at every boundary.
-- All long tasks emit the `StageProgress` shape via Trigger.dev metadata.
+- All long tasks emit the `StageProgress` shape through Trigger.dev metadata.
 - Use realtime (`useRealtimeRun`), never polling.
 
 ## Do-nots
+
+- No provider-specific production AI keys. Use OpenRouter.
 - No OpenAI API calls.
 - No polling endpoints.
-- No hardcoded secrets. `.env` only. Commit `.env.example` only.
+- No hardcoded secrets. `.env` only; commit `.env.example` only.
 - No default exports outside Next.js pages.
 - No `any`, no `@ts-ignore`.
+- Do not wipe, reseed, or reindex user data unless the user explicitly asks.
 
 ## Workflow
-- One PLAN.md task per session; `/clear` between tasks.
-- Enter Plan Mode before coding.
-- End each task with its Verification block. Commit only on pass.
-- Delegate heavy work to subagents in `.Codex/agents/`.
+
+- One `PLAN.md` task per session when practical; avoid mixing unrelated work.
+- End each task with verification notes. Commit only on pass.
+- Delegate heavy work only when the current tool/session supports subagents.

@@ -14,7 +14,7 @@ Apply via Cloudflare dashboard → R2 → your bucket → Settings → CORS:
 [
   {
     "AllowedOrigins": [
-      "http://localhost:3001",
+      "http://localhost:3000",
       "https://<your-vercel-domain>.vercel.app"
     ],
     "AllowedMethods": ["GET", "PUT"],
@@ -58,7 +58,7 @@ R2_PUBLIC_URL=https://<bucket>.r2.dev  # optional — only if public domain is c
 
 After setting `.env`:
 ```bash
-curl http://localhost:3001/api/health
+curl http://localhost:3000/api/health
 # Expected: {"db":"ok","r2":"ok","trigger":"ok","timestamp":"..."}
 ```
 

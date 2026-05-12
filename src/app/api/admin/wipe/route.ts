@@ -14,6 +14,18 @@ type DeleteCounts = Record<string, number>;
  */
 export async function DELETE(): Promise<NextResponse> {
   try {
+    if (process.env.NODE_ENV === "production" && process.env["ENABLE_ADMIN_WIPE"] !== "true") {
+      return NextResponse.json(
+        {
+          error: {
+            code: "DISABLED_IN_PRODUCTION",
+            message: "Admin wipe is disabled in production unless ENABLE_ADMIN_WIPE=true.",
+          },
+        },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     const counts: DeleteCounts = {};
 
     await prisma.$transaction(async (tx) => {

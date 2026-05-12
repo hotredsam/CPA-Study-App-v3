@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAllowedAuthEmail, isGoogleAuthConfigured } from "@/lib/auth/google";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { clientRateLimitKey, rateLimitResponse } from "@/lib/security/request";
 import {
   AUTH_COOKIE_NAME,
   DEFAULT_SESSION_TTL_SECONDS,
@@ -34,6 +36,13 @@ function isVerified(value: boolean | string): boolean {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const rateLimit = checkRateLimit({
+    key: clientRateLimitKey(request, "auth:callback:google"),
+    limit: 30,
+    windowMs: 10 * 60_000,
+  });
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
   if (!isGoogleAuthConfigured()) {
     return loginRedirect(request, "Configuration");
   }

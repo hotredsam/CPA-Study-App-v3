@@ -34,6 +34,14 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(self), geolocation=()",
   },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "X-DNS-Prefetch-Control",
+    value: "off",
+  },
   // HSTS — production only; dev skips so localhost HTTP works
   ...(isDev
     ? []
@@ -58,6 +66,9 @@ const securityHeaders = [
           "script-src 'self' 'unsafe-inline'",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "font-src 'self' https://fonts.gstatic.com",
+          "object-src 'none'",
+          "base-uri 'self'",
+          "form-action 'self'",
           "frame-ancestors 'none'",
         ].join("; "),
   },

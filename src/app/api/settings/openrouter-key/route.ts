@@ -4,11 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { encryptKey } from "@/lib/llm/crypto";
 import { hasOpenRouterKeyConfigured } from "@/lib/llm/openrouter";
 import { respond } from "@/lib/api-error";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { clientRateLimitKey, noStoreJson, rateLimitResponse } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
 
 const PostBody = z.object({
-  key: z.string().trim().min(1, "key must not be empty"),
+  key: z.string().trim().min(1, "key must not be empty").max(512, "key is too long"),
 });
 
 /**
@@ -18,6 +20,13 @@ const PostBody = z.object({
  */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const rateLimit = checkRateLimit({
+      key: clientRateLimitKey(request, "settings:openrouter-key"),
+      limit: 10,
+      windowMs: 10 * 60_000,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
     const raw = await request.json().catch(() => ({}));
     const parsed = PostBody.safeParse(raw);
     if (!parsed.success) {
@@ -38,7 +47,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       },
     });
 
-    return NextResponse.json({ success: true });
+    return noStoreJson({ success: true });
   } catch (err) {
     return respond(err);
   }
@@ -50,7 +59,7 @@ export async function POST(request: Request): Promise<NextResponse> {
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    return NextResponse.json({
+    return noStoreJson({
       hasKey: await hasOpenRouterKeyConfigured(),
     });
   } catch (err) {

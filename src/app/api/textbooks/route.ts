@@ -7,6 +7,8 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
 import { getActiveExamSections } from "@/lib/exam-settings";
 import { queueTextbookIndex } from "@/lib/textbooks/queue";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { clientRateLimitKey, rateLimitResponse } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +67,13 @@ const CreateBody = z.object({
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = checkRateLimit({
+      key: clientRateLimitKey(request, "textbooks:create"),
+      limit: 10,
+      windowMs: 60 * 60_000,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
     const contentType = request.headers.get("content-type") ?? "";
     let parsed: z.infer<typeof CreateBody>;
     let file: Blob | null = null;

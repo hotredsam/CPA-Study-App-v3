@@ -1,12 +1,14 @@
 # CPA Study App — API Reference
 
-**Base URL:** `http://localhost:3001` (dev) / `https://<your-vercel-domain>.vercel.app` (prod)
+**Base URL:** `http://localhost:3000` (dev) / `https://<your-vercel-domain>.vercel.app` (prod)
 
 **Auth:** Production routes require the signed Google OAuth session cookie. The only allowed account is `hotredsam@gmail.com` unless `AUTH_ALLOWED_EMAILS` is expanded.
+State-changing production API requests (`POST`, `PUT`, `PATCH`, `DELETE`) must come from the same origin and are rate-limited per IP. Cross-site writes return `CSRF_BLOCKED`; bursts return `RATE_LIMITED`.
+Sensitive settings endpoints use `Cache-Control: no-store` and never return stored OpenRouter key material.
 
 **Error envelope** (all error responses):
 ```json
-{ "error": { "code": "BAD_REQUEST|NOT_FOUND|UNPROCESSABLE|INTERNAL_ERROR", "message": "...", "details": {} } }
+{ "error": { "code": "BAD_REQUEST|NOT_FOUND|UNPROCESSABLE|DATABASE_UNAVAILABLE|UNAUTHORIZED|CSRF_BLOCKED|RATE_LIMITED|INTERNAL_ERROR", "message": "...", "details": {} } }
 ```
 
 ---
@@ -37,7 +39,7 @@ Create a new Recording row and return a presigned R2 upload URL.
 
 **Errors:** `400` — invalid body (durationSec must be positive integer, not null)
 
-**Rate limit:** 10 per 5-minute window per IP (Phase F target; not yet enforced)
+**Rate limit:** protected production API writes are limited in middleware; route-specific limits may be stricter for sensitive endpoints.
 
 ---
 

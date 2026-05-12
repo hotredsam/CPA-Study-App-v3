@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { keys, presignUpload } from "@/lib/r2";
 import { ApiError, respond } from "@/lib/api-error";
 import { CPA_SECTION_OPTIONS, isActiveCpaSection } from "@/lib/cpa-sections";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { clientRateLimitKey, rateLimitResponse } from "@/lib/security/request";
 
 export const dynamic = "force-dynamic";
 
@@ -139,6 +141,13 @@ const StartBody = z.object({
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = checkRateLimit({
+      key: clientRateLimitKey(request, "recordings:create"),
+      limit: 20,
+      windowMs: 10 * 60_000,
+    });
+    if (!rateLimit.allowed) return rateLimitResponse(rateLimit);
+
     const body = await request.json().catch(() => ({}));
     const parsed = StartBody.safeParse(body);
     if (!parsed.success) {

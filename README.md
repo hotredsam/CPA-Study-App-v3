@@ -4,7 +4,7 @@
 
 **AI-powered CPA exam coach that watches you work, listens to you think, and grades both your answer and your reasoning.**
 
-[![Built with Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-8A2BE2)](https://code.claude.com)
+[![Built with Codex](https://img.shields.io/badge/Built%20with-Codex-111827)](https://openai.com/codex)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-App%20Router-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Trigger.dev](https://img.shields.io/badge/Trigger.dev-v3-F45E2B)](https://trigger.dev)
@@ -103,6 +103,14 @@ Set `AUTH_REQUIRED=true`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`,
 Local dev can stay open unless `AUTH_REQUIRED=true` is present. Google OAuth
 must use `/api/auth/callback/google` as the callback path.
 
+Production security defaults:
+
+- Only Google OAuth sessions for `AUTH_ALLOWED_EMAILS` can use the app.
+- State-changing API requests require same-origin browser evidence and are rate-limited.
+- OpenRouter keys are used only server-side. Prefer `OPENROUTER_API_KEY` in Vercel/Trigger env vars; if a key is saved in Settings, it is AES-GCM encrypted with `ENCRYPTION_KEY` and never returned to the browser.
+- Keep `ENABLE_ADMIN_WIPE=false` in production unless you are deliberately performing maintenance.
+- Do not create `NEXT_PUBLIC_*` variables for database, R2, Trigger, auth, or OpenRouter secrets.
+
 Mobile support uses a bottom safe-area navigation layout and larger touch
 targets. Because mobile Safari does not expose browser screen capture for other
 apps, `/record` also accepts native iPhone screen-recording files (`.mov`,
@@ -133,7 +141,7 @@ so E2E runs cannot corrupt the user-facing dev server on port 3000.
 
 ## Sam's input folder
 
-Drop voice memos into `sam-input/audio/` or edit `sam-input/TODO.xml` and save. A hook transcribes the audio with local Whisper and calls Claude Code to act on whatever you dictated — overnight or while you're at work. See `sam-input/README.md` for the schema.
+Drop voice memos into `sam-input/audio/` or edit `sam-input/TODO.xml` and save. A hook transcribes the audio with local Whisper and calls Codex to act on whatever you dictated. See `sam-input/README.md` for the schema.
 
 ## Status
 

@@ -45,7 +45,7 @@
      }
    ]
    ```
-   For local dev, add `"http://localhost:3001"` to AllowedOrigins.
+   For local dev, add `"http://localhost:3000"` to AllowedOrigins.
 4. Optionally set a public domain for the bucket (for direct video playback)
 
 ---
@@ -65,6 +65,7 @@
    - `DATABASE_URL` (Neon direct connection URL — Trigger.dev tasks run DB migrations)
    - `OPENROUTER_API_KEY` (your OpenRouter API key)
    - `ENCRYPTION_KEY` (64-character hex key for encrypted stored API settings)
+   - `ENABLE_ADMIN_WIPE=false`
    - `WHISPER_MODEL_PATH` (path to whisper model in container, e.g. `/app/ggml-small.en.bin`)
    - All R2 env vars (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, etc.)
 
@@ -90,6 +91,7 @@
 | `AUTH_GOOGLE_ID` | Google client ID | Google OAuth credential |
 | `AUTH_GOOGLE_SECRET` | Google client secret | Google OAuth credential |
 | `AUTH_ALLOWED_EMAILS` | `hotredsam@gmail.com` | Only this email can sign in |
+| `ENABLE_ADMIN_WIPE` | `false` | Keeps destructive admin wipe disabled in production |
 | `R2_ACCOUNT_ID` | Cloudflare account ID | |
 | `R2_ACCESS_KEY_ID` | R2 API token key ID | |
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret | |
@@ -110,6 +112,20 @@ Add these authorized redirect URIs to the Google OAuth Web Application:
 ---
 
 ## 5. First Deploy Smoke Test
+
+Before clicking Deploy, confirm these security-sensitive values:
+
+```
+[ ] DATABASE_URL is a Neon/Vercel production Postgres URL, not localhost
+[ ] AUTH_REQUIRED=true
+[ ] AUTH_ALLOWED_EMAILS=hotredsam@gmail.com
+[ ] AUTH_SECRET is a fresh production-only secret
+[ ] OPENROUTER_API_KEY is set only as a server/secret env var
+[ ] No NEXT_PUBLIC_* variable contains database, auth, R2, Trigger, or OpenRouter secrets
+[ ] ENCRYPTION_KEY is 64 hex characters and backed up securely
+[ ] ENABLE_ADMIN_WIPE=false
+[ ] Google OAuth callback exactly matches https://<domain>/api/auth/callback/google
+```
 
 After deploy, run this checklist:
 
