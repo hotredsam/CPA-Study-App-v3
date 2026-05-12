@@ -259,6 +259,7 @@ export async function readDashboardData(): Promise<DashboardData> {
     section: String(topic.section),
     mastery: metrics.mastery,
     errorRate: metrics.errorRate != null ? Math.round(metrics.errorRate * 100) : 0,
+    hasErrorEvidence: metrics.errorRate != null,
   }));
 
   const focusSection =
@@ -278,6 +279,7 @@ export async function readDashboardData(): Promise<DashboardData> {
     section: String(topic.section),
     mastery: metrics.mastery,
     errorRate: metrics.errorRate != null ? Math.round(metrics.errorRate * 100) : 0,
+    hasErrorEvidence: metrics.errorRate != null,
     cardsDue: metrics.cardsDue,
     practiceHref: `/anki?topicId=${topic.id}&mode=practice`,
     audioHref: `/anki?topicId=${topic.id}&mode=audio`,
@@ -304,7 +306,9 @@ export async function readDashboardData(): Promise<DashboardData> {
     nextStudyActions.push({
       id: `weak-${firstDrill.id}`,
       title: `Drill ${firstDrill.name}`,
-      detail: `${firstDrill.mastery}% mastery with ${firstDrill.errorRate}% error rate`,
+      detail: firstDrill.hasErrorEvidence
+        ? `${firstDrill.mastery}% mastery with ${firstDrill.errorRate}% error rate`
+        : `${firstDrill.mastery}% mastery with no graded attempts yet`,
       href: firstDrill.audioHref,
       section: firstDrill.section,
       kind: "drill",

@@ -30,8 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <KeyboardNav />
             <CommandPalette />
             <div className="app-shell">
+              <a href="#main-content" className="skip-link">
+                Skip to main content
+              </a>
               <Sidebar />
-              <main className="main">{children}</main>
+              <main id="main-content" className="main" tabIndex={-1}>{children}</main>
             </div>
           </ToastProvider>
         </QueryProvider>

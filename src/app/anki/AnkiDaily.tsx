@@ -12,6 +12,7 @@ import type { AnkiMode, DueSectionBreakdown } from './types'
 
 interface Props {
   setMode: (mode: AnkiMode) => void
+  onStartReview?: () => void
 }
 
 interface DueResponse {
@@ -26,7 +27,7 @@ interface ReviewStatsResponse {
   backlog: number
 }
 
-export function AnkiDaily({ setMode }: Props) {
+export function AnkiDaily({ setMode, onStartReview }: Props) {
   const {
     data: dueData,
     isLoading: dueLoading,
@@ -97,7 +98,13 @@ export function AnkiDaily({ setMode }: Props) {
 
             <button
               type="button"
-              onClick={() => setMode('practice')}
+              onClick={() => {
+                if (onStartReview) {
+                  onStartReview()
+                } else {
+                  setMode('practice')
+                }
+              }}
               disabled={count === 0}
               className="inline-flex items-center justify-center rounded-[3px] bg-[color:var(--accent)] text-white text-sm font-medium px-5 py-2.5 hover:brightness-110 disabled:opacity-40 disabled:pointer-events-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
               aria-label="Start review session"
@@ -134,7 +141,9 @@ export function AnkiDaily({ setMode }: Props) {
             <dt className="text-sm text-[color:var(--ink-faint)]">Streak</dt>
             <dd className="text-2xl font-mono font-bold text-[color:var(--ink)]">
               {statsData?.streak ?? 0}
-              <span className="text-sm font-normal text-[color:var(--ink-faint)] ml-1">days</span>
+              <span className="text-sm font-normal text-[color:var(--ink-faint)] ml-1">
+                {(statsData?.streak ?? 0) === 1 ? 'day' : 'days'}
+              </span>
             </dd>
           </div>
           <div className="flex justify-between items-baseline">

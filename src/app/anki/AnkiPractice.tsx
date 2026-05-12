@@ -20,6 +20,7 @@ interface CardsResponse {
 
 interface Props {
   topicId?: string
+  dueOnly?: boolean
 }
 
 const RATINGS: { value: AnkiRating; label: string; key: '1' | '2' | '3' | '4' }[] = [
@@ -42,7 +43,7 @@ function dispatchToast(message: string) {
   window.dispatchEvent(new CustomEvent('servant:toast', { detail: { message } }))
 }
 
-export function AnkiPractice({ topicId }: Props) {
+export function AnkiPractice({ topicId, dueOnly = false }: Props) {
   const queryClient = useQueryClient()
   const [cardIndex, setCardIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
@@ -69,10 +70,11 @@ export function AnkiPractice({ topicId }: Props) {
   const params = new URLSearchParams()
   if (topicId) params.set('topicId', topicId)
   if (!topicId && sectionFilter !== 'all') params.set('section', sectionFilter)
+  if (dueOnly) params.set('dueOnly', 'true')
   params.set('limit', '50')
 
   const { data, isLoading, isError, error, refetch } = useQuery<CardsResponse>({
-    queryKey: ['anki-cards', topicId, sectionFilter],
+    queryKey: ['anki-cards', topicId, sectionFilter, dueOnly],
     queryFn: async () => {
       const res = await fetch(`/api/anki/cards?${params}`)
       if (!res.ok) throw await errorFromResponse(res)
@@ -314,6 +316,11 @@ export function AnkiPractice({ topicId }: Props) {
       <div className="space-y-4">
         {!topicId && (
           <Card>
+            {dueOnly && (
+              <p className="mb-3 text-xs text-[color:var(--ink-faint)]" role="status">
+                Showing due cards from today&apos;s review queue.
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter practice by section">
               {sectionFilters.map((section) => (
                 <Btn

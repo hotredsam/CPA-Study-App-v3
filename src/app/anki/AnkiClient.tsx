@@ -29,7 +29,9 @@ export function AnkiClient() {
   const searchParams = useSearchParams()
   // Deep links can open a topic directly in practice or audio mode.
   const topicId = searchParams.get('topicId') ?? undefined
+  const initialDueOnly = searchParams.get('dueOnly') === 'true'
   const [mode, setMode] = useState<AnkiMode>(() => modeFromParams(searchParams.get('mode'), topicId))
+  const [practiceDueOnly, setPracticeDueOnly] = useState(initialDueOnly)
 
   return (
     <div>
@@ -39,7 +41,10 @@ export function AnkiClient() {
         right={
           <Tabs
             value={mode}
-            onChange={(id) => setMode(id as AnkiMode)}
+            onChange={(id) => {
+              setMode(id as AnkiMode)
+              setPracticeDueOnly(false)
+            }}
             items={MODE_TABS}
             aria-label="Anki mode"
           />
@@ -51,8 +56,16 @@ export function AnkiClient() {
         id={`tabpanel-${mode}`}
         aria-labelledby={`tab-${mode}`}
       >
-        {mode === 'daily' && <AnkiDaily setMode={setMode} />}
-        {mode === 'practice' && <AnkiPractice topicId={topicId} />}
+        {mode === 'daily' && (
+          <AnkiDaily
+            setMode={setMode}
+            onStartReview={() => {
+              setPracticeDueOnly(true)
+              setMode('practice')
+            }}
+          />
+        )}
+        {mode === 'practice' && <AnkiPractice topicId={topicId} dueOnly={practiceDueOnly} />}
         {mode === 'audio' && <AnkiAudio topicId={topicId} />}
         {mode === 'path' && <AnkiPath />}
         {mode === 'browse' && <AnkiBrowse />}

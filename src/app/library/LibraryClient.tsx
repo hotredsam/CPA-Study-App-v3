@@ -386,6 +386,11 @@ function TextbookTableRow({
   const [reindexing, setReindexing] = useState(false)
 
   const handleReindex = useCallback(async () => {
+    const confirmed = window.confirm(
+      `Re-index ${textbook.title}? This can replace generated study data and may use AI credits.`,
+    )
+    if (!confirmed) return
+
     setReindexing(true)
     try {
       const res = await fetch(`/api/textbooks/${textbook.id}/reindex`, { method: 'POST' })
@@ -397,7 +402,7 @@ function TextbookTableRow({
     } finally {
       setReindexing(false)
     }
-  }, [textbook.id, onReindex])
+  }, [textbook.id, textbook.title, onReindex])
 
   return (
     <tr className="border-b border-[color:var(--border)] last:border-0 hover:bg-[color:var(--canvas-2)] transition-colors">

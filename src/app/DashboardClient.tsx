@@ -28,6 +28,7 @@ interface WeakTopic {
   section: string
   mastery: number
   errorRate: number
+  hasErrorEvidence: boolean
 }
 
 interface RecentRecording {
@@ -60,6 +61,7 @@ interface WeakTopicDrill {
   section: string
   mastery: number
   errorRate: number
+  hasErrorEvidence: boolean
   cardsDue: number
   practiceHref: string
   audioHref: string
@@ -146,8 +148,8 @@ function SectionCard({ data }: { data: SectionData }) {
   const days = daysUntil(due)
   const hue = meta?.hue ?? 0
   const mastery = clampPercent(data.mastery)
-  const unitsDone = Math.max(0, Math.round((mastery / 100) * Math.max(data.topicCount, 1)))
-  const unitsTotal = Math.max(data.topicCount, 1)
+  const topicsWithEvidence = Math.max(0, Math.round((mastery / 100) * Math.max(data.topicCount, 1)))
+  const topicTotal = Math.max(data.topicCount, 1)
 
   return (
     <Card accent={`oklch(0.55 0.10 ${hue})`}>
@@ -170,7 +172,7 @@ function SectionCard({ data }: { data: SectionData }) {
       </div>
       <div className="mt-3">
         <div className="mono mb-1 text-[11px] text-[color:var(--ink-dim)]">
-          {unitsDone}/{unitsTotal} units
+          {topicsWithEvidence}/{topicTotal} topics with evidence
         </div>
         {statBar(mastery, hue)}
       </div>
@@ -385,7 +387,7 @@ function NextStudyQueue({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-medium text-[color:var(--ink)]">{drill.name}</div>
                     <div className="mono mt-0.5 text-[10px] text-[color:var(--ink-faint)]">
-                      {drill.mastery}% mastery - {drill.errorRate}% error - {drill.cardsDue} due
+                      {drill.mastery}% mastery - {drill.hasErrorEvidence ? `${drill.errorRate}% error` : 'no graded attempts yet'} - {drill.cardsDue} due
                     </div>
                   </div>
                 </div>
@@ -499,9 +501,9 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               </div>
             </div>
             <div className="mt-5 grid max-w-[680px] grid-cols-2 gap-6 md:grid-cols-4">
-              <FocusStat label="Unit progress" value={`${focusMastery}%`} bar={focusMastery} />
-              <FocusStat label="Hours - unit" value={focusStats.hoursStudied.toFixed(1)} sub="hrs" />
-              <FocusStat label="Topics - seen" value={focusStats.topicCount} />
+              <FocusStat label="Topic evidence" value={`${focusMastery}%`} bar={focusMastery} />
+              <FocusStat label="Hours - focus" value={focusStats.hoursStudied.toFixed(1)} sub="hrs" />
+              <FocusStat label="Topics available" value={focusStats.topicCount} />
               <FocusStat label="Cards - due" value={displayCardsDue} />
             </div>
           </div>
@@ -542,7 +544,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card pad={false}>
           <div className="border-b border-[color:var(--border)] px-4 py-3">
-            <div className="eyebrow">WEAKEST TOPICS</div>
+            <div className="eyebrow">TOPICS NEEDING EVIDENCE</div>
           </div>
           <div>
             {weakestTopics.length === 0 ? (
@@ -557,8 +559,8 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                 >
                   <SectionBadge section={topic.section} size="xs" />
                   <span className="truncate text-[13px] text-[color:var(--ink)]">{topic.name}</span>
-                  <span className="mono tabular text-right text-xs" style={{ color: topic.errorRate >= 50 ? 'var(--bad)' : 'var(--warn)' }}>
-                    {topic.errorRate}%
+                  <span className="mono tabular text-right text-xs" style={{ color: topic.hasErrorEvidence ? (topic.errorRate >= 50 ? 'var(--bad)' : 'var(--warn)') : 'var(--ink-faint)' }}>
+                    {topic.hasErrorEvidence ? `${topic.errorRate}%` : 'new'}
                   </span>
                 </Link>
               ))

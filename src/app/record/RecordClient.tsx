@@ -324,9 +324,18 @@ function SetupPhase({
       .finally(() => setHealthLoading(false));
   }, []);
 
+  const autoSelectedSectionRef = useRef(false);
+  useEffect(() => {
+    if (autoSelectedSectionRef.current || selectedSections.length > 0) return;
+    const defaultSection = sectionOptions.includes("FAR") ? "FAR" : sectionOptions[0];
+    if (!defaultSection) return;
+    autoSelectedSectionRef.current = true;
+    setSelectedSections([defaultSection]);
+  }, [sectionOptions, selectedSections.length]);
+
   const toggleSection = (s: CpaSection) => {
     setSelectedSections((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+      prev.includes(s) ? (prev.length === 1 ? prev : prev.filter((x) => x !== s)) : [...prev, s],
     );
   };
 
@@ -368,7 +377,7 @@ function SetupPhase({
         : "warn",
     },
     {
-      label: "OpenRouter key",
+      label: "AI grading ready",
       status: hasOpenRouterKey === null || healthLoading
         ? "loading"
         : aiReady
@@ -376,7 +385,7 @@ function SetupPhase({
         : "fail",
     },
     {
-      label: "R2 storage",
+      label: "Secure upload ready",
       status: healthLoading
         ? "loading"
         : health?.r2 === "ok"
@@ -386,7 +395,7 @@ function SetupPhase({
         : "fail",
     },
     {
-      label: "Trigger pipeline",
+      label: "Processing worker ready",
       status: healthLoading
         ? "loading"
         : health?.trigger === "ok"
@@ -394,15 +403,15 @@ function SetupPhase({
         : "fail",
     },
     {
-      label: "Textbook database",
+      label: "Study database ready",
       status: healthLoading ? "loading" : dbReady ? "ok" : "fail",
     },
     {
-      label: "Sections assigned",
+      label: "CPA section selected",
       status: selectedSections.length > 0 ? "ok" : "warn",
     },
     {
-      label: "Budget guard",
+      label: "Spend guard ready",
       status: healthLoading ? "loading" : dbReady && aiReady ? "ok" : "warn",
     },
   ];
@@ -413,7 +422,15 @@ function SetupPhase({
     screenRecordingFile !== null && selectedSections.length > 0 && requiredServicesReady && !fileProblem;
 
   const selectedMicLabel =
-    mics.find((m) => m.deviceId === selectedMic)?.label ?? "Default";
+    micStatus === "checking"
+      ? "Checking..."
+      : micStatus === "permission-needed"
+      ? "Permission needed"
+      : micStatus === "denied"
+      ? "Permission denied"
+      : micStatus === "unsupported"
+      ? "Not supported"
+      : mics.find((m) => m.deviceId === selectedMic)?.label ?? "Default microphone";
   const recordingOptions: RecordingOptions = {
     micId: selectedMic,
     sections: selectedSections,

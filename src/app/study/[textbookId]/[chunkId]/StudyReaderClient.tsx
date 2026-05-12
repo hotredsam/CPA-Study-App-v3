@@ -326,9 +326,9 @@ export function StudyReaderClient({
                 <Link
                   href="/topics"
                   className="shrink-0 text-xs text-[color:var(--accent)] underline underline-offset-2 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent)]"
-                  aria-label={`View topic: ${topic.name}`}
+                  aria-label={`Browse topics including ${topic.name}`}
                 >
-                  View
+                  Topics
                 </Link>
               </div>
               <div className="mt-3">
