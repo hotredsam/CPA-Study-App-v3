@@ -118,6 +118,31 @@ describe("callOpenRouter", () => {
     await resultPromise;
   });
 
+  it("times out hanging requests and retries", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce((_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal as AbortSignal | undefined;
+          signal?.addEventListener("abort", () => {
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          });
+        }),
+      )
+      .mockResolvedValueOnce(makeSuccessResponse("Recovered"));
+
+    const resultPromise = callOpenRouter({
+      model: "anthropic/claude-3-5-sonnet",
+      messages: [{ role: "user", content: "test" }],
+    });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect(resultPromise).resolves.toMatchObject({ content: "Recovered" });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("throws when OpenRouter key not configured", async () => {
     vi.mocked(prisma.userSettings.findUnique).mockResolvedValueOnce(null);
 

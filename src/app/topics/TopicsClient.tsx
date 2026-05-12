@@ -103,7 +103,7 @@ export function TopicsClient() {
     <div>
       <EyebrowHeading
         eyebrow="TOPICS"
-        title="Topics extracted by Claude from your textbooks"
+        title="Topics extracted by AI from your textbooks"
         sub={`${topics.length} topics shown across the active CPA sections. Click a row to open notes, history, and re-index actions.`}
         right={
           <div className="flex flex-wrap justify-end gap-1.5">

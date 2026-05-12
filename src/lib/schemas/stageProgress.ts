@@ -7,6 +7,8 @@ export const Stage = z.enum([
   "transcribing",
   "tagging",
   "grading",
+  "embedding",
+  "analyzing_trends",
 ]);
 export type Stage = z.infer<typeof Stage>;
 
@@ -23,6 +25,14 @@ export const StageProgress = z.object({
     })
     .optional(),
   subProgress: z.record(z.number().min(0).max(100)).optional(),
+}).superRefine((progress, ctx) => {
+  if (progress.sub && progress.sub.current > progress.sub.total) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["sub", "current"],
+      message: "sub.current cannot exceed sub.total",
+    });
+  }
 });
 
 export type StageProgress = z.infer<typeof StageProgress>;

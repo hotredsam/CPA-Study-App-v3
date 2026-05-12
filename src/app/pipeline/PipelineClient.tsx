@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { EyebrowHeading, Tabs, Card, Bar, Score, SectionBadge, Btn } from '@/components/ui'
 import { usePipelineStatus } from '@/hooks/usePipelineStatus'
 import { useRecordings } from '@/hooks/useRecordings'
+import { friendlyErrorMessage } from '@/lib/api-error-message'
 import { isActiveCpaSection } from '@/lib/cpa-sections'
 
 const STAGES = [
@@ -404,7 +405,13 @@ function PreviousTable({ recordings }: { recordings: PipelineRecording[] }) {
 export function PipelineClient() {
   const [tab, setTab] = useState<'processing' | 'previous'>('processing')
 
-  const { data: pipelineData, isLoading: pipelineLoading } = usePipelineStatus()
+  const {
+    data: pipelineData,
+    isLoading: pipelineLoading,
+    isError: pipelineIsError,
+    error: pipelineError,
+    refetch: refetchPipeline,
+  } = usePipelineStatus()
   const { data: recordingsData, isLoading: recordingsLoading } = useRecordings({ limit: 50 })
 
   const processingRecordings = useMemo(
@@ -456,6 +463,18 @@ export function PipelineClient() {
               <div className="py-12 text-center text-sm text-[color:var(--ink-faint)]" role="status" aria-live="polite">
                 Loading...
               </div>
+            ) : pipelineIsError ? (
+              <Card>
+                <div className="flex flex-col items-center gap-3 py-8 text-center" role="alert" aria-live="polite">
+                  <p className="text-sm font-semibold text-[color:var(--ink)]">Pipeline unavailable</p>
+                  <p className="max-w-md text-sm text-[color:var(--ink-dim)]">
+                    {friendlyErrorMessage(pipelineError, 'Processing status could not be loaded.')}
+                  </p>
+                  <Btn size="sm" onClick={() => void refetchPipeline()}>
+                    Retry
+                  </Btn>
+                </div>
+              </Card>
             ) : processingRecordings.length === 0 ? (
               <div className="py-12 text-center text-sm text-[color:var(--ink-faint)]" role="status" aria-live="polite">
                 No recordings processing.

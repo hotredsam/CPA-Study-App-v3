@@ -28,4 +28,21 @@ describe("StageProgress schema", () => {
     expect(parsed.sub?.current).toBe(2);
     expect(parsed.sub?.total).toBe(4);
   });
+
+  it("accepts future progress stages from the plan contract", () => {
+    expect(StageProgress.parse({ stage: "embedding", pct: 1, message: "Embedding chunks" }).stage).toBe("embedding");
+    expect(
+      StageProgress.parse({ stage: "analyzing_trends", pct: 1, message: "Analyzing trends" }).stage,
+    ).toBe("analyzing_trends");
+  });
+
+  it("rejects impossible sub progress", () => {
+    const result = StageProgress.safeParse({
+      stage: "extracting",
+      pct: 50,
+      message: "Extracting question 3 of 2",
+      sub: { current: 3, total: 2 },
+    });
+    expect(result.success).toBe(false);
+  });
 });

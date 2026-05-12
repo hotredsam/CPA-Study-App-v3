@@ -251,7 +251,10 @@ function SetupPhase({
     if (typeof window === "undefined") return;
     setHealthLoading(true);
     Promise.all([
-      fetch("/api/health").then((r) => r.json()) as Promise<HealthData>,
+      fetch("/api/health").then(async (r) => {
+        if (!r.ok) throw new Error("Health check failed");
+        return r.json() as Promise<HealthData>;
+      }),
       fetch("/api/settings/openrouter-key")
         .then((r) => r.json())
         .then((d: { hasKey: boolean }) => d.hasKey)
@@ -325,10 +328,11 @@ function SetupPhase({
     },
   ];
 
+  const requiredServicesReady = health?.db === "ok" && health?.r2 === "ok";
   const canStart =
-    !micPermDenied && Boolean(screenSource) && selectedSections.length > 0 && health !== null;
+    !micPermDenied && Boolean(screenSource) && selectedSections.length > 0 && requiredServicesReady;
   const canUpload =
-    screenRecordingFile !== null && selectedSections.length > 0 && health !== null;
+    screenRecordingFile !== null && selectedSections.length > 0 && requiredServicesReady;
 
   const selectedMicLabel =
     mics.find((m) => m.deviceId === selectedMic)?.label ?? "Default";

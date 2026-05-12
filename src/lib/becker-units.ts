@@ -62,8 +62,16 @@ export function inferBeckerUnitLabel(args: {
       if (unit && isExpectedUnit(unit, args.section)) return unit;
     }
 
-    const sectionWord = /\b(?:FAR|AUD|REG|BAR|TCP|ISC)\s*[-_.]?\s*0?(\d{1,2})\b/i.exec(value);
-    if (sectionWord?.[1]) return `${sectionPrefix}${Number(sectionWord[1])}`;
+    const sectionWord = /\b(FAR|AUD|REG|BAR|TCP|ISC)\s*[-_.]?\s*0?(\d{1,2})\b/i.exec(value);
+    if (sectionWord?.[1] && sectionWord[2]) {
+      const matchedSection = sectionWord[1].toUpperCase();
+      if (isSupportedCpaSection(args.section) && matchedSection !== args.section) continue;
+
+      const prefix = isSupportedCpaSection(matchedSection)
+        ? beckerUnitPrefixForSection(matchedSection)
+        : sectionPrefix;
+      return `${prefix}${Number(sectionWord[2])}`;
+    }
 
     const loose = /\b(?:unit|part)\s*0?(\d{1,2})\b/i.exec(value);
     if (loose?.[1]) return `${sectionPrefix}${Number(loose[1])}`;

@@ -46,6 +46,14 @@ function errorHeaders(): HeadersInit {
   return { "Cache-Control": "no-store" };
 }
 
+export function redactSensitiveText(value: string): string {
+  return value
+    .replace(/sk-or-[A-Za-z0-9._-]+/g, "[REDACTED_OPENROUTER_KEY]")
+    .replace(/postgres(?:ql)?:\/\/[^\s"'`<>]+/gi, "[REDACTED_DATABASE_URL]")
+    .replace(/Invalid `prisma\.[\s\S]*?(?:\n\n|$)/g, "Invalid Prisma invocation. ")
+    .replace(/R2_SECRET_ACCESS_KEY\s*=\s*[^\s"'`<>]+/g, "R2_SECRET_ACCESS_KEY=[REDACTED]");
+}
+
 export function isDatabaseUnavailableError(err: unknown): boolean {
   if (!isRecord(err)) return false;
 
@@ -107,11 +115,9 @@ export function respond(err: unknown): NextResponse {
     );
   }
 
-  const message = process.env["NODE_ENV"] === "production"
-    ? "An unexpected error occurred."
-    : err instanceof Error
-      ? err.message
-      : "An unexpected error occurred";
+  const message = err instanceof Error
+    ? redactSensitiveText(err.message)
+    : "An unexpected error occurred";
   if (process.env["NODE_ENV"] === "production") {
     console.error("[api-error] unhandled error");
   } else {

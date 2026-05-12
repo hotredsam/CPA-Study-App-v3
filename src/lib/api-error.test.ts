@@ -84,4 +84,16 @@ describe("api-error", () => {
     const body = await res.json();
     expect(body.error.code).toBe("INTERNAL_ERROR");
   });
+
+  it("redacts sensitive unknown error details outside production", async () => {
+    const res = respond(
+      new Error("OpenRouter failed with sk-or-secret-123 and postgresql://user:pass@host/db"),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error.message).not.toContain("sk-or-secret-123");
+    expect(body.error.message).not.toContain("user:pass");
+    expect(body.error.message).toContain("[REDACTED_OPENROUTER_KEY]");
+    expect(body.error.message).toContain("[REDACTED_DATABASE_URL]");
+  });
 });

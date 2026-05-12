@@ -31,6 +31,7 @@ export interface LLMCallResult {
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 function normalizeOpenRouterKey(value: string): string {
   let key = value.trim();
@@ -170,6 +171,8 @@ export async function callOpenRouter(
     }
 
     let response: Response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
         method: "POST",
@@ -180,10 +183,17 @@ export async function callOpenRouter(
           "X-Title": "CPA Study App",
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
     } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
+      lastError = err instanceof Error && err.name === "AbortError"
+        ? new Error(`OpenRouter timed out after ${REQUEST_TIMEOUT_MS}ms on attempt ${attempt + 1}`)
+        : err instanceof Error
+          ? err
+          : new Error(String(err));
       continue;
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (isRetryableStatus(response.status)) {

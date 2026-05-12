@@ -34,5 +34,6 @@ describe("Becker unit inference", () => {
 
   it("does not cross-assign a unit from the wrong section", () => {
     expect(inferBeckerUnitLabel({ section: "FAR", chapterRef: "R1 M1 - Page 3" })).toBeNull();
+    expect(inferBeckerUnitLabel({ section: "FAR", chapterRef: "REG 1 - Page 3" })).toBeNull();
   });
 });

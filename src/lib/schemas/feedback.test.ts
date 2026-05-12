@@ -73,4 +73,20 @@ describe("FeedbackPayload", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects more than 5 weak topic tags", () => {
+    const result = FeedbackPayload.safeParse({
+      items: PROVISIONAL_RUBRIC_KEYS.map((item) => ({
+        key: item.key,
+        label: item.label,
+        comment: "clear",
+      })),
+      accountingScore: 7,
+      consultingScore: 8,
+      combinedScore: 7.5,
+      whatYouNeedToLearn: null,
+      weakTopicTags: ["a", "b", "c", "d", "e", "f"],
+    });
+    expect(result.success).toBe(false);
+  });
 });

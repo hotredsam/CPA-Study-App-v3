@@ -50,6 +50,8 @@ enum StageName {
   transcribing
   tagging
   grading
+  embedding
+  analyzing_trends
 }
 
 // ─── New enums ────────────────────────────────────────────────────────────────

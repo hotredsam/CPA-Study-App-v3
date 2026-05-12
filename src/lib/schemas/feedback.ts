@@ -44,7 +44,7 @@ export const FeedbackPayload = z.object({
   consultingScore: z.number().min(0).max(10),
   combinedScore: z.number().min(0).max(10),
   whatYouNeedToLearn: z.string().nullable(),
-  weakTopicTags: z.array(z.string()),
+  weakTopicTags: z.array(z.string()).max(5),
 }).superRefine((payload, ctx) => {
   const seen = new Set(payload.items.map((item) => item.key));
 

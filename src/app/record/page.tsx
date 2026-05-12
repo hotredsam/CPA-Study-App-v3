@@ -9,7 +9,7 @@ export default function RecordPage() {
       <EyebrowHeading
         eyebrow="NEW RECORDING"
         title="Preflight"
-        sub="Capture screen and mic. Claude will segment the video into questions, transcribe your reasoning, and grade each one."
+        sub="Capture screen and mic. AI will segment the video into questions, transcribe your reasoning, and grade each one."
       />
       <RecordClient />
     </div>
