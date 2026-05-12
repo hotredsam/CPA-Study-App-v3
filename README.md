@@ -108,6 +108,12 @@ Production security defaults:
 - Only Google OAuth sessions for `AUTH_ALLOWED_EMAILS` can use the app.
 - State-changing API requests require same-origin browser evidence and are rate-limited.
 - OpenRouter calls are preflighted by hard spend gates: per-call estimate, daily cap, per-recording cap, and per-question cap. Context is recorded on `ModelCall` rows for auditability.
+- First production deploy should keep conservative launch caps:
+  `OPENROUTER_MAX_COST_PER_CALL_USD=0.15`,
+  `OPENROUTER_DAILY_CAP_USD=3`,
+  `OPENROUTER_RECORDING_CAP_USD=1.25`,
+  `OPENROUTER_QUESTION_CAP_USD=0.25`, and
+  `TRIGGER_ACTIVE_RECORDING_LIMIT=1`.
 - OpenRouter keys are used only server-side. Prefer `OPENROUTER_API_KEY` in Vercel/Trigger env vars; if a key is saved in Settings, it is AES-GCM encrypted with `ENCRYPTION_KEY` and never returned to the browser.
 - Keep `ENABLE_ADMIN_WIPE=false` in production unless you are deliberately performing maintenance.
 - Do not create `NEXT_PUBLIC_*` variables for database, R2, Trigger, auth, or OpenRouter secrets.

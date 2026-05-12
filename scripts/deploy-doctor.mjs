@@ -153,11 +153,11 @@ warning(
 );
 
 const caps = [
-  ["OPENROUTER_MAX_COST_PER_CALL_USD", 0.25],
-  ["OPENROUTER_DAILY_CAP_USD", 5],
-  ["OPENROUTER_RECORDING_CAP_USD", 2],
-  ["OPENROUTER_QUESTION_CAP_USD", 0.75],
-  ["TRIGGER_ACTIVE_RECORDING_LIMIT", 3],
+  ["OPENROUTER_MAX_COST_PER_CALL_USD", 0.15],
+  ["OPENROUTER_DAILY_CAP_USD", 3],
+  ["OPENROUTER_RECORDING_CAP_USD", 1.25],
+  ["OPENROUTER_QUESTION_CAP_USD", 0.25],
+  ["TRIGGER_ACTIVE_RECORDING_LIMIT", 1],
 ];
 for (const [name, fallback] of caps) {
   const value = envNumber(name, fallback);

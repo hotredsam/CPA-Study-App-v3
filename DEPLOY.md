@@ -120,6 +120,12 @@ Set these environment variables in the Vercel project dashboard (Settings → En
 | `OPENROUTER_API_KEY` | OpenRouter API key |
 | `ENCRYPTION_KEY` | 64-character hex key for stored OpenRouter settings |
 
+For the first production test, keep spend gates conservative:
+`SPEND_GATES_ENABLED=true`, `OPENROUTER_MAX_COST_PER_CALL_USD=0.15`,
+`OPENROUTER_DAILY_CAP_USD=3`, `OPENROUTER_RECORDING_CAP_USD=1.25`,
+`OPENROUTER_QUESTION_CAP_USD=0.25`, and `TRIGGER_ACTIVE_RECORDING_LIMIT=1`.
+Raise them later from real usage data, not guesses.
+
 In Google Cloud Console, the OAuth Web Application must include:
 
 - `https://<your-vercel-domain>/api/auth/callback/google`

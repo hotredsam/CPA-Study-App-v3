@@ -21,10 +21,10 @@ export interface SpendGateSnapshot {
   perCallCapUsd: number;
 }
 
-const DEFAULT_PER_CALL_CAP_USD = 0.25;
-const DEFAULT_DAILY_CAP_USD = 5;
-const DEFAULT_RECORDING_CAP_USD = 2;
-const DEFAULT_QUESTION_CAP_USD = 0.75;
+const DEFAULT_PER_CALL_CAP_USD = 0.15;
+const DEFAULT_DAILY_CAP_USD = 3;
+const DEFAULT_RECORDING_CAP_USD = 1.25;
+const DEFAULT_QUESTION_CAP_USD = 0.25;
 
 const FUNCTION_ESTIMATES_USD: Record<AiFunctionKey, number> = {
   PIPELINE_GRADE: 0.06,

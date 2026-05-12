@@ -12,8 +12,8 @@ const ACTIVE_PIPELINE_STATUSES = ["uploaded", "segmenting", "processing_question
 const STALE_PIPELINE_MS = 2 * 60 * 60 * 1000;
 
 function activeRecordingLimit(): number {
-  const parsed = Number(process.env["TRIGGER_ACTIVE_RECORDING_LIMIT"] ?? "3");
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 3;
+  const parsed = Number(process.env["TRIGGER_ACTIVE_RECORDING_LIMIT"] ?? "1");
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
 }
 
 function isActivePipelineStatus(status: string): boolean {

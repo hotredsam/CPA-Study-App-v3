@@ -104,12 +104,16 @@ Vercel requires these app variables at minimum:
 - `TRIGGER_PROJECT_ID`, `TRIGGER_SECRET_KEY`
 - `OPENROUTER_API_KEY`
 - `SPEND_GATES_ENABLED=true`
-- `OPENROUTER_MAX_COST_PER_CALL_USD=0.25`
-- `OPENROUTER_DAILY_CAP_USD=5`
-- `OPENROUTER_RECORDING_CAP_USD=2`
-- `OPENROUTER_QUESTION_CAP_USD=0.75`
-- `TRIGGER_ACTIVE_RECORDING_LIMIT=3`
+- `OPENROUTER_MAX_COST_PER_CALL_USD=0.15` for the initial launch
+- `OPENROUTER_DAILY_CAP_USD=3`
+- `OPENROUTER_RECORDING_CAP_USD=1.25`
+- `OPENROUTER_QUESTION_CAP_USD=0.25`
+- `TRIGGER_ACTIVE_RECORDING_LIMIT=1`
 - `ENCRYPTION_KEY`
+
+These are conservative first-deploy caps. Raise the daily or per-recording caps
+only after checking real `ModelCall` rows and Trigger.dev run duration for a few
+recordings.
 
 Google OAuth callback URLs must include `https://<your-domain>/api/auth/callback/google`
 for production and `http://localhost:3000/api/auth/callback/google` for local testing.
