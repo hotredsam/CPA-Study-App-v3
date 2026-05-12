@@ -181,6 +181,27 @@ If the UI shows "Database offline" or an API returns `DATABASE_UNAVAILABLE`,
 Docker Desktop is usually closed or Postgres is not listening on `localhost:5432`.
 Start Docker Desktop, run the compose command above, then refresh the page.
 
+## Month dry run and fresh-start reset
+
+Use these only against local Docker Postgres. Both commands refuse non-local
+database hosts.
+
+```bash
+pnpm simulate:month
+```
+
+Creates 30 days of synthetic recordings, feedback, reviews, routine history, and
+zero-cost model-call bookkeeping without calling OpenRouter, Trigger.dev, R2, or
+any AI provider.
+
+```bash
+pnpm reset:study-progress
+```
+
+Clears study activity/progress and resets cards to due-now while preserving
+uploaded textbooks, chunks, topic taxonomy, generated Anki cards, settings, model
+config, and indexing config.
+
 ## Where to look when something is weird
 
 - **Pipeline state in the DB**: `StageProgress` rows track the last snapshot

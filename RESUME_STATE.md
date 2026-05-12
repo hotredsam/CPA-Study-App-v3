@@ -1,6 +1,6 @@
 # Resume State
 
-status: PRODUCTION-DEPLOYABLE-CANDIDATE
+status: READY-FOR-STUDY-AND-DEPLOY
 branch: codex/production-deployable
 updated: 2026-05-12
 
@@ -13,30 +13,32 @@ updated: 2026-05-12
 - Local Postgres remains `postgresql://postgres:postgres@localhost:5432/cpa_study`.
 - Do not wipe, reseed, or reindex local/prod data unless the user explicitly asks.
 - Keep `ENABLE_ADMIN_WIPE=false` in production.
+- The local study database has been reset for Sam to start studying: textbooks=1,
+  chunks=33, topics=23, generated Anki cards=150, and recordings/questions/
+  feedback/reviews/model-call logs/study routines=0.
 
 ## Verification Baseline
 
-The production branch previously passed:
+The current branch passed:
 
 - `pnpm typecheck`
 - `pnpm lint`
-- `pnpm test`
+- `pnpm test` (213/213)
 - `pnpm prisma validate`
 - `pnpm prisma migrate status`
-- `pnpm prisma migrate deploy`
 - `pnpm build`
-- `pnpm exec playwright test --project=chromium`
-- `pnpm runtime:probe`
-- `pnpm runtime:probe:mobile`
+- `pnpm e2e -- --project=chromium` (235/235)
+- `pnpm runtime:probe` (900 depth-5 desktop sequences)
+- `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences)
+- `pnpm simulate:month` followed by `pnpm reset:study-progress`
 
-The latest security/docs pass reran the standard verification set successfully,
-including desktop and mobile runtime probes.
+The 30-day simulator uses direct local database writes only and does not call
+OpenRouter, Trigger, R2 processing, or any other token-spending provider API.
 
 ## Deploy Next Steps
 
-1. Push `main` and `codex/production-deployable`.
-2. Confirm Vercel env vars match `DEPLOY.md`.
-3. Confirm Google OAuth callback uses the final Vercel domain.
-4. Click Deploy in Vercel.
-5. Sign in as `hotredsam@gmail.com` and run the smoke checklist in
+1. Confirm Vercel env vars match `DEPLOY.md`.
+2. Confirm Google OAuth callback uses the final Vercel domain.
+3. Click Deploy in Vercel.
+4. Sign in as `hotredsam@gmail.com` and run the smoke checklist in
    `docs/deploy-prod.md`.

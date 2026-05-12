@@ -17,6 +17,8 @@
     "e2e": "playwright test",
     "runtime:probe": "node scripts/runtime-interaction-probe.mjs",
     "runtime:probe:mobile": "node scripts/runtime-interaction-probe.mjs --mobile",
+    "simulate:month": "tsx scripts/simulate-month.ts",
+    "reset:study-progress": "tsx scripts/reset-study-progress.ts",
     "trigger:dev": "trigger dev",
     "db:seed": "tsx prisma/seed-night5.ts",
     "verify-seed": "tsx scripts/verify-seed.ts"

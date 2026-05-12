@@ -14,7 +14,7 @@ import { SectionBadge } from '@/components/ui/SectionBadge'
 
 type ExtractedShape = {
   question?: string
-  choices?: string[]
+  choices?: Array<string | { label?: unknown; text?: unknown }>
   correctIndex?: number
   userAnswer?: string
   correctAnswer?: string
@@ -31,7 +31,7 @@ type TranscriptSegment = {
 }
 type TranscriptShape = { segments?: TranscriptSegment[] }
 
-type FeedbackItem = { key: string; score?: number; body?: string; provisional?: boolean }
+type FeedbackItem = { key: string; score?: number; body?: string; comment?: string; provisional?: boolean }
 
 export type ReviewQuestion = {
   id: string
@@ -81,7 +81,7 @@ function parseFeedbackItems(items: unknown): FeedbackItem[] {
   const arr = Array.isArray(container.items) ? container.items : Array.isArray(items) ? items : null
   if (!arr) return []
   return arr.filter(
-    (i): i is { key: string; score?: number; body?: string; provisional?: boolean } =>
+    (i): i is { key: string; score?: number; body?: string; comment?: string; provisional?: boolean } =>
       !!i && typeof i === 'object' && typeof (i as { key?: unknown }).key === 'string',
   )
 }
@@ -124,6 +124,16 @@ function estimatePace(segments: TranscriptSegment[]): string {
   if (duration <= 0) return '—'
   const wpm = Math.round((totalWords / duration) * 60)
   return `${wpm} wpm`
+}
+
+function normalizeChoice(choice: string | { label?: unknown; text?: unknown }, fallbackLabel: string) {
+  if (typeof choice === 'string') {
+    return { label: fallbackLabel, text: choice }
+  }
+
+  const label = typeof choice.label === 'string' && choice.label.trim() ? choice.label.trim() : fallbackLabel
+  const text = typeof choice.text === 'string' ? choice.text : ''
+  return { label, text: text || label }
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -188,6 +198,7 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
   const choices = extracted?.choices ?? []
   const correctIndex = extracted?.correctIndex
   const normalizedUserAnswer = extracted?.userAnswer?.trim().toUpperCase() ?? ''
+  const normalizedCorrectAnswer = extracted?.correctAnswer?.trim().toUpperCase() ?? ''
 
   const labels = ['A', 'B', 'C', 'D', 'E']
 
@@ -198,11 +209,19 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
       {choices.length > 0 && (
         <ol className="mt-4 space-y-1.5" aria-label="Answer choices">
           {choices.map((choice, i) => {
-            const label = labels[i] ?? String(i + 1)
-            const isCorrect = correctIndex !== undefined && i === correctIndex
+            const fallbackLabel = labels[i] ?? String(i + 1)
+            const normalizedChoice = normalizeChoice(choice, fallbackLabel)
+            const label = normalizedChoice.label
+            const choiceText = normalizedChoice.text
+            const normalizedChoiceText = choiceText.trim().toUpperCase()
+            const isCorrect =
+              correctIndex !== undefined
+                ? i === correctIndex
+                : normalizedCorrectAnswer === label.toUpperCase() ||
+                  normalizedCorrectAnswer === normalizedChoiceText
             const isUserChoice =
-              normalizedUserAnswer === label ||
-              normalizedUserAnswer === choice.trim().toUpperCase()
+              normalizedUserAnswer === label.toUpperCase() ||
+              normalizedUserAnswer === normalizedChoiceText
             const isWrongUserChoice = isUserChoice && !isCorrect
             return (
               <li
@@ -228,7 +247,7 @@ function QuestionCard({ question }: { question: ReviewQuestion }) {
                 >
                   {label}
                 </span>
-                <span>{choice}</span>
+                <span>{choiceText}</span>
               </li>
             )
           })}
@@ -412,8 +431,8 @@ function FeedbackCard({ feedback }: { feedback: ReviewQuestion['feedback'] }) {
                   <Score value={item.score} size="sm" />
                 )}
               </div>
-              {item.body && (
-                <p className="text-sm text-[color:var(--ink-dim)] leading-relaxed">{item.body}</p>
+              {(item.body || item.comment) && (
+                <p className="text-sm text-[color:var(--ink-dim)] leading-relaxed">{item.body ?? item.comment}</p>
               )}
             </li>
           ))}
@@ -444,6 +463,7 @@ function FlowchartCard({ question }: { question: ReviewQuestion }) {
   const gap =
     feedback?.whatYouNeedToLearn ??
     items.find((item) => /gap|learn|misstep/i.test(item.key))?.body ??
+    items.find((item) => /gap|learn|misstep/i.test(item.key))?.comment ??
     'No first-misstep narrative was returned for this question.'
   const answerLine =
     extracted?.correctAnswer || extracted?.userAnswer
