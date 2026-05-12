@@ -2,7 +2,7 @@
 
 **Base URL:** `http://localhost:3001` (dev) / `https://<your-vercel-domain>.vercel.app` (prod)
 
-**Auth:** None (single-user MVP). Future: Bearer token in `Authorization` header.
+**Auth:** Production routes require the signed Google OAuth session cookie. The only allowed account is `hotredsam@gmail.com` unless `AUTH_ALLOWED_EMAILS` is expanded.
 
 **Error envelope** (all error responses):
 ```json

@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { createSessionToken, getConfiguredLoginUsername, isAuthConfigured, shouldRequireAuth, verifySessionToken } from "./session";
+import {
+  createOAuthStateToken,
+  createSessionToken,
+  safeNextPath,
+  verifyOAuthStateToken,
+  verifySessionToken,
+} from "./session";
 
 describe("auth sessions", () => {
   it("round-trips a signed session token", async () => {
     const token = await createSessionToken({
-      username: "sam",
+      email: "Hotredsam@Gmail.com",
       secret: "test-secret",
       nowMs: 1_000,
     });
     const session = await verifySessionToken(token, "test-secret", 2_000);
 
-    expect(session?.username).toBe("sam");
+    expect(session?.email).toBe("hotredsam@gmail.com");
   });
 
-  it("rejects expired or incorrectly signed tokens", async () => {
+  it("rejects expired or incorrectly signed session tokens", async () => {
     const token = await createSessionToken({
-      username: "sam",
+      email: "hotredsam@gmail.com",
       secret: "test-secret",
       ttlSeconds: 1,
       nowMs: 1_000,
@@ -25,24 +31,24 @@ describe("auth sessions", () => {
     await expect(verifySessionToken(token, "test-secret", 3_000)).resolves.toBeNull();
   });
 
-  it("accepts username auth config and legacy email config", () => {
-    expect(
-      isAuthConfigured({
-        AUTH_SECRET: "secret",
-        APP_LOGIN_USERNAME: "sam",
-        APP_LOGIN_PASSWORD_HASH: "hash",
-      } as unknown as NodeJS.ProcessEnv),
-    ).toBe(true);
-    expect(
-      getConfiguredLoginUsername({
-        APP_LOGIN_EMAIL: "sam@example.com",
-      } as unknown as NodeJS.ProcessEnv),
-    ).toBe("sam@example.com");
+  it("round-trips an oauth state token", async () => {
+    const token = await createOAuthStateToken({
+      state: "state-123",
+      nextPath: "/settings?tab=models",
+      secret: "test-secret",
+      nowMs: 1_000,
+    });
+
+    await expect(verifyOAuthStateToken(token, "test-secret", 2_000)).resolves.toMatchObject({
+      state: "state-123",
+      nextPath: "/settings?tab=models",
+    });
   });
 
-  it("requires auth on Vercel or when explicitly enabled", () => {
-    expect(shouldRequireAuth({ VERCEL: "1" } as unknown as NodeJS.ProcessEnv)).toBe(true);
-    expect(shouldRequireAuth({ AUTH_REQUIRED: "true" } as unknown as NodeJS.ProcessEnv)).toBe(true);
-    expect(shouldRequireAuth({ AUTH_BYPASS: "true", VERCEL: "1" } as unknown as NodeJS.ProcessEnv)).toBe(false);
+  it("normalizes unsafe next paths", () => {
+    expect(safeNextPath("/topics")).toBe("/topics");
+    expect(safeNextPath("https://example.com")).toBe("/");
+    expect(safeNextPath("//example.com")).toBe("/");
+    expect(safeNextPath(null)).toBe("/");
   });
 });

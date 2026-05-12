@@ -19,7 +19,6 @@ const EnvSchema = z.object({
       message: "TRIGGER_PROJECT_ID must not be the placeholder value — set a real project ID",
   }),
   TRIGGER_SECRET_KEY: z.string().min(1),
-  ANTHROPIC_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: optionalNonEmptyString,
   ENCRYPTION_KEY: z.preprocess(
     (value) => (value === "" ? undefined : value),

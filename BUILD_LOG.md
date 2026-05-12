@@ -74,7 +74,7 @@ Started: 2026-04-17 00:46 local (Sam asleep, autonomous run).
 
 **Three things Sam should do next:**
 1. **Run `pnpm db:seed`** — seeds Budget, UserSettings, ModelConfig singletons required by the UI. Without it, the budget card on the Settings page errors.
-2. **Set OpenRouter key** — go to Settings → Models & API tab, paste key. All 7 new AI features need it. OAuth claude-cli fallback still works for Anthropic-default functions.
+2. **Set OpenRouter key** — go to Settings → Models & API tab, paste key. All 7 new AI features use OpenRouter in production.
 3. **Upload a textbook PDF** — go to Library → Upload → trigger textbook-indexer. Topics page will populate and Anki cards will generate automatically.
 
 **New blockers filed:**
@@ -132,7 +132,7 @@ All 3 fixtures run end-to-end: sample-3q.mp4 (2.7 min), sample-5q.mkv (2.5 min),
 - **Quality audit**: documented in `reports/night4-quality-audit.md` — extraction is "incomplete" (expected, text-only dev), transcription empty (no whisper model), grading produces structured stubs
 
 **Three things Sam should look at:**
-1. **Quality with real data** — Deploy to trigger.dev cloud with `ANTHROPIC_API_KEY` + `WHISPER_MODEL_PATH` to get real extraction/grading output
+1. **Quality with real data** — Deploy to Trigger.dev Cloud with `OPENROUTER_API_KEY` + `WHISPER_MODEL_PATH` to get real extraction/grading output
 2. **Scene detection** — Lower threshold from 0.3 → 0.15 to test Becker video segmentation (currently all fixtures use equal-thirds fallback)
 3. **Feedback item keys** — Still provisional (blocker `2026-04-17-feedback-items`); lock before demo
 
@@ -228,7 +228,7 @@ Added to `sam-input/TODO.xml` as a `<blocker>` once Section 7 builds that file. 
 ## Section 0 — ground rules acknowledged
 
 - Working dir: `C:\Users\hotre\Desktop\Coding Projects\CPA-Study-App-v3` (on Desktop, not OneDrive — avoids Cowork mount issues).
-- Auth: OAuth only. `ANTHROPIC_API_KEY` unset and stays unset.
+- Auth: OAuth only. OpenRouter is the production AI route; no direct Anthropic production key is required.
 - Commits: Conventional Commits, small + frequent.
 - Failure mode: log here, open blocker if human needed, never halt.
 
@@ -241,7 +241,7 @@ Added to `sam-input/TODO.xml` as a `<blocker>` once Section 7 builds that file. 
 - `claude --version` → `2.1.112 (Claude Code)`. Above the 2.1.87 floor; no update needed.
 
 ### Step 3 — OAuth auth
-- Per starthere.txt override, `CLAUDE_CODE_OAUTH_TOKEN` is already set at the Windows User scope. Not re-set. `ANTHROPIC_API_KEY` deliberately unset (confirmed: `ANTHROPIC_API_KEY_SET=no`).
+- Per starthere.txt override, `CLAUDE_CODE_OAUTH_TOKEN` is already set at the Windows User scope for local dev tooling. Production AI calls route through OpenRouter.
 
 ### Step 4 — verification of env vars
 - `CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING=1` ✔
@@ -302,6 +302,7 @@ Resulting decisions:
 
 ## Event log (reverse chronological; most recent first)
 
+- `2026-05-11` - Google-only auth pass: replaced the temporary username/password gate with a first-party Google OAuth flow, restricted sign-in to `hotredsam@gmail.com` by default, removed password hash helpers, and kept the existing signed-cookie middleware model. Updated Vercel/Trigger deploy docs and `.env.example` to use `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_ALLOWED_EMAILS`, and OpenRouter envs instead of password login or direct provider keys. Also expanded Prisma closed-connection handling to return the typed `DATABASE_UNAVAILABLE` envelope. Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (206/206), `pnpm prisma validate`, `pnpm prisma migrate status`, `pnpm prisma migrate deploy`, `pnpm build`, `pnpm exec playwright test --project=chromium` (235/235), `pnpm runtime:probe` (900 depth-5 desktop sequences), and `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences) passed. Local DB counts after non-destructive verification: textbooks=1, topics=23, ankiCards=150, userSettings=1, studyRoutines=0.
 - `2026-05-08` - Username/password login configuration pass: changed the login form and auth API to submit `username` plus password, added `APP_LOGIN_USERNAME` as the preferred deploy/local env var, and kept `APP_LOGIN_EMAIL` as a legacy fallback so existing environments and older session tokens do not break during the switch. Updated auth route/session tests, Playwright login coverage, `.env.example`, `README.md`, and `RUNBOOK.md`. Verification: `pnpm typecheck`, `pnpm lint`, focused auth tests (7/7), `pnpm test` (201/201), `pnpm prisma validate`, `pnpm prisma migrate status`, `pnpm build`, Playwright login spec, `pnpm exec playwright test --project=chromium` (235/235), `pnpm runtime:probe` (900 depth-5 desktop sequences), and `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences) passed.
 - `2026-05-07` - Shell command palette and navigation refactor: added a `Ctrl/Cmd+K` command palette for searchable route jumps with arrow, Enter, and Escape handling. Centralized shell navigation metadata in `src/lib/navigation.ts` so Sidebar, KeyboardNav, the early shortcut bootstrap script, and the palette share one route/shortcut source. Extracted shared typing-target detection to `src/lib/keyboard-target.ts`. Added Playwright coverage for command palette search navigation, keyboard selection, Escape close behavior, and existing shortcut navigation. Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (197/197), `pnpm prisma validate`, `pnpm prisma migrate status`, `pnpm build`, `pnpm exec playwright test --project=chromium` (235/235), `pnpm runtime:probe` (900 depth-5 desktop sequences), and `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences) passed.
 - `2026-05-07` - No-UI performance pass: followed current Next.js/TanStack/web.dev performance guidance by reducing navigation-time background work. Sidebar badge/study-hour data now comes from one lightweight `/api/shell/summary` request instead of three independent client queries, and the shell no longer uses the recordings list endpoint for badge counts. Dashboard and Study pages now call shared server-side DB readers directly rather than self-fetching their own API routes, while remaining explicitly dynamic so DB-backed data is not frozen at build time. Keyboard shortcut hydration handoff now marks the React listener ready only after the listener is registered. Added Playwright coverage proving the shell summary request replaced the old sidebar requests. Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (197/197), `pnpm prisma validate`, `pnpm prisma migrate status`, `pnpm build`, `pnpm exec playwright test --project=chromium` (233/233), `pnpm runtime:probe` (900 depth-5 desktop sequences), and `pnpm runtime:probe:mobile` (900 depth-5 mobile sequences) passed.
@@ -333,7 +334,7 @@ Executed in-process rather than via `scripts/ralph.sh` (the shell driver is stil
 | 2 | In-app recording + upload progress | PASS | `/record` + `RecordClient.tsx` ship the full MediaRecorder + XHR progress flow. |
 | 3 | Trigger.dev pipeline skeleton + realtime progress | PASS | `processRecording` orchestrates; StageProgress throttled at 1Hz; `/recordings/<id>/status` live. |
 | 4 | Video segmentation | PARTIAL | ffmpeg scene-detect helper + progress-parser + tests shipped; real-wiring blocked on fixture boundaries. Trigger task still emits stub progress. |
-| 5 | Claude vision extraction | PARTIAL | ExtractedQuestion schema + extraction prompt + Task-5 stub persistence shipped; Anthropic SDK wiring deferred (OAuth-only dev session). |
+| 5 | OpenRouter vision extraction | PARTIAL | ExtractedQuestion schema + extraction prompt + Task-5 stub persistence shipped; live OpenRouter verification deferred. |
 | 6 | Local Whisper transcription | PARTIAL | smart-whisper wrapper + normalizer + progress-parser + tests shipped; decode-to-Float32 step pending. |
 | 7 | Grading + feedback | PARTIAL | FeedbackPayload schema + grading prompt shipped; 10-item keys still blocker. |
 | 8 | Review UI | PASS | `/review/<id>` with keyboard nav, word-timestamp scrub, feedback list. |

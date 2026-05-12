@@ -82,7 +82,8 @@ npx trigger.dev@latest deploy
 In the Trigger.dev dashboard (https://cloud.trigger.dev), set these environment variables for your project:
 - `DATABASE_URL`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
-- `ANTHROPIC_API_KEY`
+- `OPENROUTER_API_KEY`
+- `ENCRYPTION_KEY`
 - `WHISPER_MODEL_PATH` (path to model file in the task container, if using custom image)
 
 ### 4. Vercel
@@ -97,6 +98,11 @@ Set these environment variables in the Vercel project dashboard (Settings → En
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | Neon pooled connection string |
+| `AUTH_REQUIRED` | Set to `true` in production |
+| `AUTH_SECRET` | Session secret, generated with `openssl rand -base64 33` |
+| `AUTH_GOOGLE_ID` | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
+| `AUTH_ALLOWED_EMAILS` | `hotredsam@gmail.com` |
 | `R2_ACCOUNT_ID` | Cloudflare account ID |
 | `R2_ACCESS_KEY_ID` | R2 API token key ID |
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret |
@@ -104,7 +110,13 @@ Set these environment variables in the Vercel project dashboard (Settings → En
 | `R2_PUBLIC_URL` | Public bucket URL (optional) |
 | `TRIGGER_PROJECT_ID` | Trigger.dev project ID |
 | `TRIGGER_SECRET_KEY` | Trigger.dev secret key |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `OPENROUTER_API_KEY` | OpenRouter API key |
+| `ENCRYPTION_KEY` | 64-character hex key for stored OpenRouter settings |
+
+In Google Cloud Console, the OAuth Web Application must include:
+
+- `https://<your-vercel-domain>/api/auth/callback/google`
+- `http://localhost:3000/api/auth/callback/google` for local testing
 
 ---
 
@@ -113,6 +125,11 @@ Set these environment variables in the Vercel project dashboard (Settings → En
 | Name | Required in Prod | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql://...`) |
+| `AUTH_REQUIRED` | Yes | Set to `true` in production |
+| `AUTH_SECRET` | Yes | Session secret |
+| `AUTH_GOOGLE_ID` | Yes | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Yes | Google OAuth client secret |
+| `AUTH_ALLOWED_EMAILS` | Yes | Comma-separated allowlist; use `hotredsam@gmail.com` |
 | `R2_ACCOUNT_ID` | Yes | Cloudflare account ID (found in R2 dashboard) |
 | `R2_ACCESS_KEY_ID` | Yes | R2 API token — Key ID |
 | `R2_SECRET_ACCESS_KEY` | Yes | R2 API token — Secret |
@@ -120,7 +137,8 @@ Set these environment variables in the Vercel project dashboard (Settings → En
 | `R2_PUBLIC_URL` | No | Public HTTPS URL for the bucket (enables direct links) |
 | `TRIGGER_PROJECT_ID` | Yes | Trigger.dev project reference ID |
 | `TRIGGER_SECRET_KEY` | Yes | Trigger.dev secret key for triggering tasks |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key (used in Trigger.dev tasks) |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key |
+| `ENCRYPTION_KEY` | Yes | 64-character hex key for encrypted stored API settings |
 | `WHISPER_MODEL_PATH` | No | Absolute path to whisper.cpp model file in the task container |
 | `NODE_ENV` | Auto-set | Set by Vercel/Node; do not set manually |
 

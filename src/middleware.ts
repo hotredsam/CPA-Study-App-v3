@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  AUTH_COOKIE_NAME,
-  isAuthConfigured,
-  shouldRequireAuth,
-  verifySessionToken,
-} from "@/lib/auth/session";
+import { isAllowedAuthEmail, isGoogleAuthConfigured, shouldRequireAuth } from "@/lib/auth/google";
+import { AUTH_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
 
 const PUBLIC_PATH_PREFIXES = [
   "/_next",
@@ -30,7 +26,14 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  if (!isAuthConfigured()) {
+  if (!isGoogleAuthConfigured()) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: { code: "AUTH_NOT_CONFIGURED", message: "Google sign-in is not configured." } },
+        { status: 503 },
+      );
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("setup", "missing");
     return NextResponse.redirect(loginUrl);
@@ -41,7 +44,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     process.env["AUTH_SECRET"],
   );
 
-  if (session) return NextResponse.next();
+  if (isAllowedAuthEmail(session?.email)) {
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(

@@ -22,7 +22,7 @@ You record yourself working through Becker CPA practice questions. The app:
 1. Captures your screen + your voice.
 2. Splits the recording into one clip per question using ffmpeg scene detection, verbal cues from local Whisper, and perceptual-hash template matching against Becker's UI.
 3. Transcribes your reasoning locally with `whisper.cpp` — **your audio never leaves your machine**.
-4. Extracts the question, choices, your answer, and Becker's explanation from keyframes using Claude vision.
+4. Extracts the question, choices, your answer, and Becker's explanation from keyframes using an OpenRouter-routed vision model.
 5. Grades both your **accounting knowledge** (0–10) and your **verbal consulting technique** (0–10), then returns a 10-item structured feedback payload.
 6. Tracks progress across sessions, surfaces weak topics every 100 questions, and grounds explanations in your uploaded textbooks (Phase 2).
 
@@ -33,9 +33,9 @@ flowchart LR
     A[Record in-app<br/>MediaRecorder + getDisplayMedia] --> B[R2 upload<br/>presigned PUT]
     B --> C[Trigger.dev v3<br/>processRecording]
     C --> D[ffmpeg segmentation<br/>+ pHash UI templates<br/>+ Whisper pre-pass]
-    D --> E1[Claude vision<br/>question extraction]
+    D --> E1[OpenRouter vision<br/>question extraction]
     D --> E2[Local whisper.cpp<br/>transcription]
-    E1 & E2 --> F[Claude Sonnet 4.6<br/>grading + 10-item feedback]
+    E1 & E2 --> F[OpenRouter model<br/>grading + 10-item feedback]
     F --> G[Review UI<br/>live progress + playback]
 ```
 
@@ -47,7 +47,7 @@ flowchart LR
 - Trigger.dev v3 for all long-running work
 - Cloudflare R2 for blobs
 - `whisper.cpp` via `smart-whisper` for transcription (local, zero per-minute cost)
-- Claude Sonnet 4.6 via OAuth-authenticated Claude Code during dev; Anthropic API in prod
+- OpenRouter for production AI routing; Codex OAuth is local dev tooling only
 - `ffmpeg` for video work
 
 ## Development
@@ -91,18 +91,17 @@ and otherwise creates only enough cards to cover non-obvious exam rules,
 exceptions, formulas, treatments, disclosures, and pitfalls.
 
 Production auth is controlled by environment variables. Generate a session
-secret and a password hash before deploying:
+secret before deploying:
 
 ``` bash
-openssl rand -base64 32
-pnpm auth:hash "your long password"
+openssl rand -base64 33
+# or: node -e "console.log(require('crypto').randomBytes(33).toString('base64'))"
 ```
 
-Set `AUTH_REQUIRED=true`, `AUTH_SECRET`, `APP_LOGIN_USERNAME`, and
-`APP_LOGIN_PASSWORD_HASH` in Vercel. Local dev can stay open unless
-`AUTH_REQUIRED=true` is present. Existing deployments that still have
-`APP_LOGIN_EMAIL` configured continue to work as a legacy fallback, but new
-deployments should use `APP_LOGIN_USERNAME`.
+Set `AUTH_REQUIRED=true`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`,
+`AUTH_GOOGLE_SECRET`, and `AUTH_ALLOWED_EMAILS=hotredsam@gmail.com` in Vercel.
+Local dev can stay open unless `AUTH_REQUIRED=true` is present. Google OAuth
+must use `/api/auth/callback/google` as the callback path.
 
 Mobile support uses a bottom safe-area navigation layout and larger touch
 targets. Because mobile Safari does not expose browser screen capture for other

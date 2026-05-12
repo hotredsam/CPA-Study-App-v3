@@ -46,8 +46,10 @@ export function isDatabaseUnavailableError(err: unknown): boolean {
   return (
     name === "PrismaClientInitializationError" ||
     code === "P1001" ||
+    code === "P1017" ||
     message.includes("Can't reach database server") ||
-    message.includes("Can't reach database")
+    message.includes("Can't reach database") ||
+    message.includes("Server has closed the connection")
   );
 }
 

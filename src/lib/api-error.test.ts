@@ -43,6 +43,20 @@ describe("api-error", () => {
     expect(body.error.message).not.toContain("prisma.userSettings.upsert");
   });
 
+  it("respond(Prisma closed connection error) returns 503 without leaking invocation details", async () => {
+    const err = Object.assign(
+      new Error("Invalid `prisma.userSettings.findUnique()` invocation:\n\nServer has closed the connection."),
+      { code: "P1017" },
+    );
+
+    const res = respond(err);
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe("DATABASE_UNAVAILABLE");
+    expect(body.error.message).toContain("Database is unavailable");
+    expect(body.error.message).not.toContain("prisma.userSettings.findUnique");
+  });
+
   it("respond(ZodError) returns 400 with flatten details", async () => {
     const schema = z.object({ name: z.string() });
     const result = schema.safeParse({ name: 123 });

@@ -9,7 +9,7 @@ Source of truth: `PLAN.md`. Read it before every task.
 - Prisma + Postgres
 - Trigger.dev v3 — all long-running work
 - Local whisper.cpp via smart-whisper — NEVER OpenAI Whisper API
-- Codex Sonnet 4.6 via OAuth for dev, Anthropic API for prod
+- OpenRouter for production AI routing; Codex OAuth is local dev tooling only
 - Cloudflare R2 blobs
 - ffmpeg local in Trigger.dev task container
 

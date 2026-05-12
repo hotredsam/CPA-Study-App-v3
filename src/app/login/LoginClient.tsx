@@ -1,18 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 function messageFromError(value: unknown): string {
   if (value instanceof Error) return value.message;
   return "Login failed. Please try again.";
 }
 
-export function LoginClient({ configured }: { configured: boolean }) {
-  const router = useRouter();
+export function LoginClient({ configured, allowedEmail }: { configured: boolean; allowedEmail: string }) {
   const searchParams = useSearchParams();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -21,26 +18,23 @@ export function LoginClient({ configured }: { configured: boolean }) {
     return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/";
   }, [searchParams]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const providerError = searchParams.get("error");
+  const setupMissing = searchParams.get("setup") === "missing";
+  const visibleError =
+    error ??
+    (providerError
+      ? `That Google account is not allowed. Sign in with ${allowedEmail}.`
+      : null);
+
+  async function handleGoogleSignIn() {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw new Error(body?.error?.message ?? "Username or password is incorrect.");
-      }
-      router.replace(nextPath);
-      router.refresh();
+      window.location.assign(`/api/auth/google?next=${encodeURIComponent(nextPath)}`);
     } catch (err) {
       setError(messageFromError(err));
-    } finally {
       setSubmitting(false);
+      return;
     }
   }
 
@@ -55,56 +49,32 @@ export function LoginClient({ configured }: { configured: boolean }) {
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-[6px] border border-[color:var(--border)] bg-[color:var(--surface)] p-5 shadow-sm"
-        >
-          {!configured && (
+        <div className="rounded-[6px] border border-[color:var(--border)] bg-[color:var(--surface)] p-5 shadow-sm">
+          {(!configured || setupMissing) && (
             <div className="mb-4 rounded border border-[color:var(--bad-border)] bg-[color:var(--bad-soft)] px-3 py-2 text-sm text-[color:var(--bad)]">
-              Login is not configured yet. Set the auth environment variables before deploying.
+              Google sign-in is not configured yet. Set the Google auth environment variables before deploying.
             </div>
           )}
 
-          <label className="block text-sm font-medium" htmlFor="username">
-            Username
-          </label>
-          <input
-            id="username"
-            type="text"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            className="mt-1 h-11 w-full rounded-[4px] border border-[color:var(--border)] bg-[color:var(--surface)] px-3 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent-faint)]"
-            required
-          />
+          <button
+            type="button"
+            disabled={!configured || submitting}
+            onClick={handleGoogleSignIn}
+            className="flex h-11 w-full items-center justify-center rounded-[4px] bg-[color:var(--accent)] px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? "Opening Google..." : "Continue with Google"}
+          </button>
 
-          <label className="mt-4 block text-sm font-medium" htmlFor="password">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-            className="mt-1 h-11 w-full rounded-[4px] border border-[color:var(--border)] bg-[color:var(--surface)] px-3 text-base outline-none focus:border-[color:var(--accent)] focus:ring-2 focus:ring-[color:var(--accent-faint)]"
-            required
-          />
+          <p className="mt-3 text-xs leading-relaxed text-[color:var(--ink-faint)]">
+            Access is restricted to {allowedEmail}.
+          </p>
 
-          {error && (
+          {visibleError && (
             <p className="mt-3 text-sm text-[color:var(--bad)]" role="alert">
-              {error}
+              {visibleError}
             </p>
           )}
-
-          <button
-            type="submit"
-            disabled={!configured || submitting}
-            className="mt-5 flex h-11 w-full items-center justify-center rounded-[4px] bg-[color:var(--accent)] px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+        </div>
       </main>
     </div>
   );

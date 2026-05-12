@@ -10,9 +10,9 @@ A web app that ingests screen recordings of Becker CPA practice question session
 - **Transcription**: OpenAI Whisper API → **local `whisper.cpp`** running inside the Trigger.dev task container. No audio leaves our infrastructure. Word-level timestamps supported natively.
 - **Video processing**: `ffmpeg` runs locally in the task container (was already the plan — now explicit, with progress parsing).
 - **Progress reporting is a first-class concern**. Every long stage streams progress to the UI via Trigger.dev realtime. The review/status pages show live progress bars for each stage.
-- **AI analysis split**: local-first for text extraction from audio/video, Claude API for analysis only.
+- **AI analysis split**: local-first for text extraction from audio/video, OpenRouter-routed models for analysis only.
   - Local: `ffmpeg` segmentation, `whisper.cpp` transcription, `ffmpeg` thumbnail + keyframe extraction.
-  - Remote (Claude API): structured question/answer extraction from keyframes (vision), grading/feedback generation (text).
+  - Remote (OpenRouter): structured question/answer extraction from keyframes (vision), grading/feedback generation (text).
 
 ## Locked Decisions
 
@@ -23,16 +23,16 @@ A web app that ingests screen recordings of Becker CPA practice question session
 - **Blob storage**: Cloudflare R2 (S3-compatible). Raw recordings, per-question clips, extracted audio, keyframe images.
 - **Recording**: In-app recording via `MediaRecorder` + `getDisplayMedia` from day one, with mic and source selection.
 - **Transcription**: `whisper.cpp` via the `smart-whisper` (or `nodejs-whisper`) npm package, running inside the Trigger.dev task container. Default model: `ggml-small.en.bin` (good accuracy / reasonable CPU speed). Upgrade to `ggml-medium.en` if accuracy lags.
-- **AI models**: Claude Sonnet 4.6 for vision-based question/answer extraction from keyframes and for grading.
+- **AI models**: OpenRouter-routed vision/text models for question extraction and grading.
 - **Segmentation strategy**: `ffmpeg` scene detection as a baseline, augmented by (a) a fast local Whisper pre-pass producing transcript cues like "next question" and (b) perceptual-hash template matching against reference Becker UI frames (question view vs feedback view). Visual + verbal + template signals combined.
 - **Hosting**: Vercel for frontend + API routes. **Trigger.dev Cloud** for tasks. Postgres on Neon. R2 on Cloudflare.
 - **Task machine size**: Trigger.dev `large-2x` or `large-4x` to give `whisper.cpp` enough CPU to run at ~5–10× realtime on the `small.en` model.
 - **Progress transport**: Trigger.dev task `metadata` + `@trigger.dev/react-hooks` `useRealtimeRun` on the client. No custom SSE or polling.
-- **Auth**: Single-user for MVP, no auth. Revisit in Phase 2 if multi-user is needed.
+- **Auth**: Google OAuth with a single-user allowlist for `hotredsam@gmail.com`. Revisit in Phase 2 if multi-user is needed.
 
 ## Out of Scope
 
-- Offline AI inference for *grading* (grading stays on Claude API — only transcription/segmentation are local).
+- Offline AI inference for *grading* (grading stays on OpenRouter-routed models; only transcription/segmentation are local).
 - Multiple study modes (one unified mode with filtering after the fact).
 - Native desktop app.
 - Mobile-first UI.
@@ -59,7 +59,7 @@ Goal: Record a Becker question session in-app, process it end-to-end with visibl
   - `Feedback` (FK to Question, 10 feedback items JSON, scores)
   - `StageProgress` (FK to Recording, stage enum, pct 0–100, etaSec, message, updatedAt) — optional persistence layer behind realtime, useful for post-hoc debugging.
 - Trigger.dev v3 initialized: `trigger.config.ts`, `/trigger` directory, dev runner working via `npx trigger.dev@latest dev`.
-- `.env.example` covering DB, R2, Anthropic, Trigger.dev credentials. No OpenAI key needed.
+- `.env.example` covering DB, R2, OpenRouter, Google OAuth, and Trigger.dev credentials. No OpenAI key needed.
 
 **Verification**: `pnpm dev` serves the home page. `prisma studio` shows the four empty tables. `npx trigger.dev dev` registers a "hello world" task that the Next.js app can trigger from a route handler.
 
@@ -128,19 +128,19 @@ Goal: Record a Becker question session in-app, process it end-to-end with visibl
 
 **Commit when**: Sample fixture segments correctly, thumbnails render, and progress bars reflect reality.
 
-### Task 5: Question and answer extraction (Claude vision on keyframes)
+### Task 5: Question and answer extraction (OpenRouter vision on keyframes)
 
-**What**: For each clip, sample keyframes from (a) the question view and (b) Becker's feedback view, send them to Claude Sonnet 4.6 with a structured prompt that returns JSON: `question`, `choices[]`, `userAnswer`, `correctAnswer`, `beckerExplanation`, `section`.
+**What**: For each clip, sample keyframes from (a) the question view and (b) Becker's feedback view, send them through OpenRouter with a structured prompt that returns JSON: `question`, `choices[]`, `userAnswer`, `correctAnswer`, `beckerExplanation`, `section`.
 
-**Why**: Grading needs structured question data. Local OCR (Tesseract) misses Becker's UI structure — which choice the user picked, which is marked correct, which explanation panel is showing. Claude vision handles the structure cleanly.
+**Why**: Grading needs structured question data. Local OCR (Tesseract) misses Becker's UI structure — which choice the user picked, which is marked correct, which explanation panel is showing. Vision-capable OpenRouter models handle the structure cleanly.
 
 **Scope**:
 
 - Keyframe sampling: 2–3 frames from the question-view span, 2–3 from the feedback-view span (using Task 4's pHash classification).
 - Structured prompt with explicit JSON schema; `response_format` / tool-use pattern that enforces shape.
 - Persist parsed result to `Question.extracted` as JSON.
-- Graceful handling: if Claude returns incomplete data, mark the question `incomplete` (so the user still sees the clip + transcript) rather than failing the whole pipeline.
-- Progress reporting: one step per keyframe uploaded + one step per Claude call. Simple pct = completed / total.
+- Graceful handling: if the model returns incomplete data, mark the question `incomplete` (so the user still sees the clip + transcript) rather than failing the whole pipeline.
+- Progress reporting: one step per keyframe uploaded + one step per model call. Simple pct = completed / total.
 
 **Verification**: On the sample fixture, all 3 questions extract with correct question text, choices, and answers, verified manually against the recording. A deliberately-corrupted recording marks questions `incomplete` without crashing the pipeline.
 
@@ -168,9 +168,9 @@ Goal: Record a Becker question session in-app, process it end-to-end with visibl
 
 **Commit when**: Transcription runs cleanly on the sample fixture with a smooth progress bar.
 
-### Task 7: Grading and feedback generation (Claude API)
+### Task 7: Grading and feedback generation (OpenRouter)
 
-**What**: One Claude Sonnet 4.6 call per question that takes the extracted question, user's answer, Becker's explanation, and the user's transcript, and returns the 10-item feedback payload. Persist to `Feedback`.
+**What**: One OpenRouter-routed model call per question that takes the extracted question, user's answer, Becker's explanation, and the user's transcript, and returns the 10-item feedback payload. Persist to `Feedback`.
 
 **Why**: This is the core value prop. Every other task exists to get the right inputs into this call.
 
@@ -347,7 +347,7 @@ UI components subscribe via `useRealtimeRun` and bind progress bars directly to 
 - **Whisper model tier**: Start on `small.en`. If accuracy or speed is off, swap to `base.en` (faster, less accurate) or `medium.en` (slower, more accurate). Decide during Task 10. Why parked: real-world recordings are the only fair test.
 - **Trigger.dev machine size**: Start on `large-2x`. Bump to `large-4x` or larger if transcription is the bottleneck. Decide during Task 10.
 - **Concurrency across questions**: Default fan-out is parallel per-clip (`extractQuestion` + `transcribeQuestion`). Revisit in Task 10 if machine CPU saturates.
-- **Multi-user / auth**: MVP is single-user, no auth. Revisit in Phase 2 if the system needs to be shared.
+- **Multi-user / auth**: Current auth is a Google OAuth single-user allowlist. Revisit in Phase 2 if the system needs to be shared.
 - **Textbook formats beyond PDF/EPUB**: Phase 2 assumes PDF/EPUB. If Becker content is in other formats, add converters. Decide during Task 11.
 
 ## Glossary

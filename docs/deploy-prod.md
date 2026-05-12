@@ -63,7 +63,8 @@
    This uploads your task code to Trigger.dev Cloud. Tasks will then run on their infrastructure.
 6. In Trigger.dev dashboard → Environment Variables, add:
    - `DATABASE_URL` (Neon direct connection URL — Trigger.dev tasks run DB migrations)
-   - `ANTHROPIC_API_KEY` (your Anthropic API key for Claude vision + grading)
+   - `OPENROUTER_API_KEY` (your OpenRouter API key)
+   - `ENCRYPTION_KEY` (64-character hex key for encrypted stored API settings)
    - `WHISPER_MODEL_PATH` (path to whisper model in container, e.g. `/app/ggml-small.en.bin`)
    - All R2 env vars (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, etc.)
 
@@ -84,6 +85,11 @@
 | Variable | Value | Notes |
 | -------- | ----- | ----- |
 | `DATABASE_URL` | Neon pooler URL | Pooled connection for serverless |
+| `AUTH_REQUIRED` | `true` | Enables production auth |
+| `AUTH_SECRET` | random secret | Generate with `openssl rand -base64 33` |
+| `AUTH_GOOGLE_ID` | Google client ID | Google OAuth credential |
+| `AUTH_GOOGLE_SECRET` | Google client secret | Google OAuth credential |
+| `AUTH_ALLOWED_EMAILS` | `hotredsam@gmail.com` | Only this email can sign in |
 | `R2_ACCOUNT_ID` | Cloudflare account ID | |
 | `R2_ACCESS_KEY_ID` | R2 API token key ID | |
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret | |
@@ -91,9 +97,15 @@
 | `R2_PUBLIC_URL` | `https://<bucket>.r2.dev` | Optional, for public URLs |
 | `TRIGGER_PROJECT_ID` | `proj_...` from Trigger.dev | |
 | `TRIGGER_SECRET_KEY` | `tr_sec_...` from Trigger.dev | |
-| `ANTHROPIC_API_KEY` | (empty) | Not needed in Next.js app; only in Trigger.dev tasks |
+| `OPENROUTER_API_KEY` | OpenRouter key | AI routing |
+| `ENCRYPTION_KEY` | 64 hex characters | Encrypts stored OpenRouter settings |
 | `SENTRY_DSN` | (optional) | Leave blank to disable Sentry |
 | `NEXT_PUBLIC_SENTRY_DSN` | (optional) | Client-side Sentry DSN |
+
+Add these authorized redirect URIs to the Google OAuth Web Application:
+
+- `https://<your-vercel-domain>/api/auth/callback/google`
+- `http://localhost:3000/api/auth/callback/google` for local testing
 
 ---
 
@@ -102,7 +114,8 @@
 After deploy, run this checklist:
 
 ```
-[ ] GET https://<domain>.vercel.app/ → loads home page
+[ ] GET https://<domain>.vercel.app/ → redirects to login when signed out
+[ ] Sign in with Google as hotredsam@gmail.com → loads home page
 [ ] GET https://<domain>.vercel.app/api/health → {db:"ok", r2:"ok", trigger:"ok"}
 [ ] POST https://<domain>.vercel.app/api/recordings (with valid body) → returns uploadUrl
 [ ] PUT <uploadUrl> with a small test file → HTTP 200

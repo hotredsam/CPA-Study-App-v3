@@ -14,10 +14,10 @@ pnpm trigger:dev              # Trigger.dev dev runner (separate terminal)
 
 Required env vars (see `.env.example`):
 
-- `DATABASE_URL` — local: `postgresql://postgres:postgres@localhost:5432/cpa_study`
-- `R2_*` — Cloudflare R2 credentials (endpoint, access key, secret, bucket)
-- `TRIGGER_SECRET_KEY` — Trigger.dev secret (dev scope)
-- `ANTHROPIC_API_KEY` — for Tasks 5 + 7 once wired
+- `DATABASE_URL` - local: `postgresql://postgres:postgres@localhost:5432/cpa_study`
+- `R2_*` - Cloudflare R2 credentials (endpoint, access key, secret, bucket)
+- `TRIGGER_SECRET_KEY` - Trigger.dev secret (dev scope)
+- `OPENROUTER_API_KEY` - AI routing for indexing and generated study content
 
 ## Record a session
 
@@ -74,16 +74,17 @@ Vercel requires these app variables at minimum:
 
 - `DATABASE_URL` - production Postgres, not local Docker
 - `AUTH_REQUIRED=true`
-- `AUTH_SECRET` - generate with `openssl rand -base64 32`
-- `APP_LOGIN_USERNAME`
-- `APP_LOGIN_PASSWORD_HASH` - generate with `pnpm auth:hash "your long password"`
+- `AUTH_SECRET` - generate with `openssl rand -base64 33`
+- `AUTH_GOOGLE_ID` - Google OAuth client ID
+- `AUTH_GOOGLE_SECRET` - Google OAuth client secret
+- `AUTH_ALLOWED_EMAILS=hotredsam@gmail.com`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
 - `TRIGGER_PROJECT_ID`, `TRIGGER_SECRET_KEY`
 - `OPENROUTER_API_KEY`
 - `ENCRYPTION_KEY`
 
-`APP_LOGIN_EMAIL` is still accepted as a legacy fallback for older local or
-Vercel environments, but `APP_LOGIN_USERNAME` is the current variable to set.
+Google OAuth callback URLs must include `https://<your-domain>/api/auth/callback/google`
+for production and `http://localhost:3000/api/auth/callback/google` for local testing.
 
 NAS storage is optional. Vercel can archive processed media to a NAS only if the
 NAS exposes a public, TLS-secured S3/MinIO-compatible endpoint or a tunnel. Put
