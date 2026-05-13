@@ -110,6 +110,7 @@ Production security defaults:
 - OpenRouter calls are preflighted by hard spend gates: per-call estimate, daily cap, per-recording cap, and per-question cap. Context is recorded on `ModelCall` rows for auditability.
 - First production deploy should keep conservative launch caps:
   `OPENROUTER_MAX_COST_PER_CALL_USD=0.15`,
+  `OPENROUTER_INDEXING_MAX_COST_PER_CALL_USD=1`,
   `OPENROUTER_DAILY_CAP_USD=3`,
   `OPENROUTER_RECORDING_CAP_USD=1.25`,
   `OPENROUTER_QUESTION_CAP_USD=0.25`, and

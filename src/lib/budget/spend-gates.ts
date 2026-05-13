@@ -22,6 +22,7 @@ export interface SpendGateSnapshot {
 }
 
 const DEFAULT_PER_CALL_CAP_USD = 0.15;
+const DEFAULT_INDEXING_PER_CALL_CAP_USD = 1;
 const DEFAULT_DAILY_CAP_USD = 3;
 const DEFAULT_RECORDING_CAP_USD = 1.25;
 const DEFAULT_QUESTION_CAP_USD = 0.25;
@@ -40,8 +41,19 @@ const FUNCTION_ESTIMATES_USD: Record<AiFunctionKey, number> = {
   TOPIC_NOTES: 0.025,
 };
 
+const TEXTBOOK_INDEXING_FUNCTION_KEYS = new Set<string>([
+  "TEXTBOOK_PDF_PARSE",
+  "TEXTBOOK_HTML_RENDER",
+  AiFunctionKey.TOPIC_EXTRACT,
+  AiFunctionKey.ANKI_GEN,
+]);
+
 function isAiFunctionKey(value: string): value is AiFunctionKey {
   return Object.values(AiFunctionKey).includes(value as AiFunctionKey);
+}
+
+function isTextbookIndexingFunction(functionKey: AiFunctionKey | string): boolean {
+  return TEXTBOOK_INDEXING_FUNCTION_KEYS.has(functionKey);
 }
 
 function envNumber(name: string, fallback: number): number {
@@ -92,13 +104,16 @@ export function estimateFunctionUsd(functionKey: AiFunctionKey | string, overrid
 }
 
 export async function readSpendGateSnapshot(
+  functionKey: AiFunctionKey | string,
   context: SpendContext,
   estimatedUsd: number,
 ): Promise<SpendGateSnapshot> {
   const dailyCapUsd = envNumber("OPENROUTER_DAILY_CAP_USD", DEFAULT_DAILY_CAP_USD);
   const recordingCapUsd = envNumber("OPENROUTER_RECORDING_CAP_USD", DEFAULT_RECORDING_CAP_USD);
   const questionCapUsd = envNumber("OPENROUTER_QUESTION_CAP_USD", DEFAULT_QUESTION_CAP_USD);
-  const perCallCapUsd = envNumber("OPENROUTER_MAX_COST_PER_CALL_USD", DEFAULT_PER_CALL_CAP_USD);
+  const perCallCapUsd = isTextbookIndexingFunction(functionKey)
+    ? envNumber("OPENROUTER_INDEXING_MAX_COST_PER_CALL_USD", DEFAULT_INDEXING_PER_CALL_CAP_USD)
+    : envNumber("OPENROUTER_MAX_COST_PER_CALL_USD", DEFAULT_PER_CALL_CAP_USD);
   const since = todayStart();
 
   if (!gatesEnabled()) {
@@ -143,7 +158,7 @@ export async function assertSpendAllowed(
   context: SpendContext,
   estimatedUsd: number,
 ): Promise<SpendGateSnapshot> {
-  const snapshot = await readSpendGateSnapshot(context, estimatedUsd);
+  const snapshot = await readSpendGateSnapshot(functionKey, context, estimatedUsd);
   if (!snapshot.enabled) return snapshot;
 
   const failures: string[] = [];
