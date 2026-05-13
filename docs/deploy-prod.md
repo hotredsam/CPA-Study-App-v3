@@ -14,7 +14,7 @@
 ## 1. Neon (Postgres)
 
 1. Create a Neon account at neon.tech
-2. Create a project: "cpa-study-v3"
+2. Create a project: `cpa-study-app-v3`
 3. In the project dashboard, find **Connection Details**:
    - Copy the **Connection pooling** URL (use for `DATABASE_URL` in Vercel)
    - Copy the **Direct connection** URL (use for migrations only)
@@ -37,11 +37,11 @@
    ```json
    [
      {
-       "AllowedOrigins": ["https://<your-vercel-domain>.vercel.app"],
-       "AllowedMethods": ["GET", "PUT"],
+       "AllowedOrigins": ["https://cpa-study-app-v3.vercel.app"],
+       "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
        "AllowedHeaders": ["*"],
        "ExposeHeaders": ["ETag"],
-       "MaxAgeSeconds": 3000
+       "MaxAgeSeconds": 3600
      }
    ]
    ```
@@ -61,11 +61,13 @@ Vercel functions.
 2. Create a project: "cpa-study-v3"
 3. Note the **Project ID** (format: `proj_...`)
 4. Generate a **Secret Key** (format: `tr_sec_...`)
-5. Deploy the tasks:
+5. Deploy the tasks from this repo:
    ```bash
-   npx trigger.dev@latest deploy
+   pnpm exec trigger deploy --env prod --env-file .env.vercel
    ```
-   This uploads your task code to Trigger.dev Cloud. Tasks will then run on their infrastructure.
+   This uploads task code to Trigger.dev Cloud. The repo's `trigger.config.ts`
+   builds `ffmpeg`, `whisper.cpp`, local Whisper models, and the Prisma Linux
+   client during deployment.
 6. In Trigger.dev dashboard → Environment Variables, add:
    - `DATABASE_URL` (Neon direct connection URL for task runtime; run migrations separately with `pnpm prisma migrate deploy`)
    - `OPENROUTER_API_KEY` (your OpenRouter API key)
@@ -114,6 +116,11 @@ Add these authorized redirect URIs to the Google OAuth Web Application:
 - `https://<your-vercel-domain>/api/auth/callback/google`
 - `http://localhost:3000/api/auth/callback/google` for local testing
 
+Current production domain:
+
+- `https://cpa-study-app-v3.vercel.app`
+- Google OAuth callback: `https://cpa-study-app-v3.vercel.app/api/auth/callback/google`
+
 ---
 
 ## 5. First Deploy Smoke Test
@@ -132,6 +139,7 @@ Before clicking Deploy, confirm these security-sensitive values:
 [ ] ENCRYPTION_KEY is 64 hex characters and backed up securely
 [ ] ENABLE_ADMIN_WIPE=false
 [ ] Google OAuth callback exactly matches https://<domain>/api/auth/callback/google
+[ ] R2 CORS allows PUT/POST/HEAD/GET from https://cpa-study-app-v3.vercel.app
 ```
 
 After deploy, run this checklist:

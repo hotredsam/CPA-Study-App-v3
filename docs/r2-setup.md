@@ -5,6 +5,7 @@
 - [ ] Bucket name: `cpa-study-recordings`
 - [ ] Region: Automatic (Cloudflare picks nearest)
 - [ ] Public access: Disabled by default (uploads via presigned PUT URLs only)
+- [ ] CORS configured for production browser uploads
 
 ## CORS configuration (required for browser uploads)
 
@@ -15,17 +16,20 @@ Apply via Cloudflare dashboard → R2 → your bucket → Settings → CORS:
   {
     "AllowedOrigins": [
       "http://localhost:3000",
-      "https://<your-vercel-domain>.vercel.app"
+      "https://cpa-study-app-v3.vercel.app"
     ],
-    "AllowedMethods": ["GET", "PUT"],
+    "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
     "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag", "x-amz-checksum-crc32"],
-    "MaxAgeSeconds": 3000
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
   }
 ]
 ```
 
 Without CORS, the browser PUT (upload) will fail with a CORS error.
+The object read/write R2 S3 keys used by the app are intentionally not
+bucket-admin keys and cannot update CORS. Change CORS in the Cloudflare
+dashboard, or use a separate short-lived Cloudflare admin token only for setup.
 
 ## API token scopes
 

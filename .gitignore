@@ -57,3 +57,4 @@ dev-server.log
 /sam-input/audio/*.m4a
 !/sam-input/audio/.gitkeep
 /sam-input/.processed/
+.vercel
