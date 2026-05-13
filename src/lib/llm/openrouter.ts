@@ -130,9 +130,31 @@ interface OpenRouterResponse {
   usage?: OpenRouterUsage;
 }
 
-function estimateCost(promptTokens: number, completionTokens: number): number {
-  // Placeholder cost estimate — real cost would come from OpenRouter's usage object
-  return promptTokens * 0.000001 + completionTokens * 0.000002;
+const FALLBACK_PRICING_PER_M_TOKENS = {
+  input: 1,
+  output: 2,
+};
+
+const MODEL_PRICING_PER_M_TOKENS: Record<string, { input: number; output: number }> = {
+  "anthropic/claude-haiku-4.5": { input: 1, output: 5 },
+  "anthropic/claude-sonnet-4.6": { input: 3, output: 15 },
+};
+
+function normalizeModelForPricing(model: string): string {
+  return model.trim().replace(/:.+$/, "");
+}
+
+export function estimateOpenRouterCostUsd(
+  model: string,
+  promptTokens: number,
+  completionTokens: number,
+): number {
+  const pricing =
+    MODEL_PRICING_PER_M_TOKENS[normalizeModelForPricing(model)] ??
+    FALLBACK_PRICING_PER_M_TOKENS;
+  const inputCost = (promptTokens / 1_000_000) * pricing.input;
+  const outputCost = (completionTokens / 1_000_000) * pricing.output;
+  return Math.round((inputCost + outputCost) * 1_000_000) / 1_000_000;
 }
 
 /**
@@ -220,7 +242,7 @@ export async function callOpenRouter(
     const content = firstChoice.message.content;
     const inputTokens = data.usage?.prompt_tokens ?? 0;
     const outputTokens = data.usage?.completion_tokens ?? 0;
-    const usdCost = estimateCost(inputTokens, outputTokens);
+    const usdCost = estimateOpenRouterCostUsd(data.model || params.model, inputTokens, outputTokens);
 
     return {
       content,
