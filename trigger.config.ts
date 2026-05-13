@@ -1,5 +1,5 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
-import { additionalFiles, aptGet, ffmpeg } from "@trigger.dev/build/extensions/core";
+import { additionalFiles, aptGet, ffmpeg, syncEnvVars } from "@trigger.dev/build/extensions/core";
 import { prismaExtension } from "@trigger.dev/build/extensions/prisma";
 import { existsSync, readFileSync } from "node:fs";
 
@@ -114,6 +114,7 @@ export default defineConfig({
     extensions: [
       ffmpeg(),
       aptGet({ packages: ["cmake", "build-essential", "git", "curl", "ca-certificates"] }),
+      syncEnvVars(() => runtimeDeployEnv(), { override: true }),
       whisperCppExtension(),
       prismaExtension({ mode: "legacy", schema: "prisma/schema.prisma" }),
       additionalFiles({ files: ["./fixtures/*.json", "./fixtures/README.md"] }),
