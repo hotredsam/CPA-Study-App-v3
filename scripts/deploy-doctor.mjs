@@ -192,16 +192,26 @@ async function databaseProductionChecks() {
   try {
     const { PrismaClient } = await import("@prisma/client");
     const prisma = new PrismaClient();
-    const oauthFallbackCount = await prisma.modelConfig.count({
-      where: { useOAuthFallback: true },
+    const modelConfigs = await prisma.modelConfig.findMany({
+      select: { functionKey: true, model: true, useOAuthFallback: true },
     });
     await prisma.$disconnect();
+    const oauthFallbackCount = modelConfigs.filter((config) => config.useOAuthFallback).length;
+    const badModelSlugs = modelConfigs.filter((config) => config.model.includes("claude-sonnet-4-6"));
     check(
       "ModelConfig OAuth fallback",
       oauthFallbackCount === 0,
       oauthFallbackCount === 0
         ? "No local OAuth fallback configs persisted"
         : `${oauthFallbackCount} config(s) still enable local OAuth fallback`,
+      "error",
+    );
+    check(
+      "ModelConfig model slugs",
+      badModelSlugs.length === 0,
+      badModelSlugs.length === 0
+        ? "Persisted model ids look valid"
+        : `Invalid OpenRouter slug(s): ${badModelSlugs.map((config) => `${config.functionKey}=${config.model}`).join(", ")}`,
       "error",
     );
   } catch (error) {
